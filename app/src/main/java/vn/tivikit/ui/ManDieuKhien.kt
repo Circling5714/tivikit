@@ -3,6 +3,8 @@ package vn.tivikit.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -39,17 +41,52 @@ import androidx.compose.ui.unit.sp
 import vn.tivikit.adb.PhimTv
 import vn.tivikit.t
 
-/** Màn Điều khiển tivi (25/10/2026): remote trên điện thoại + gõ chữ vào ô nhập đang chọn trên tivi + xem màn hình tivi. */
+/**
+ * Màn Điều khiển tivi (25/10/2026): remote trên điện thoại + gõ chữ vào ô nhập đang chọn trên tivi + xem màn hình tivi.
+ * Đang xem màn hình tivi thì khung hình ghim trên cùng, phần remote bên dưới cuộn riêng (26/10/2026, góp ý: trượt xuống
+ * bấm remote vẫn phải thấy tivi).
+ */
 @Composable
-internal fun ManDieuKhien(vm: PhienLamViec) = Cuon {
+internal fun ManDieuKhien(vm: PhienLamViec) {
+    val x = vm.xemManHinh
+    // Chạy TiviKit ngay trên tivi thì tự xem chính mình là vô nghĩa.
+    val xemDuoc = !vn.tivikit.ManHinh.laTv && vm.ip.trim() != "127.0.0.1"
+    // Theo dõi vòng đời ở cấp màn chứ không trong khung hình: khung chuyển từ phần cuộn lên chỗ ghim không được làm tắt
+    // luồng. App xuống nền thì tạm dừng, rời màn Điều khiển thì tắt (đỡ tốn Wi-Fi và pin).
+    if (xemDuoc) {
+        val vongDoi = androidx.compose.ui.platform.LocalLifecycleOwner.current
+        DisposableEffect(vongDoi) {
+            val nghe = androidx.lifecycle.LifecycleEventObserver { _, e ->
+                if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) x.tamDung()
+                if (e == androidx.lifecycle.Lifecycle.Event.ON_START) x.tiepTuc()
+            }
+            vongDoi.lifecycle.addObserver(nghe)
+            onDispose { vongDoi.lifecycle.removeObserver(nghe); x.tat() }
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        if (xemDuoc && x.muonXem) KhungManHinhTv(x)
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            NoiDungDieuKhien(vm, moiXem = xemDuoc && !x.muonXem)
+        }
+    }
+}
+
+/** Phần cuộn của màn Điều khiển; [moiXem] = hiện thẻ mời bật xem màn hình tivi. */
+@Composable
+private fun ColumnScope.NoiDungDieuKhien(vm: PhienLamViec, moiXem: Boolean) {
     val dk = vm.dieuKhien
     var hoiTat by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(t("Điều khiển tivi", "TV remote"), style = KieuTieuDeLon)
         Phu(t("Bấm như remote thật. Nhấn giữ OK để nhấn giữ trên tivi.", "Works like the real remote. Hold OK for a long press on the TV."))
     }
-    // Chạy TiviKit ngay trên tivi thì tự xem chính mình là vô nghĩa.
-    if (!vn.tivikit.ManHinh.laTv && vm.ip.trim() != "127.0.0.1") TheManHinhTv(vm)
+    if (moiXem) The(t("Màn hình tivi", "TV screen"), Icons.Rounded.Cast) {
+        Phu(t("Xem màn hình tivi ngay trên điện thoại, trễ chưa tới nửa giây; chạm lên hình để bấm đúng chỗ đó. Khung hình ghim trên cùng, trượt xuống bấm remote vẫn thấy tivi. Phim có bản quyền (Netflix…) và cổng HDMI sẽ ra màn đen.",
+            "See the TV screen live on the phone, under half a second behind; tap the picture to press that spot. The picture stays pinned at the top while you scroll the remote. Copy-protected films (Netflix…) and HDMI inputs show black."))
+        NutPhu(t("Xem màn hình tivi", "Show the TV screen"), Icons.Rounded.Visibility) { vm.xemManHinh.bat() }
+    }
     // Ô gõ chữ ở trên cùng (25/10/2026): bàn phím điện thoại mở ra là chiếm nửa dưới màn — ô gõ, nút Gửi và dòng "Đã gửi"
     // phải nằm phía trên nó.
     The(t("Gõ chữ lên tivi", "Type on the TV"), Icons.Rounded.Keyboard) {
@@ -108,29 +145,16 @@ internal fun ManDieuKhien(vm: PhienLamViec) = Cuon {
 }
 
 /**
- * Màn hình tivi trực tiếp (26/10/2026, kiểu scrcpy — XemManHinh): bấm Xem thì hình tivi hiện ở đây, chạm lên hình là bấm
- * đúng chỗ đó trên tivi. App xuống nền thì tạm dừng, rời màn Điều khiển thì tắt (đỡ tốn Wi-Fi và pin).
+ * Khung màn hình tivi trực tiếp (26/10/2026, kiểu scrcpy — XemManHinh), ghim trên cùng màn Điều khiển khi đang xem: chạm
+ * lên hình là bấm đúng chỗ đó trên tivi. Cao tối đa 40% màn điện thoại để phần remote bên dưới còn chỗ.
  */
 @Composable
-private fun TheManHinhTv(vm: PhienLamViec) {
-    val x = vm.xemManHinh
-    val vongDoi = androidx.compose.ui.platform.LocalLifecycleOwner.current
-    DisposableEffect(vongDoi) {
-        val nghe = androidx.lifecycle.LifecycleEventObserver { _, e ->
-            if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) x.tamDung()
-            if (e == androidx.lifecycle.Lifecycle.Event.ON_START) x.tiepTuc()
-        }
-        vongDoi.lifecycle.addObserver(nghe)
-        onDispose { vongDoi.lifecycle.removeObserver(nghe); x.tat() }
-    }
-    The(t("Màn hình tivi", "TV screen"), Icons.Rounded.Cast) {
-        if (!x.muonXem) {
-            Phu(t("Xem màn hình tivi ngay trên điện thoại, trễ chưa tới nửa giây; chạm lên hình để bấm đúng chỗ đó. Phim có bản quyền (Netflix…) và cổng HDMI sẽ ra màn đen.",
-                "See the TV screen live on the phone, under half a second behind; tap the picture to press that spot. Copy-protected films (Netflix…) and HDMI inputs show black."))
-            NutPhu(t("Xem màn hình tivi", "Show the TV screen"), Icons.Rounded.Visibility) { x.bat() }
-            return@The
-        }
-        Box(Modifier.fillMaxWidth().aspectRatio(x.rong.toFloat() / x.cao.coerceAtLeast(1)).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
+private fun KhungManHinhTv(x: XemManHinh) {
+    val tiLe = x.rong.toFloat() / x.cao.coerceAtLeast(1)
+    val caoToiDa = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.4f).dp
+    Column(Modifier.fillMaxWidth().background(Nen).padding(start = 16.dp, end = 16.dp, top = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.widthIn(max = caoToiDa * tiLe).fillMaxWidth().aspectRatio(tiLe).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
             if (!x.cheDoAnh) androidx.compose.ui.viewinterop.AndroidView(
                 factory = { c -> android.view.TextureView(c).apply { surfaceTextureListener = x.ngheBeMat } },
                 modifier = Modifier.matchParentSize())
