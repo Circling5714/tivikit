@@ -596,9 +596,11 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             val cu = docCauHinhTv() ?: cauHinhTruocGo ?: return@let null
             if (!m.has("stock_home_redirect")) cu.optString("stock_home_redirect").takeIf { it.isNotBlank() }?.let { m.put("stock_home_redirect", it) }
             if (!m.has(PhimRieng.KHOA)) PhimRieng.docTu(cu).takeIf { it.isNotEmpty() }?.let { PhimRieng.apVao(m, it) }
-            // Ô kênh nào cấu hình mới chưa có tên thì lấy tên đang có trên tivi.
+            // Ô kênh nào cấu hình mới chưa có tên / logo thì lấy cái đang có trên tivi.
             val coTen = KenhNhanh.tenTrong(m)
             KenhNhanh.tenTrong(cu).filterKeys { it !in coTen }.forEach { (goi, ten) -> KenhNhanh.datTen(m, goi, ten) }
+            val coAnh = KenhNhanh.anhTrong(m)
+            KenhNhanh.anhTrong(cu).filterKeys { it !in coAnh }.forEach { (goi, anh) -> KenhNhanh.datAnh(m, goi, anh) }
             m.toString()
         } ?: json
         cauHinhTruocGo = null
@@ -1291,14 +1293,16 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }
 
     /**
-     * Ô kênh [goi] trên Home sạch: tên ô [ten] (app_labels; null = bỏ) và có trong dock không, ghi vào config.json ĐANG
-     * CÓ (như ghiPhimRieng) rồi khởi động lại Home sạch cho thấy ngay. Trả kết quả của KenhNhanh.datDock: false = dock đã
-     * đủ [toiDa] ô, null = Home sạch đang dùng dock mặc định (để nguyên).
+     * Ô kênh [goi] trên Home sạch: tên ô [ten] (app_labels; null = bỏ cả ô), logo [anh] (app_banners, tên ảnh đã gửi bằng
+     * ghiAnhOKenh; null = không logo) và có trong dock không, ghi vào config.json ĐANG CÓ (như ghiPhimRieng) rồi khởi động
+     * lại Home sạch cho thấy ngay. Trả kết quả của KenhNhanh.datDock: false = dock đã đủ [toiDa] ô, null = Home sạch đang
+     * dùng dock mặc định (để nguyên).
      */
-    fun ghiOKenh(goi: String, ten: String?, trongDock: Boolean, toiDa: Int): Boolean? {
+    fun ghiOKenh(goi: String, ten: String?, anh: String?, trongDock: Boolean, toiDa: Int): Boolean? {
         val j = cauHinhDeSua()
         val truoc = j.toString()
         KenhNhanh.datTen(j, goi, ten)
+        KenhNhanh.datAnh(j, goi, anh.takeIf { ten != null })
         val dock = KenhNhanh.datDock(j, goi, trongDock, toiDa)
         // Không đổi gì thì thôi ghi (ghi config.json làm Home sạch đặt lại vài chỉnh sửa làm trên tivi) và khởi động lại.
         if (j.toString() != truoc) {
@@ -1307,6 +1311,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         }
         return dock
     }
+
+    /** Gửi logo kênh của ô [o] (JPEG) cạnh config.json của Home sạch, tên KenhNhanh.tenAnh(o) + ".jpg". */
+    fun ghiAnhOKenh(o: Int, anh: ByteArray) = ghiFileTheme(KenhNhanh.tenAnh(o) + ".jpg", anh)
 
     /**
      * Ô kênh VTVgo kiểu cũ (ô link của Home sạch): gửi ảnh ô ([anh]: tên file sau "kenh-", ảnh), rồi ghi lại link_tiles

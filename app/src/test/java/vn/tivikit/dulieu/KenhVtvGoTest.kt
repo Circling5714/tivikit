@@ -69,6 +69,21 @@ class KenhVtvGoTest {
         assertEquals("""{"theme":"tivikit"}""", macDinh.toString())
     }
 
+    /** Ô TV360 mượn logo kênh VTVgo cùng tên: bỏ dấu, "Truyền hình", "HD"; tên viết tắt ANTV, QPVN. */
+    @Test fun timTheoTen_choOTv360() {
+        fun k(ma: String, ten: String) = KenhVtvGo.Kenh(ten, ma, "", "", false)
+        val ds = listOf(k("1", "VTV1"), k("htv9", "Truyền hình HTV9"), k("hn1", "Truyền hình Hà Nội 1"),
+            k("can", "Truyền hình Công an Nhân dân"), k("qp", "Truyền hình Quốc phòng Việt Nam"), k("hn2", "Truyền hình Hà Nội 2"))
+        assertEquals("1", KenhVtvGo.timTheoTen(ds, "VTV1")?.ma)
+        assertEquals("htv9", KenhVtvGo.timTheoTen(ds, "HTV9 HD")?.ma)
+        assertEquals("hn1", KenhVtvGo.timTheoTen(ds, "Hà Nội 1")?.ma)
+        assertEquals("can", KenhVtvGo.timTheoTen(ds, "ANTV")?.ma)
+        assertEquals("qp", KenhVtvGo.timTheoTen(ds, "QPVN HD")?.ma)
+        assertNull(KenhVtvGo.timTheoTen(ds, "HTV7 HD"))
+        assertNull(KenhVtvGo.timTheoTen(ds, "VTV10"))
+        assertNull(KenhVtvGo.timTheoTen(ds, " "))
+    }
+
     /** Launcher bỏ ô có tên quá 24 ký tự; mã kênh VTV1–9 không trùng nhau. */
     @Test fun tenO_toiDa24_vaMaVtvKhongTrung() {
         assertEquals(24, KenhVtvGo.tenNgan("Truyền hình " + "A".repeat(40)).length)

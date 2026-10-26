@@ -80,6 +80,22 @@ object KenhVtvGo {
         return true
     }
 
+    /**
+     * Kênh VTVgo trùng tên với [ten] (tên ô TV360: "VTV1", "HTV9 HD", "Hà Nội 1", "ANTV"…), để ô TV360 mượn logo kênh của
+     * VTVgo; null nếu VTVgo không có kênh đó.
+     */
+    fun timTheoTen(ds: List<Kenh>, ten: String): Kenh? {
+        val k = gonTen(ten).let { TEN_KHAC[it] ?: it }
+        return if (k.isEmpty()) null else ds.firstOrNull { gonTen(it.ten) == k }
+    }
+
+    /** Tên để so: không dấu, chữ thường, bỏ chữ "truyền hình", "HD" và mọi ký tự ngoài a-z 0-9. */
+    private fun gonTen(s: String): String = XaPhuong.boDau(s).replace("truyen hinh", " ")
+        .replace(Regex("\\bhd\\b"), " ").replace(Regex("[^a-z0-9]"), "")
+
+    /** Tên viết tắt TV360 dùng mà VTVgo ghi đủ (gonTen của cả hai). */
+    private val TEN_KHAC = mapOf("antv" to "congannhandan", "qpvn" to "quocphongvietnam")
+
     fun docNho(ctx: Context): List<Kenh> =
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString("ds", null)?.let { runCatching { tach(it) }.getOrNull() } ?: emptyList()
 

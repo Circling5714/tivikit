@@ -72,19 +72,37 @@ object KenhNhanh {
     private fun chu(a: JSONArray?): List<String> = if (a == null) emptyList()
         else (0 until a.length()).mapNotNull { a.opt(it) as? String }.map { it.trim() }.filter { it.isNotEmpty() }
 
-    /** Tên các ô Kênh nhanh trong app_labels của config.json ("vn.tivikit.kenh3=VTV3"): gói → tên. */
-    fun tenTrong(j: JSONObject): Map<String, String> = chu(j.optJSONArray("app_labels")).mapNotNull { m ->
-        val goi = m.substringBefore('=').trim(); val ten = m.substringAfter('=', "").trim()
-        if (laGoiKenh(goi) && ten.isNotEmpty()) goi to ten else null
+    /** Các mục "gói=giá trị" của ô Kênh nhanh trong danh sách [khoa] của config.json: gói → giá trị. */
+    private fun cuaO(j: JSONObject, khoa: String): Map<String, String> = chu(j.optJSONArray(khoa)).mapNotNull { m ->
+        val goi = m.substringBefore('=').trim(); val v = m.substringAfter('=', "").trim()
+        if (laGoiKenh(goi) && v.isNotEmpty()) goi to v else null
     }.toMap()
 
-    /** Đặt / bỏ ([ten] null) tên ô [goi] trong app_labels, giữ nguyên tên người dùng đặt cho app khác. */
-    fun datTen(j: JSONObject, goi: String, ten: String?): JSONObject {
-        val giu = chu(j.optJSONArray("app_labels")).filter { it.substringBefore('=').trim() != goi }
-        val ds = if (ten.isNullOrBlank()) giu else giu + "$goi=$ten"
-        if (ds.isEmpty()) j.remove("app_labels") else j.put("app_labels", JSONArray(ds))
+    /** Đặt / bỏ ([giaTri] null) mục của ô [goi] trong danh sách [khoa], giữ nguyên mục người dùng đặt cho app khác. */
+    private fun datCuaO(j: JSONObject, khoa: String, goi: String, giaTri: String?): JSONObject {
+        val giu = chu(j.optJSONArray(khoa)).filter { it.substringBefore('=').trim() != goi }
+        val ds = if (giaTri.isNullOrBlank()) giu else giu + "$goi=$giaTri"
+        if (ds.isEmpty()) j.remove(khoa) else j.put(khoa, JSONArray(ds))
         return j
     }
+
+    /** Tên các ô Kênh nhanh trong app_labels của config.json ("vn.tivikit.kenh3=VTV3"): gói → tên. */
+    fun tenTrong(j: JSONObject): Map<String, String> = cuaO(j, "app_labels")
+
+    /** Đặt / bỏ ([ten] null) tên ô [goi] trong app_labels, giữ nguyên tên người dùng đặt cho app khác. */
+    fun datTen(j: JSONObject, goi: String, ten: String?): JSONObject = datCuaO(j, "app_labels", goi, ten)
+
+    /**
+     * Logo kênh của ô [o] (26/10/2026): ảnh kenh-o<n>.jpg TiviKit gửi cạnh config.json, ô trỏ tới bằng app_banners
+     * "vn.tivikit.kenh3=kenh-o3"; Home sạch của TiviKit đọc được (LinkTiles.picture trong bản vá launcher).
+     */
+    fun tenAnh(o: Int): String = "kenh-o$o"
+
+    /** Logo các ô Kênh nhanh trong app_banners của config.json: gói → tên ảnh. */
+    fun anhTrong(j: JSONObject): Map<String, String> = cuaO(j, "app_banners")
+
+    /** Đặt / bỏ ([anh] null) logo của ô [goi] trong app_banners, giữ nguyên ảnh người dùng đặt cho app khác. */
+    fun datAnh(j: JSONObject, goi: String, anh: String?): JSONObject = datCuaO(j, "app_banners", goi, anh)
 
     /**
      * Thêm (cuối dock, có rồi thì giữ chỗ) / bỏ ô [goi] trong dock_apps. true = xong, false = dock đã đủ [toiDa] app (ô

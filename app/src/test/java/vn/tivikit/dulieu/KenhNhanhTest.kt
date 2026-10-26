@@ -60,6 +60,22 @@ class KenhNhanhTest {
         assertFalse(KenhNhanh.Kenh("003", "VTV3").trung(KenhNhanh.Kenh("", "VTV3", "003")))
     }
 
+    /**
+     * Logo ô (26/10/2026): app_banners "gói=kenh-o<n>" (tên khớp kenh-[a-z0-9]{1,24} mà Home sạch nhận), giữ ảnh người dùng
+     * đặt cho app khác ở Nâng cao, bỏ được.
+     */
+    @Test fun logoO_appBanners() {
+        assertEquals("kenh-o3", KenhNhanh.tenAnh(3))
+        assertTrue((1..KenhNhanh.SO_O).all { Regex("kenh-[a-z0-9]{1,24}").matches(KenhNhanh.tenAnh(it)) })
+        val j = JSONObject().put("app_banners", JSONArray(listOf("com.a=banner_tv")))
+        KenhNhanh.datAnh(j, o3, KenhNhanh.tenAnh(3))
+        assertEquals(listOf("com.a=banner_tv", "vn.tivikit.kenh3=kenh-o3"), mang(j, "app_banners"))
+        assertEquals(mapOf(o3 to "kenh-o3"), KenhNhanh.anhTrong(j))
+        KenhNhanh.datAnh(j, o3, null)
+        assertEquals(listOf("com.a=banner_tv"), mang(j, "app_banners"))
+        assertFalse(KenhNhanh.datAnh(JSONObject(), o3, null).has("app_banners"))
+    }
+
     /** Ô link kiểu cũ (vgs.kenh.*) không tính vào số app tối đa của dock, như lúc Áp dụng Home sạch. */
     @Test fun datDock_khongTinhOLinkCu() {
         val j = JSONObject().put("dock_apps", JSONArray(listOf("vgs.kenh.vtv1", "vgs.kenh.vtv3", "com.a", "com.b")))

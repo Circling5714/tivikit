@@ -42,6 +42,9 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     /** Ô kênh VTVgo kiểu cũ đang có trên Home sạch (link_tiles): (tên, mã kênh). */
     var kenhGoCu by mutableStateOf<List<Pair<String, String>>>(emptyList())
         private set
+    /** Home sạch trên tivi không phải bản đi kèm app: bản cũ không hiện logo kênh của ô, cần Áp dụng ở màn Home sạch. */
+    var homeCu by mutableStateOf(false)
+        private set
     var bao by mutableStateOf("")
         private set
     /** Lời báo là lỗi / không như mong đợi (tô màu cam). */
@@ -69,13 +72,28 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         coTv360 = KenhNhanh.TV360 in tt.caiDat && KenhNhanh.TV360 !in tt.daTat
         val j = if (vm.daCoHomeSach) vm.io { vm.tv.docCauHinhTv() } else null
         val dock = j?.let { KenhNhanh.trongDock(it) }.orEmpty()
-        j?.let { vm.tenKenh.clear(); vm.tenKenh.putAll(KenhNhanh.tenTrong(it)) }
+        j?.let { vm.tenKenh.clear(); vm.tenKenh.putAll(KenhNhanh.tenTrong(it)); vm.anhOKenh.clear(); vm.anhOKenh.putAll(KenhNhanh.anhTrong(it)) }
         ds = (1..KenhNhanh.SO_O).filter { KenhNhanh.goiCua(it) in tt.caiDat }.map { o ->
             O(o, KenhNhanh.tuJson(vm.io { vm.tv.docKenh(o) }), KenhNhanh.goiCua(o) in dock)
         }
         kenhGoCu = j?.let { KenhVtvGo.docTu(it) }.orEmpty()
         vm.kenhChon.clear(); vm.kenhChon.addAll(kenhGoCu)
+        homeCu = vm.daCoHomeSach && !vm.io { vm.tv.homeLaBanDiKem(vn.tivikit.CapNhat.moAsset(vm.ctx, vm.tv.apkHome).use { it.readBytes() }) }
     }
+
+    /**
+     * Logo kênh [k] cho ô: ảnh kênh của VTVgo (ô VTVgo theo mã kênh, ô TV360 theo tên trùng một kênh VTVgo: VTV1–9, HTV9,
+     * Hà Nội 1, ANTV, QPVN…), tải một lần rồi cất (KenhVtvGo.anhO). null nếu không có / không tải được: ô hiện biểu tượng
+     * và tên như trước. App không đóng sẵn logo của đài.
+     */
+    private suspend fun logo(k: KenhNhanh.Kenh): ByteArray? = vm.io {
+        val ds = vm.dsKenhGo.ifEmpty { KenhVtvGo.docNho(vm.ctx).ifEmpty { KenhVtvGo.tai(vm.ctx) } }
+        if (k.laVtvGo) KenhVtvGo.anhO(vm.ctx, k.ma, ds.firstOrNull { it.ma == k.ma }?.anh)
+        else KenhVtvGo.timTheoTen(ds, k.ten)?.let { KenhVtvGo.anhO(vm.ctx, it.ma, it.anh) }
+    }
+
+    /** Sang màn Home sạch (Áp dụng một lần để cập nhật Home sạch cũ); bấm quay lại thì về màn chính. */
+    fun moHomeSach() { vm.man = Man.CHINH; vm.moDoiTheme() }
 
     private fun coO(k: KenhNhanh.Kenh, truO: Int? = null) = ds.firstOrNull { it.so != truO && it.kenh?.trung(k) == true }
 
@@ -130,8 +148,8 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     }
 
     /**
-     * Cài / cập nhật app của ô [o] (app phụ cũ chưa biết VTVgo thì bản đi kèm thay vào), đặt kênh [k], tên ô và dock trên
-     * Home sạch. Trả câu nói thêm ô nằm ở đâu trên Home sạch.
+     * Cài / cập nhật app của ô [o] (app phụ cũ chưa biết VTVgo thì bản đi kèm thay vào), đặt kênh [k], tên ô, logo kênh
+     * và dock trên Home sạch. Trả câu nói thêm ô nằm ở đâu trên Home sạch.
      */
     private suspend fun themO(o: Int, k: KenhNhanh.Kenh, trongDock: Boolean): String {
         val goi = KenhNhanh.goiCua(o)
@@ -139,11 +157,20 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         vm.io { vm.tv.caiKenh(o, apk, KenhNhanh.json(k)) { s -> vm.thongBao = s } }
         if (!vm.daCoHomeSach) return ""
         vm.thongBao = t("Đặt ô ${k.ten} trên Home sạch…", "Setting the ${k.ten} tile on the clean Home…")
-        val dock = vm.io { vm.tv.ghiOKenh(goi, k.ten, trongDock, DOCK_TOI_DA) }
+        // Gửi logo trước rồi mới trỏ app_banners tới, để Home sạch khởi động lại là thấy ngay; gửi không được thì ô không logo.
+        val anh = logo(k)?.takeIf { b -> runCatching { vm.io { vm.tv.ghiAnhOKenh(o, b) } }.isSuccess }?.let { KenhNhanh.tenAnh(o) }
+        val dock = vm.io { vm.tv.ghiOKenh(goi, k.ten, anh, trongDock, DOCK_TOI_DA) }
         vm.tenKenh[goi] = k.ten
+        if (anh != null) vm.anhOKenh[goi] = anh else vm.anhOKenh.remove(goi)
         if (dock == true) vm.dongBoDock(goi, trongDock)
         vm.veApp()
-        return when {
+        val logoChu = when {
+            anh == null -> ""
+            homeCu -> t(" Logo kênh hiện khi Home sạch được cập nhật: mở Home sạch, bấm Áp dụng lên tivi một lần.",
+                " The channel logo shows once the clean Home is updated: open Clean Home and press Apply to the TV once.")
+            else -> t(" Ô có logo kênh.", " The tile has the channel logo.")
+        }
+        return logoChu + when {
             dock == false -> t(" Dock đã đủ $DOCK_TOI_DA ô nên ô ${k.ten} nằm trong danh sách app; bỏ bớt một app khỏi dock ở mục Home sạch rồi lưu lại.",
                 " The dock already has $DOCK_TOI_DA tiles, so the ${k.ten} tile is in the app list; remove an app from the dock under Clean Home and save again.")
             dock == null && trongDock -> t(" Home sạch đang dùng dock mặc định: thêm ô ${k.ten} vào dock ở mục Home sạch.",
@@ -227,8 +254,8 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
             val phim = j?.let { PhimRieng.docTu(it) }.orEmpty()
             val con = phim.filter { PhimRieng.dichCua(it) != o.goi }
             if (con.size != phim.size) { vm.io { vm.tv.ghiPhimRieng(con) }; vm.phimRieng.clear(); vm.phimRieng.addAll(con) }
-            vm.io { vm.tv.ghiOKenh(o.goi, null, false, DOCK_TOI_DA) }
-            vm.tenKenh.remove(o.goi)
+            vm.io { vm.tv.ghiOKenh(o.goi, null, null, false, DOCK_TOI_DA) }
+            vm.tenKenh.remove(o.goi); vm.anhOKenh.remove(o.goi)
             vm.dongBoDock(o.goi, false)
             vm.veApp()
         }
@@ -247,6 +274,6 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     /** Kết nối tivi khác. */
     fun quen() {
         ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true
-        app = 0; kenhGo = null; kenhGoCu = emptyList()
+        app = 0; kenhGo = null; kenhGoCu = emptyList(); homeCu = false
     }
 }

@@ -122,6 +122,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
      * gói → tên. cauHinhHome ghép lại vào như phimRieng.
      */
     val tenKenh = mutableStateMapOf<String, String>()
+    /** Logo các ô Kênh nhanh (app_banners "vn.tivikit.kenh3=kenh-o3" trên tivi đang nối): gói → tên ảnh; ghép lại như tenKenh. */
+    val anhOKenh = mutableStateMapOf<String, String>()
 
     fun moHuongDan() { if (man != Man.HUONG_DAN) manTruoc = man; man = Man.HUONG_DAN }
     fun moGiayPhep() { if (man != Man.GIAY_PHEP) manTruoc = man; man = Man.GIAY_PHEP }
@@ -736,7 +738,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         daNapCu = false
         // Nút gán riêng / ô Kênh nhanh thuộc về tivi trước: tivi này đọc lại từ config.json của nó (napTuJson, màn Nút
         // remote, màn Kênh nhanh).
-        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         xemManHinh.tat()
         tv.quenTivi()
         thongBao = t("Đang đọc thông tin tivi…", "Reading the TV…")
@@ -1358,11 +1360,12 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
             val con = chu.split(',', '\n').map { it.trim() }.filter { it.isNotEmpty() && it !in phimRieng }
             if (con.isEmpty()) nangCao.remove("app_keys") else nangCao["app_keys"] = con.joinToString(", ")
         }
-        // Tên các ô Kênh nhanh cũng vậy, trong app_labels.
+        // Tên và logo các ô Kênh nhanh cũng vậy, trong app_labels và app_banners.
         tenKenh.clear(); tenKenh.putAll(vn.tivikit.dulieu.KenhNhanh.tenTrong(j))
-        nangCao["app_labels"]?.let { chu ->
+        anhOKenh.clear(); anhOKenh.putAll(vn.tivikit.dulieu.KenhNhanh.anhTrong(j))
+        for (khoa in listOf("app_labels", "app_banners")) nangCao[khoa]?.let { chu ->
             val con = chu.split(',', '\n').map { it.trim() }.filter { it.isNotEmpty() && !vn.tivikit.dulieu.KenhNhanh.laGoiKenh(it.substringBefore('=').trim()) }
-            if (con.isEmpty()) nangCao.remove("app_labels") else nangCao["app_labels"] = con.joinToString(", ")
+            if (con.isEmpty()) nangCao.remove(khoa) else nangCao[khoa] = con.joinToString(", ")
         }
         nutManCho = j.optBoolean("dream_button", nutManCho)
         gonNut = j.optBoolean("top_compact", gonNut)
@@ -1547,6 +1550,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Nút gán riêng (màn Nút remote) sau cả Nâng cao: cùng nút thì nó thắng, và nó cần dịch vụ lọc phím.
         if (phimRieng.isNotEmpty()) vn.tivikit.dulieu.PhimRieng.apVao(this, phimRieng.toList())
         tenKenh.forEach { (goi, ten) -> vn.tivikit.dulieu.KenhNhanh.datTen(this, goi, ten) }
+        anhOKenh.forEach { (goi, anh) -> vn.tivikit.dulieu.KenhNhanh.datAnh(this, goi, anh) }
     }.toString()
 
     /**
@@ -1945,7 +1949,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         nhatKy.clear(); saoLuu = null; saoLuuTuTv = false; goiTatKhongSaoLuu = null; epSetupwraith = false
         dsTatTv = null; chonBatLai.clear(); batLaiBao = ""
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
-        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         xemManHinh.tat()
         dangDon = false; sauKetNoi = null
         taiLaiSaoLuu()

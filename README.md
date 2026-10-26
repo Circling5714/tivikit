@@ -50,7 +50,8 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 - ✅ **Nút remote**: gán một nút thật trên remote (VD nút YouTube) để mở app khác như SmartTube. App đọc mã nút lúc bạn bấm rồi ghi vào Home sạch, nên cần cài Home sạch trước.
 - **Kênh nhanh**: tối đa 6 ô, mỗi ô mở thẳng một kênh trong app xem truyền hình, gán được nút remote riêng, Hẹn giờ mở được. Mỗi ô là một app rất nhỏ TiviKit cài lên tivi.
   - TV360: VTV1, VTV3, HTV7… theo số kênh của TV360 (tivi cần có app TV360). ✅ Một ô đã thử; ⚠️ nhiều ô (tới 6) chưa thử.
-  - ⚠️ VTVgo: VTV1–9, đài địa phương, VTVcab… từ danh sách kênh của VTVgo (tivi cần có app VTVgo bản tivi). Ô kênh VTVgo kiểu cũ trên Home sạch (không gán được nút remote) chuyển được sang ô Kênh nhanh. Ô chưa có logo kênh.
+  - ⚠️ VTVgo: VTV1–9, đài địa phương, VTVcab… từ danh sách kênh của VTVgo (tivi cần có app VTVgo bản tivi). Ô kênh VTVgo kiểu cũ trên Home sạch (không gán được nút remote) chuyển được sang ô Kênh nhanh.
+  - ⚠️ Logo kênh trên ô: tải ảnh kênh của VTVgo lúc lưu ô rồi gửi lên tivi (app không đóng sẵn logo của đài); ô TV360 dùng chung khi VTVgo có kênh cùng tên (VTV1–9, HTV9, Hà Nội 1, ANTV, QPVN…). Cần Home sạch bản mới: tivi đang có bản cũ thì mở Home sạch, bấm Áp dụng một lần.
 - ✅ **Hẹn giờ**: bật / tắt tivi và mở app theo lịch; báo trước 60 giây khi sắp tắt, cho hoãn 30 phút. Có nút thử "tivi tự bật sau 2 phút"; tivi ngủ sâu hoặc rút điện thì không tự bật được.
 - **Khoá trẻ em** (từ CleanTV): hẹn giờ khoá tivi theo ngày trong tuần, mã PIN 4 số mở 60 phút, che cả HDMI và chặn remote.
   - ⚠️ Mới: giới hạn giờ xem mỗi ngày (ngày thường / cuối tuần), báo trước 5 phút, hết giờ thì khoá đến nửa đêm; báo cáo thời gian xem 7 ngày và theo từng app.
@@ -148,7 +149,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 | `kenh/` | Kênh nhanh TV360, mỗi ô một app (`vn.tivikit.kenh`, `kenh2` … `kenh6`) |
 | `hengio/` | Hẹn giờ bật / tắt tivi, mở app (`vn.tivikit.hengio`) |
 | `go/` | Bộ gõ phụ để gõ tiếng Việt có dấu từ điện thoại (`vn.tivikit.go`) |
-| `patches/launcher-vgs.patch` | Phần CleanTV sửa trên launcher CleanYourTV (thời tiết, font Lexend, cụm nút, máy chiếu, màn chờ, ô kênh `link_tiles`, mở app khi bật từ chế độ chờ…), đã chuyển lên commit ghi trong `upstream-commit.txt` |
+| `patches/launcher-vgs.patch` | Phần CleanTV sửa trên launcher CleanYourTV (thời tiết, font Lexend, cụm nút, máy chiếu, màn chờ, ô kênh `link_tiles`, logo ô Kênh nhanh qua `app_banners` trỏ tới ảnh `kenh-*.jpg`, mở app khi bật từ chế độ chờ…), đã chuyển lên commit ghi trong `upstream-commit.txt` |
 | `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi (`lam-du-lieu.py`, `cap_nhat_mau.py`), vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), tải máy chủ scrcpy có kiểm SHA-256 (`tai-scrcpy.sh`), phát hành (`phat_hanh.py`) |
 | `.github/workflows/` | Phát hành (dựng, ký, đăng GitHub Release), Cập nhật mẫu tivi (hằng tuần từ CleanYourTV) và Kiểm tra (unit test mỗi lần đẩy code) |
 
@@ -202,7 +203,8 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 - ✅ **Remote buttons**: make a real remote button (e.g. YouTube) open another app such as SmartTube. Needs the clean Home.
 - **Quick channel**: up to 6 tiles, each opening one channel straight in a TV app, each able to take its own remote button and be opened by the Timer. Each tile is a tiny app TiviKit installs on the TV.
   - TV360: VTV1, VTV3, HTV7… by TV360's channel number (the TV needs the TV360 app). ✅ One tile tried; ⚠️ more tiles (up to 6) not yet.
-  - ⚠️ VTVgo: VTV1–9, local stations, VTVcab… from VTVgo's channel list (the TV needs the VTVgo app for TV). Old-style VTVgo tiles on the clean Home (no remote button) can be moved to Quick channel tiles. No channel logo on the tiles yet.
+  - ⚠️ VTVgo: VTV1–9, local stations, VTVcab… from VTVgo's channel list (the TV needs the VTVgo app for TV). Old-style VTVgo tiles on the clean Home (no remote button) can be moved to Quick channel tiles.
+  - ⚠️ Channel logos on the tiles: VTVgo's channel picture is downloaded when a tile is saved and sent to the TV (no station logos are bundled); TV360 tiles share it when VTVgo has a channel of the same name (VTV1–9, HTV9, Hà Nội 1, ANTV, QPVN…). Needs the new clean Home: on a TV with an older one, open Clean Home and press Apply once.
 - ✅ **Timer**: turn the TV on / off and open apps on a schedule, with a 60-second warning and a 30-minute snooze, plus a "turn on in 2 minutes" test. A TV in deep standby can't be woken.
 - **Kids lock** (from CleanTV): weekday lock periods, a 4-digit PIN unlocks for 60 minutes, covers HDMI and blocks the remote.
   - ⚠️ New: daily viewing limits (weekdays / weekends), a 5-minute warning, a lock until midnight when time is up, and a 7-day, per-app viewing report.

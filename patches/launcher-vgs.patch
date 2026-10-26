@@ -141,7 +141,7 @@ index 701b5feb..05be9b5e 100644
              android:name=".ClockDream"
              android:label="@string/dream_name"
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java b/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
-index 3632d74b..960a3838 100644
+index 3632d74b..681ac5ae 100644
 --- a/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
 @@ -64,7 +64,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -162,7 +162,21 @@ index 3632d74b..960a3838 100644
  
          Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
              this(APP, label, component, banner, icon, null, 0);
-@@ -306,6 +308,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -291,9 +293,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+             String label = card != null ? card.label : Cards.cleanLabel(
+                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
+             if (!seen.add(pkg + '\n' + label)) continue;
+-            Drawable banner = null;
++            // CleanTV/VGS (TiviKit): an app_banners entry "kenh-…" is a picture sent beside config.json (a Quick channel
++            // tile's channel logo); like a link tile's picture it shows even with uniform_tiles.
++            Drawable banner = card == null ? LinkTiles.picture(ctx, appBanners.get(pkg)) : null;
+             // uniform_tiles draws the icon, so an app's banner is never loaded. A module card keeps its banner.
+-            if (!(uniformTiles && card == null)) {
++            if (banner == null && !(uniformTiles && card == null)) {
+                 banner = bundledBanner(appBanners.get(pkg));
+                 if (banner == null) banner = loadBanner(pm, ri);
+             }
+@@ -306,6 +310,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                  fresh.add(new Entry(label, component, banner, icon));
              }
          }
@@ -178,7 +192,7 @@ index 3632d74b..960a3838 100644
          Collections.sort(fresh, (a, b) -> {
              // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
              int saved = Order.compare(savedRanks, a.component.flattenToShortString(), b.component.flattenToShortString());
-@@ -489,6 +500,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -489,6 +502,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
              h.icon.setVisibility(View.VISIBLE);
              h.label.setText(e.label);
              h.label.setVisibility(uniformTiles ? View.GONE : View.VISIBLE);
@@ -192,7 +206,7 @@ index 3632d74b..960a3838 100644
          }
          h.card.setOnClickListener(v -> launch(e));
          h.card.setOnLongClickListener(v -> {
-@@ -497,7 +515,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -497,7 +517,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                  if (pos != RecyclerView.NO_POSITION) listener.onTileLongPress(pos, v);
                  return true;
              }
@@ -201,7 +215,7 @@ index 3632d74b..960a3838 100644
              i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
              try {
                  ctx.startActivity(i);
-@@ -509,6 +527,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -509,6 +529,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
  
      /** Opens the tile's activity by explicit component, with no extras: a card can name nothing else. */
      private void launch(Entry e) {
@@ -212,7 +226,7 @@ index 3632d74b..960a3838 100644
          if (e.kind == Entry.HOME_SETTINGS) {
              ctx.startActivity(new Intent(ctx, HomeSettingsActivity.class)
                      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-@@ -538,6 +560,21 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -538,6 +562,21 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
          }
      }
  
@@ -234,7 +248,7 @@ index 3632d74b..960a3838 100644
      @Override
      public int getItemCount() {
          return items.size() + (showLibrary ? 1 : 0);
-@@ -809,6 +846,23 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -809,6 +848,23 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
          return Math.max(0, Math.min(255, Math.round(v)));
      }
  
@@ -330,10 +344,10 @@ index 233f9820..a4b35a06 100644
      static boolean stillArmed(long now, long armedUntil) {
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java b/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java
 new file mode 100644
-index 00000000..9b2fd8e3
+index 00000000..a438191b
 --- /dev/null
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java
-@@ -0,0 +1,152 @@
+@@ -0,0 +1,161 @@
 +package com.gathin.tvhome;
 +
 +import android.content.Context;
@@ -411,16 +425,25 @@ index 00000000..9b2fd8e3
 +                    continue;
 +                }
 +                Link l = new Link(label, target, uri, color | 0xFF000000);
-+                File pic = new File(dir, "kenh-" + l.pkg.substring(PREFIX.length()) + ".jpg");
-+                if (pic.isFile() && pic.length() < 512 * 1024) {
-+                    android.graphics.Bitmap b = android.graphics.BitmapFactory.decodeFile(pic.getPath());
-+                    if (b != null) l.picture = new android.graphics.drawable.BitmapDrawable(ctx.getResources(), b);
-+                }
++                l.picture = picture(ctx, "kenh-" + l.pkg.substring(PREFIX.length()));
 +                out.add(l);
 +            }
 +        } catch (Exception ignored) {
 +        }
 +        return out;
++    }
++
++    /**
++     * The picture <name>.jpg beside config.json for a name "kenh-…" (a link tile's logo card, or an app_banners entry
++     * TiviKit points at a Quick channel tile's channel logo), or null for none or any other name.
++     */
++    static Drawable picture(Context ctx, String name) {
++        if (name == null || !name.matches("kenh-[a-z0-9]{1,24}")) return null;
++        File dir = Config.dir(ctx);
++        File pic = dir != null ? new File(dir, name + ".jpg") : null;
++        if (pic == null || !pic.isFile() || pic.length() >= 512 * 1024) return null;
++        android.graphics.Bitmap b = android.graphics.BitmapFactory.decodeFile(pic.getPath());
++        return b != null ? new android.graphics.drawable.BitmapDrawable(ctx.getResources(), b) : null;
 +    }
 +
 +    /** The tile face: the label in large bold type on a gradient of the link's colour, filling the whole card. */
