@@ -22,6 +22,8 @@ data class Theme(
     fun ghiVao(o: JSONObject) {
         cauHinh.forEach { (k, v) -> o.put(k, v) }
         o.put("wallpaper", anhNen != null || boAnh != null)
+        // Lần sau kết nối lại: mở đúng giao diện này, và biết khoá nào do giao diện ghi chứ không phải người dùng bật.
+        o.put("vgs_theme", id)
     }
 }
 
@@ -35,11 +37,19 @@ val THEMES = listOf(
         mapOf("sky_intensity" to 70, "dock_band" to false), null, listOf(0xFF1B2B5A, 0xFF5A3A4A)),
     Theme("dien-anh", "Điện ảnh", "Cinematic", "Ảnh app đang chọn phủ kín nửa trên", "The focused app's artwork fills the top",
         mapOf("cinematic_home" to true, "sky_intensity" to 35), null, listOf(0xFF4A0A0A, 0xFF101010)),
+    // Giao diện "kiểu Apple TV" của CleanTV 2.9.0, đổi tên vì Apple TV là nhãn hiệu của Apple: nửa trên phủ màu + ảnh của
+    // app đang chọn, tên app lớn, dock kính mờ, ô icon đều, viền chọn trắng, không lời chào, các hàng mờ dần.
+    Theme("kinh-mo", "Kính mờ", "Frosted", "Nền theo màu app đang chọn, dock kính mờ, ô icon đều", "Backdrop in the focused app's colour, frosted dock, even icon tiles",
+        mapOf("background_color" to "#000000", "cinematic_home" to true, "cinematic_dots" to false, "cinematic_art" to 70,
+            "cinematic_scrim" to 60, "cinematic_white_focus" to true, "uniform_tiles" to true, "dock_glass" to true,
+            "show_greeting" to false, "header_white" to true, "fade_rows" to true, "rows_below_dock" to 1, "columns" to 5,
+            "rows_offset_dp" to 90),
+        null, listOf(0xFF7A0A14, 0xFF0B3A6E, 0xFF050505)),
     // Scenes của CleanYourTV (manas-04): 14 tranh phong cảnh tối vẽ bằng code, tự đổi mỗi giờ (22/10/2026).
     Theme("phong-canh", "Phong cảnh", "Scenes", "14 tranh phong cảnh, tự đổi mỗi giờ", "14 landscapes, a new one every hour",
         mapOf("wallpaper_rotation_minutes" to 60, "dock_band" to false, "background_color" to "#05060A"), null,
         listOf(0xFF1A2236, 0xFF4A3A5A), boAnh = "theme/phong-canh", anhXem = "theme/phong-canh/02-golden-coast.jpg"),
-    Theme("toi-gian", "Tối giản", "Minimal", "Nền đen tuyền, kiểu Apple TV", "Pure black, Apple TV style",
+    Theme("toi-gian", "Tối giản", "Minimal", "Nền đen tuyền, gọn nhất", "Pure black, the plainest",
         mapOf("background_color" to "#000000"), null, listOf(0xFF000000, 0xFF111111)),
     Theme("sau-cot", "Nhiều app", "More apps", "6 cột, thấy thêm một hàng app", "6 columns, one more row visible",
         mapOf("columns" to 6, "rows_below_dock" to 1, "background_color" to "#000000"), null, listOf(0xFF111111, 0xFF222233)),
@@ -82,6 +92,27 @@ object XaPhuong {
 
     fun boDau(s: String): String = java.text.Normalizer.normalize(s.lowercase(), java.text.Normalizer.Form.NFD)
         .replace(Regex("\\p{Mn}+"), "").replace('đ', 'd')
+
+    /**
+     * Thành phố ngoài Việt Nam (CleanTV 2.10.7, người dùng ở Indonesia, Nhật xin thời tiết nơi mình ở): hỏi dịch vụ tìm
+     * địa danh của Open-Meteo, cùng nơi cấp số thời tiết. Bỏ kết quả ở Việt Nam (đã có danh sách xã). Lỗi mạng thì rỗng.
+     */
+    fun timTheGioi(q: String, tiengViet: Boolean, toiDa: Int = 6): List<Xa> = runCatching {
+        val url = java.net.URL("https://geocoding-api.open-meteo.com/v1/search?count=$toiDa&format=json&language=${if (tiengViet) "vi" else "en"}&name=" +
+            java.net.URLEncoder.encode(q.trim(), "UTF-8"))
+        val c = url.openConnection() as java.net.HttpURLConnection
+        c.connectTimeout = 5000; c.readTimeout = 5000
+        tachTheGioi(c.inputStream.bufferedReader().use { it.readText() })
+    }.getOrDefault(emptyList())
+
+    /** Kết quả của Open-Meteo geocoding thành danh sách địa danh ngoài Việt Nam (tên, "vùng, nước", toạ độ). */
+    fun tachTheGioi(json: String): List<Xa> {
+        val ds = org.json.JSONObject(json).optJSONArray("results") ?: return emptyList()
+        return (0 until ds.length()).map { ds.getJSONObject(it) }.filter { it.optString("country_code") != "VN" }.map { r ->
+            Xa(r.optString("name"), listOf(r.optString("admin1"), r.optString("country")).filter { it.isNotBlank() }.joinToString(", "),
+                r.optDouble("latitude"), r.optDouble("longitude"))
+        }
+    }
 
     fun timXa(ds: List<Xa>, q: String, toiDa: Int = 8): List<Xa> {
         val tu = boDau(q).split(' ').filter { it.isNotBlank() }

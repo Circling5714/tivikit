@@ -819,6 +819,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      */
     fun choPhepDangPhat() { runCatching { sh("cmd notification allow_listener $pkgHome/$NS_HOME.NowPlayingListener 2>/dev/null; true") } }
 
+    /** Mở màn Cài đặt launcher của Home sạch trên tivi (chỗ chọn "Mở khi khởi động"; CleanTV 2.10.4). */
+    fun moCaiDatLauncher() { sh("am start -a com.gathin.tvhome.action.LAUNCHER_SETTINGS -n $cmpHome >/dev/null 2>&1; true") }
+
     /** Bật HomeKeyService cho phím remote của mẫu (nút app, Cài đặt). Bo CVTE: không (upstream #741). */
     fun batBatPhimHome() { if (!laBoMachCvte()) batDichVu("HomeKeyService") }
 

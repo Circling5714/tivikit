@@ -181,10 +181,23 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     var motHang by mutableStateOf(false)
     /** Ẩn lời chào trên đồng hồ (show_greeting=false). */
     var anLoiChao by mutableStateOf(false)
-    /** Ô icon đều nhau kiểu Apple TV: icon trên nền màu của chính nó, không dùng ảnh banner (uniform_tiles). */
+    /** Ô icon đều nhau: icon trên nền màu của chính nó, không dùng ảnh banner (uniform_tiles). */
     var oDeuNhau by mutableStateOf(false)
+    /**
+     * Giữ nút âm lượng để tăng/giảm liên tục (key_filter=false): dịch vụ bắt phím của Home sạch làm Android thôi tự lặp
+     * phím giữ trên Sony, Xiaomi, Hisense (upstream #1680, #944, #1326; CleanTV 2.10.10). Bật thì dịch vụ vẫn chạy để mở
+     * đè Home cũ, chỉ thôi lọc phím: nút app / Input / Apps trên remote không còn do Home sạch lo. Nút gán ở màn Nút
+     * remote cần lọc phím nên vẫn thắng (PhimRieng.apVao bỏ key_filter=false khi còn nút gán).
+     */
+    var giuAmLuong by mutableStateOf(false)
+    /** Chọn giao diện: công tắc ô icon đều nhau theo giao diện mới, người dùng vẫn đổi lại được sau đó (CleanTV 3.0.0). */
+    fun chonTheme(th: vn.tivikit.dulieu.Theme) { themeChon = th; oDeuNhau = th.cauHinh["uniform_tiles"] == true }
     /** Số app mỗi hàng (columns của launcher, 0 = theo theme), góp ý 24/10/2026: Sony chỉ có 4 app một hàng. */
     var soCot by mutableStateOf(0)
+    /** Cho chọn app tự mở khi bật tivi (open_on_start_choice của launcher; CleanTV 2.10.2): chọn app ngay trên tivi. */
+    var moKhiBat by mutableStateOf(false)
+    /** Chữ giờ / ngày trắng sáng hẳn (header_white của launcher; CleanTV 2.10.12). */
+    var chuTrang by mutableStateOf(false)
     /**
      * Nút app / Cài đặt trên remote (24/10/2026, góp ý TCL G09): tắt Home gốc của TCL là nút YouTube, Netflix… chết vì
      * hãng chỉ gửi chúng cho launcherx. null = tự chọn: bật khi mẫu có bảng phím, trừ mẫu trong PHIM_TAT_SAN.
@@ -279,9 +292,37 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     var thanhPho by mutableStateOf<vn.tivikit.dulieu.ThanhPho?>(null)
     /** Ô tìm phường/xã cho thời tiết (góp ý 23/10/2026). */
     var timXa by mutableStateOf("")
-    val ketQuaXa: List<vn.tivikit.dulieu.XaPhuong.Xa>
-        get() = if (timXa.trim().length < 2) emptyList() else vn.tivikit.dulieu.XaPhuong.timXa(vn.tivikit.dulieu.XaPhuong.nap(ctx), timXa)
-    fun chonXa(x: vn.tivikit.dulieu.XaPhuong.Xa) { thanhPho = vn.tivikit.dulieu.ThanhPho(x.tenNgan, x.lat, x.lon); timXa = "" }
+        private set
+    /**
+     * Kết quả tìm phường/xã: lọc 3.321 xã sau khi ngừng gõ 0,35 giây, ở luồng phụ (CleanTV 2.10.2: chạy ngay trên tivi,
+     * lọc lại mỗi lần vẽ màn hình làm ô gõ giật). Ít kết quả trong nước thì tìm thêm thành phố khắp thế giới (2.10.7).
+     */
+    var ketQuaXa by mutableStateOf<List<vn.tivikit.dulieu.XaPhuong.Xa>>(emptyList())
+        private set
+    private var viecTimXa: kotlinx.coroutines.Job? = null
+
+    fun doiTimXa(q: String) {
+        timXa = q
+        viecTimXa?.cancel()
+        if (q.trim().length < 2) { ketQuaXa = emptyList(); return }
+        viecTimXa = viewModelScope.launch {
+            kotlinx.coroutines.delay(350)
+            val trongNuoc = withContext(Dispatchers.Default) { vn.tivikit.dulieu.XaPhuong.timXa(vn.tivikit.dulieu.XaPhuong.nap(ctx), q) }
+            ketQuaXa = trongNuoc
+            if (trongNuoc.size < 3 && q.trim().length >= 3) {
+                val theGioi = withContext(Dispatchers.IO) { vn.tivikit.dulieu.XaPhuong.timTheGioi(q, vn.tivikit.NgonNgu.tiengViet) }
+                if (timXa == q) ketQuaXa = trongNuoc + theGioi.take(8 - trongNuoc.size)
+            }
+        }
+    }
+    fun chonXa(x: vn.tivikit.dulieu.XaPhuong.Xa) { thanhPho = vn.tivikit.dulieu.ThanhPho(x.tenNgan, x.lat, x.lon); doiTimXa("") }
+
+    /** Mở thẳng màn chọn app "Mở khi khởi động" trên tivi (CleanTV 2.10.4: không tìm thấy chỗ chọn trên Xiaomi). */
+    var baoChonApp by mutableStateOf("")
+    fun moChonAppKhiBat() = chay(t("Đang mở trên tivi…", "Opening on the TV…")) {
+        io { tv.moCaiDatLauncher() }
+        baoChonApp = t("Đã mở Cài đặt launcher trên tivi: chọn \"Mở khi khởi động\" rồi chọn app.", "Launcher settings are open on the TV: pick \"Open on start\", then the app.")
+    }
 
     /** Tivi đã có Home sạch: chỉ cần đẩy theme, không cài lại. */
     /** Tên gói Home sạch trên tivi đang nối (Xiaomi bản Trung Quốc: com.ts.launcher), dò lúc kết nối. */
@@ -1235,6 +1276,11 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     /** Đưa một config.json (của tivi hoặc file cấu hình đã lưu) vào các lựa chọn trên màn Home sạch. */
     private fun napTuJson(j: JSONObject) {
+        // Khoá do giao diện đang dùng ghi (vgs_theme, CleanTV 2.9) không phải lựa chọn của người dùng: đọc như mặc định,
+        // không thì đổi sang giao diện khác vẫn dính (Kính mờ bật dock_glass, header_white, ẩn lời chào, dời hàng app).
+        val theme = vn.tivikit.dulieu.themeTheoId(j.optString("vgs_theme"))
+        theme?.let { themeChon = it }
+        fun cuaTheme(k: String) = theme?.cauHinh?.containsKey(k) == true
         amLich = j.optBoolean("lunar_date", amLich)
         tenDuoiApp = j.optBoolean("always_show_names", false)
         tenToTrenDock = j.optBoolean("dock_title", true)
@@ -1242,15 +1288,21 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         thuVienApp = j.optBoolean("app_library", false)
         dongHoKhiYen = j.optInt("home_idle_clock_minutes", 0)
         tiviYeu = j.optBoolean("reduced_motion", false)
-        hieuUngKinh = j.optBoolean("dock_glass", false)
+        hieuUngKinh = !cuaTheme("dock_glass") && j.optBoolean("dock_glass", false)
         lamToiNen = j.optInt("wallpaper_dim", 0)
         hienThongSo = j.optBoolean("show_stats", false)
-        doiHang = if (j.optBoolean("rows_middle", false)) HANG_GIUA else j.optInt("rows_offset_dp", 0)
+        doiHang = if (j.optBoolean("rows_middle", false)) HANG_GIUA else if (cuaTheme("rows_offset_dp")) 0 else j.optInt("rows_offset_dp", 0)
         nutDangPhat = j.optBoolean("now_playing", true)
         coChuDau = j.optInt("header_scale", 100)
         motHang = j.optBoolean("single_row", false)
-        anLoiChao = !j.optBoolean("show_greeting", true)
+        anLoiChao = !cuaTheme("show_greeting") && !j.optBoolean("show_greeting", true)
+        // key_filter=false do nút gán riêng cất đi (PhimRieng.KHOA_BO_TAT_LOC) vẫn là lựa chọn của người dùng; TCL Google TV
+        // thì app tự ghi, không tính.
+        giuAmLuong = !cuaTheme("key_filter") && (!j.optBoolean("key_filter", true) || j.optBoolean(vn.tivikit.dulieu.PhimRieng.KHOA_BO_TAT_LOC)) && !laTclGoogleTv
+        // Công tắc hiện đúng trạng thái thật, kể cả khi giao diện bật, và tắt được đè lên giao diện (CleanTV 3.0.0).
         oDeuNhau = j.optBoolean("uniform_tiles", false)
+        moKhiBat = j.optBoolean("open_on_start_choice", false)
+        chuTrang = !cuaTheme("header_white") && j.optBoolean("header_white", false)
         // Chỉ nạp số cột do người dùng chọn ở đây (vgs_so_cot), không lấy columns của theme.
         soCot = if (j.optBoolean("vgs_so_cot", false)) j.optInt("columns", 0) else 0
         if (j.has("handle_view_inputs")) nutInput = j.optBoolean("handle_view_inputs", nutInput)
@@ -1400,12 +1452,15 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Giữ OK trên ô app: menu Di chuyển / Thêm vào dock / Bỏ khỏi Home / Thông tin (upstream #464, #746; tắt mặc định
         // ở upstream). CleanTV bật sẵn vì người dùng xin đổi chỗ dock ngay trên tivi (22/10/2026); Nâng cao vẫn tắt được.
         put("tile_menu", true)
-        if (doiHang == HANG_GIUA) put("rows_middle", true) else if (doiHang != 0) put("rows_offset_dp", doiHang)
+        // Giữa màn hình bỏ khoảng dời của giao diện (Kính mờ hạ dock 90dp) để hàng app nằm đúng giữa.
+        if (doiHang == HANG_GIUA) { put("rows_middle", true); put("rows_offset_dp", 0) } else if (doiHang != 0) put("rows_offset_dp", doiHang)
         if (!nutDangPhat) put("now_playing", false)
         if (coChuDau != 100) put("header_scale", coChuDau)
         if (motHang) { put("dock_row", true); put("single_row", true) }
         if (anLoiChao) put("show_greeting", false)
-        if (oDeuNhau) put("uniform_tiles", true)
+        put("uniform_tiles", oDeuNhau)
+        if (moKhiBat) put("open_on_start_choice", true)
+        if (chuTrang) put("header_white", true)
         if (soCot > 0) { put("columns", soCot); put("vgs_so_cot", true) }
         // Phím APPS (KEYCODE_ALL_APPS) chỉ là nút Home với que / tivi Xiaomi hoặc khi bật "Remote gửi phím Home lạ";
         // tivi khác (Sony VH2: nút Apps mở Home sạch như Back, abc999roses 24/10/2026) để phím cho tivi.
@@ -1413,13 +1468,16 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Ảnh riêng làm nền: tắt ánh sáng sau dock theo màu app (ambient_glow), không thì ảnh gia đình bị ám đỏ / vàng /
         // xanh mỗi lần đổi ô (góp ý dangngoctri2010, 23/10/2026). Nâng cao ghi sau nên người dùng vẫn bật lại được.
         if (anhNenRieng != null) put("ambient_glow", false)
+        // Ảnh riêng hiện đúng như ảnh (CleanTV 2.10.9: ảnh bị phủ mờ, loang màu): bỏ lớp phủ bầu trời theo giờ của giao
+        // diện, giải mã màu 32-bit thay vì RGB_565. Nâng cao ghi sau nên vẫn đổi lại được.
+        if (anhNenRieng != null) { put("sky_intensity", 0); put("wallpaper_true_color", true) }
         // Phím remote của mẫu (app_keys, settings_key_keycodes…), HomeKeyService đọc. LUÔN ghi app_keys, kể cả khi bật
         // nút Input: 2.6.5 bỏ app_keys lúc đó (InputKeyService cũng đọc, sợ mở app hai lần — upstream tcl-55c725) mà nút
         // Input tự bật trên mọi Google TV, nên TCL Google TV mất hẳn nút YouTube (góp ý heavensky95, TCL G10, 24/10/2026).
         // Mở cùng một app hai lần chỉ là đưa nó lên trước.
         // TCL Google TV không dùng nút app remote: thôi lọc phím để giữ âm lượng lặp được (Nâng cao đặt key_filter thì đè sau).
         val tclGoogleTv = thongTin?.brand?.equals("TCL", ignoreCase = true) == true && trangThai?.caiDat?.contains("com.google.android.apps.tv.launcherx") == true
-        if (tclGoogleTv && !dungPhimRemote) put("key_filter", false)
+        if ((tclGoogleTv && !dungPhimRemote) || giuAmLuong) put("key_filter", false)
         if (dungPhimRemote) phimRemote()?.let { ph ->
             ph.keys().forEach { k -> if (!has(k)) put(k, ph.get(k)) }
             // Nút Web của remote TCL (4159, upstream tcl-g10-google-tv): mở trình duyệt nếu tivi có.
@@ -1545,17 +1603,36 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         anhGocRieng = anh; khungAnh = vn.tivikit.dulieu.AnhNen.Khung(); anhNenRieng = anh; dangCanhAnh = false
     }
 
-    /** Ảnh mới chọn: giữ ảnh gốc, cắt giữa trước, mở luôn chế độ canh ảnh. */
+    /** Ảnh mới chọn: giữ ảnh gốc, cắt giữa trước, mở luôn chế độ canh ảnh (vừa khung thì không cần canh). */
     private suspend fun datAnhMoi(goc: ByteArray) {
-        val anh = io { vn.tivikit.dulieu.AnhNen.cat(goc, vn.tivikit.dulieu.AnhNen.Khung()) } ?: error(t("Không cắt được ảnh này, thử ảnh khác.", "Couldn't crop this picture, try another one."))
+        val vuaKhung = anhVuaKhung
+        val anh = io { if (vuaKhung) vn.tivikit.dulieu.AnhNen.vuaKhung(goc) else vn.tivikit.dulieu.AnhNen.cat(goc, vn.tivikit.dulieu.AnhNen.Khung()) }
+            ?: error(t("Không cắt được ảnh này, thử ảnh khác.", "Couldn't crop this picture, try another one."))
         catLai?.cancel()
-        anhGocRieng = goc; khungAnh = vn.tivikit.dulieu.AnhNen.Khung(); anhNenRieng = anh; dangCanhAnh = true
+        anhGocRieng = goc; khungAnh = vn.tivikit.dulieu.AnhNen.Khung(); anhNenRieng = anh; dangCanhAnh = !vuaKhung
     }
 
     fun boAnhRieng() = datAnhCoSan(null)
 
+    /** Ảnh riêng vừa khung, không cắt: phần trống là chính ảnh làm mờ (CleanTV 3.0.0). Bật thì không canh ảnh. */
+    var anhVuaKhung by mutableStateOf(false)
+        private set
+
+    /** Đổi giữa vừa khung và cắt theo khung cho ảnh đang chọn, không phải chọn lại ảnh. */
+    fun doiVuaKhung(v: Boolean) = chay(t("Đang chuẩn bị ảnh…", "Preparing the picture…")) {
+        anhVuaKhung = v
+        if (v) dangCanhAnh = false
+        val goc = anhGocRieng ?: return@chay
+        catLai?.cancel()
+        val k = khungAnh
+        val anh = io { if (v) vn.tivikit.dulieu.AnhNen.vuaKhung(goc) else vn.tivikit.dulieu.AnhNen.cat(goc, k) }
+            ?: error(t("Không xử lý được ảnh này, thử ảnh khác.", "Couldn't process this picture, try another one."))
+        if (anhGocRieng === goc) anhNenRieng = anh
+    }
+
     /** Kéo / chụm trên khung xem trước: đổi khung, cắt lại khi tay dừng 0,3 giây. */
     fun doiKhungAnh(k: vn.tivikit.dulieu.AnhNen.Khung) {
+        if (anhVuaKhung) return
         val goc = anhGocRieng ?: return
         khungAnh = k
         catLai?.cancel()

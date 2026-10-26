@@ -863,7 +863,7 @@ private fun XemTruocHome(vm: PhienLamViec) {
 private fun TheGiaoDien(vm: PhienLamViec) {
     The {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            THEMES.forEach { th -> TheTheme(th, th == vm.themeChon) { vm.themeChon = th } }
+            THEMES.forEach { th -> TheTheme(th, th == vm.themeChon) { vm.chonTheme(th) } }
         }
         // Ảnh của chính mình làm hình nền (góp ý 23/10/2026): thay ảnh / bộ ảnh của theme, giữ màu và hiệu ứng theme.
         val chonAnh = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -872,6 +872,10 @@ private fun TheGiaoDien(vm: PhienLamViec) {
         // Chạy CleanTV ngay trên tivi: thường không có trình chọn ảnh (TCL báo "không có ứng dụng phù hợp", 24/10/2026)
         // → chọn ảnh có sẵn trên tivi / USB qua shell.
         val trenTv = vn.tivikit.ManHinh.laTv || vm.ip.trim() == "127.0.0.1"
+        // Vừa khung, không cắt (CleanTV 3.0.0): chọn trước hoặc sau khi chọn ảnh đều được.
+        Hang(t("Ảnh riêng vừa khung, không cắt", "Fit your picture, no cropping"),
+            t("Cả ảnh nằm trọn trên màn, hai bên là chính ảnh làm mờ (hợp ảnh dọc)", "The whole picture fits, with a blurred copy at the sides (good for portrait shots)"),
+            vm.anhVuaKhung) { vm.doiVuaKhung(it) }
         if (vm.anhNenRieng == null) {
             if (!trenTv) NutPhu(t("Dùng ảnh của bạn làm hình nền", "Use your own picture as wallpaper"), Icons.Rounded.Image) {
                 runCatching { chonAnh.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)) }
@@ -907,7 +911,7 @@ private fun TheGiaoDien(vm: PhienLamViec) {
                     ChonChip(t("Canh giữa", "Center"), false) { vm.doiKhungAnh(vn.tivikit.dulieu.AnhNen.Khung()) }
                     ChonChip(t("Xong", "Done"), true) { vm.dangCanhAnh = false }
                 }
-            } else NutPhu(t("Canh ảnh: dời, phóng to", "Position the picture: move, zoom"), Icons.Rounded.Crop) { vm.dangCanhAnh = true }
+            } else if (!vm.anhVuaKhung) NutPhu(t("Canh ảnh: dời, phóng to", "Position the picture: move, zoom"), Icons.Rounded.Crop) { vm.dangCanhAnh = true }
             NutPhu(t("Bỏ ảnh riêng (${rieng.size / 1024} KB), dùng ảnh của theme", "Remove your picture (${rieng.size / 1024} KB)"), Icons.Rounded.Close) { vm.boAnhRieng() }
         }
         Text(t("Làm tối hình nền", "Dim the wallpaper"), fontSize = 14.sp)
@@ -964,8 +968,8 @@ private fun TheHomeNoiDung(vm: PhienLamViec) {
         }
     }
     The(t("Thời tiết", "Weather"), Icons.Rounded.WbSunny) {
-        OutlinedTextField(vm.timXa, { vm.timXa = it }, label = { Text(t("Tìm phường / xã của bạn", "Find your ward / commune")) },
-            placeholder = { Text(t("vd: Bến Thành, Cửa Lò", "e.g. Ben Thanh, Cua Lo")) },
+        OutlinedTextField(vm.timXa, { vm.doiTimXa(it) }, label = { Text(t("Tìm phường / xã hoặc thành phố", "Find your ward or city")) },
+            placeholder = { Text(t("vd: Bến Thành, Cửa Lò, Bali, Osaka", "e.g. Ben Thanh, Bali, Osaka")) },
             singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
         vm.ketQuaXa.forEach { x ->
             Text("${x.ten} · ${x.tinh}", fontSize = 14.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
@@ -982,6 +986,7 @@ private fun TheHomeNoiDung(vm: PhienLamViec) {
     The(t("Đồng hồ & lời chào", "Clock & greeting"), Icons.Rounded.Schedule) {
         OutlinedTextField(vm.tenChao, { vm.tenChao = it }, label = { Text(t("Tên chào (vd: Nhà bác Hùng)", "Greeting name (e.g. The Smiths)")) },
             singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+        Hang(t("Chữ giờ, ngày trắng sáng", "Bright white clock and date"), t("Dòng ngày tháng trắng hẳn thay vì xám nhạt, dễ đọc từ xa", "The date line in full white instead of soft grey, easier to read from afar"), vm.chuTrang) { vm.chuTrang = it }
         Hang(t("Ẩn lời chào", "Hide the greeting"), t("Bỏ dòng \"Chào buổi tối\" phía trên đồng hồ", "Drops the \"Good evening\" line above the clock"), vm.anLoiChao) { vm.anLoiChao = it }
         Hang(t("Âm lịch dưới ngày dương", "Lunar date under the date"), t("Ví dụ: 2/9 âm lịch · Bính Ngọ", "e.g. Lunar 2/9 · Year of the Horse"), vm.amLich) { vm.amLich = it }
         Text(t("Đồng hồ khi để yên", "Clock when idle"), fontSize = 14.sp)
@@ -999,7 +1004,7 @@ private fun TheTuyChinh(vm: PhienLamViec) {
         Hang(t("Hiện tên dưới mọi app", "Names under every app"), t("Ông bà dễ nhận app hơn", "Easier to recognise apps"), vm.tenDuoiApp) { vm.tenDuoiApp = it }
         Hang(t("Tô màu ô app điện thoại", "Colour phone-app tiles"), t("App không có ảnh tivi (Chrome, Thư viện…) có ô màu theo icon thay vì nền xám", "Apps without a TV banner get a tile in their icon's colour"), vm.toMauOApp) { vm.toMauOApp = it }
         Hang(t("Tất cả app một hàng", "Every app in one row"), t("Một hàng cuộn ngang, không còn lưới bên dưới", "One sideways-scrolling row, no grid below"), vm.motHang) { vm.motHang = it }
-        Hang(t("Ô icon đều nhau", "Uniform icon tiles"), t("Kiểu Apple TV: mọi ô là icon trên nền màu của app, bỏ ảnh banner", "Apple TV style: every tile is the icon on its own colour, no banners"), vm.oDeuNhau) { vm.oDeuNhau = it }
+        Hang(t("Ô icon đều nhau", "Uniform icon tiles"), t("Mọi ô là icon trên nền màu của app. Tắt để dùng lại ảnh banner của app (kể cả với giao diện Kính mờ)", "Every tile is the icon on its own colour. Turn off for the apps' banners (the Frosted look too)"), vm.oDeuNhau) { vm.oDeuNhau = it }
         Hang(t("Gom nút trên cùng thành icon", "Compact icon buttons"), t("Một cụm gọn, bỏ chữ", "One tidy cluster, no labels"), vm.gonNut) { vm.gonNut = it }
         Text(t("Cỡ chữ đồng hồ, lịch, thời tiết", "Clock, date and weather size"), fontSize = 14.sp)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1019,6 +1024,9 @@ private fun TheTuyChinh(vm: PhienLamViec) {
                 ChonChip(chu, vm.doiHang == v) { vm.doiHang = v }
             }
         }
+        Hang(t("Mở một app khi bật tivi", "Open an app at power-on"), t("Bật, Áp dụng lên tivi, rồi bấm nút bên dưới để chọn app ngay trên tivi", "Turn on, apply to the TV, then use the button below to pick the app on the TV"), vm.moKhiBat) { vm.moKhiBat = it }
+        if (vm.moKhiBat) NutPhu(t("Mở màn chọn app trên tivi", "Open the app picker on the TV"), Icons.Rounded.Tv) { vm.moChonAppKhiBat() }
+        if (vm.moKhiBat && vm.baoChonApp.isNotEmpty()) Phu(vm.baoChonApp, Xanh)
         Hang(t("Nút Đang phát", "Now playing button"), t("Hiện khi có app đang phát nhạc / video: tạm dừng từng app hay dừng tất cả", "Shows while apps play: pause each or stop them all"), vm.nutDangPhat) { vm.nutDangPhat = it }
         Hang(t("Nút màn hình chờ", "Screensaver button"), t("Bấm là bật ảnh / đồng hồ, tiện khi nghe nhạc", "Starts the photo / clock screensaver, handy with music"), vm.nutManCho) { vm.nutManCho = it }
         Hang(t("Thư viện app", "App library"), t("Nút xem mọi app trên tivi, thêm / bớt khỏi Home", "A button listing every app; add or remove from Home"), vm.thuVienApp) { vm.thuVienApp = it }
@@ -1031,6 +1039,11 @@ private fun TheTuyChinh(vm: PhienLamViec) {
             if (vm.mauChon?.id == "tcl-g09-google-tv" || vm.laTclGoogleTv) t("YouTube, Netflix, Cài đặt… mở được khi Home gốc tắt. Trên máy này bật thì giữ nút âm lượng chỉ nhảy một nấc", "YouTube, Netflix, Settings… work with the stock Home off. On this set, holding volume then steps only once")
             else t("YouTube, Netflix, Cài đặt… vẫn mở được khi Home gốc tắt", "YouTube, Netflix, Settings… keep working with the stock Home off"),
             vm.nutAppRemote) { vm.nutAppRemoteChon = it }
+        Hang(t("Giữ nút âm lượng để tăng / giảm liên tục", "Hold volume to keep raising / lowering"),
+            t("Bật nếu giữ nút chỉ nhảy một nấc (hay gặp trên Sony). Đổi lại, nút Input / Apps / nút app trên remote về như tivi gốc.", "Turn on if holding volume only moves one step (common on Sony). In return the remote's Input / Apps / app buttons work as the TV's own.") +
+                (if (vm.phimRieng.isNotEmpty()) t(" Đang có nút gán ở màn Nút remote: các nút đó cần Home sạch lọc phím nên công tắc này chưa có tác dụng.",
+                    " Buttons are assigned under Remote buttons: they need the clean Home to filter keys, so this switch has no effect yet.") else ""),
+            vm.giuAmLuong) { vm.giuAmLuong = it }
     }
     The(t("File cấu hình", "Settings file"), Icons.Rounded.Save) {
         Phu(t("Lưu mọi lựa chọn (theme, dock, thời tiết, tuỳ chỉnh, Nâng cao, ảnh nền riêng) ra một file để giữ lại hoặc mang sang tivi khác.",

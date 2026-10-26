@@ -23,7 +23,8 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit
 - **Kết nối tivi qua Wi-Fi** bằng ADB: quét mạng hoặc gõ IP; Google TV đời mới ghép bằng mã 6 số (Gỡ lỗi không dây), app tự dò cổng. Hướng dẫn 7 bước có hình trong app.
 - **So với 316 danh sách đã thử** của cộng đồng CleanYourTV (nhiều hãng: TCL, Sony, Xiaomi, Philips, Hisense, Skyworth, onn, Chromecast, máy chiếu…), tự cập nhật hằng tuần. Chưa khớp mẫu thì gợi ý mẫu gần giống; tivi lạ dùng luật chung an toàn.
 - **Chỉ tắt, không gỡ** quảng cáo, theo dõi, app rác. Không đụng cổng HDMI, remote, bàn phím, CH Play, gói đang giữ Wi-Fi, gói lõi Android và Home đang dùng. Google Home / cast và tìm kiếm giọng nói không bao giờ tích sẵn.
-- **Home sạch** (launcher CleanYourTV kèm bản vá của CleanTV): đồng hồ, lịch âm có can chi, thời tiết theo 3.321 phường/xã, dock 8 app, cụm nút Máy chiếu · Mạng · Màn hình chờ · Cài đặt; 7 giao diện, ảnh nền riêng từ điện thoại hoặc từ tivi / USB, 65 tuỳ chọn Nâng cao.
+- **Home sạch** (launcher CleanYourTV kèm bản vá của CleanTV): đồng hồ, lịch âm có can chi, thời tiết theo 3.321 phường/xã, dock 8 app, cụm nút Máy chiếu · Mạng · Màn hình chờ · Cài đặt; 8 giao diện, ảnh nền riêng từ điện thoại hoặc từ tivi / USB, 65 tuỳ chọn Nâng cao.
+- ⚠️ Thêm cho Home sạch (từ CleanTV 2.9 – 3.0): mở một app khi bật tivi (chọn app ngay trên tivi), giữ nút âm lượng để tăng / giảm liên tục, chữ giờ và ngày trắng sáng, giao diện Kính mờ (nền theo màu app đang chọn, dock kính mờ, ô icon đều), ảnh nền riêng vừa khung với viền mờ và nét hơn, thời tiết cho cả thành phố ngoài Việt Nam. Đổi giao diện xong, lần sau mở lại app nhớ đúng giao diện đang dùng.
 - **Nút Home về đúng Home sạch**: app bấm thử nút Home thật; tivi không cho tắt Home gốc thì Home sạch tự mở đè lên. **Nút trên remote vẫn chạy** (YouTube, Netflix, Prime, Cài đặt) theo bảng phím của từng mẫu tivi.
 - Máy chiếu (Formovie, XGIMI, JMGO…) ghim màn lấy nét / chỉnh hình vào nút Máy chiếu. Xiaomi bản Trung Quốc có Home sạch riêng. Bo mạch CVTE giữ Home hãng.
 - ⚠️ Các bản sửa đưa về từ CleanTV 2.8.3 – 3.0.0:
@@ -73,7 +74,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit
 
 ### Khác
 
-- ⚠️ **Ảnh nền riêng** cho Home sạch: kéo dời, chụm phóng trên khung xem trước.
+- ⚠️ **Ảnh nền riêng** cho Home sạch: kéo dời, chụm phóng trên khung xem trước, hoặc để vừa khung không cắt (hai bên là chính ảnh làm mờ).
 - ⚠️ **Sao lưu & chuyển máy**: lưu bản sao lưu tivi, bộ cài đặt mẫu, danh sách tivi (và khoá ADB nếu muốn) ra một file zip, nhập trên điện thoại khác.
 - Chạy trên **điện thoại Android** hoặc **ngay trên tivi** (cho người dùng iPhone). Giao diện kiểu iOS, sáng / tối theo điện thoại (trên tivi luôn tối), song ngữ Việt / Anh.
 - ⚠️ **Tự cập nhật** từ GitHub Releases: Android 12 trở lên tự tải và cài bản mới lúc không mở app, máy cũ hơn chạm một lần để cài; tắt ở mục Cập nhật TiviKit. Không gửi số liệu nào (xem [Quyền riêng tư](#quyền-riêng-tư)).
@@ -124,7 +125,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 ### Quyền riêng tư
 
 - TiviKit **không gửi số liệu sử dụng**. Bộ đếm ẩn danh, nút gửi danh sách gói và các liên kết ra trang web của CleanTV đều tắt khi dựng (`GUI_SO_LIEU`, `LIEN_KET_VGS` trong `app/build.gradle.kts`).
-- Điện thoại chỉ ra Internet để tự cập nhật TiviKit (hỏi GitHub Releases khoảng 12 giờ một lần và khi mở app, tải APK bản mới, kiểm tra SHA-256 rồi mới cài), khi bạn tải app trong mục Cài app (GitHub, VideoLAN, Kodi hoặc đường link bạn nhập) và khi kiểm tra bản mới của app đã cài (GitHub).
+- Điện thoại chỉ ra Internet để tự cập nhật TiviKit (hỏi GitHub Releases khoảng 12 giờ một lần và khi mở app, tải APK bản mới, kiểm tra SHA-256 rồi mới cài), khi bạn tải app trong mục Cài app (GitHub, VideoLAN, Kodi hoặc đường link bạn nhập), khi kiểm tra bản mới của app đã cài (GitHub) và khi tìm nơi xem thời tiết ngoài Việt Nam (dịch vụ tìm địa danh của Open-Meteo, chỉ gửi chữ bạn gõ).
 - Lệnh điều khiển đi thẳng từ điện thoại tới tivi trong mạng nhà: ADB với Android TV, kết nối điều khiển của LG với tivi LG.
 - Trên tivi: Home sạch lấy thời tiết từ Open-Meteo; bật DNS chặn quảng cáo thì tên miền tivi truy cập đi qua nhà cung cấp bạn chọn (AdGuard, NextDNS…); tivi LG đã root tải script cài Vibehack từ GitHub khi bạn bấm cài.
 
@@ -162,7 +163,8 @@ From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic an
 - **Connects over Wi-Fi** with ADB: scan or type the IP; newer Google TVs pair with a 6-digit code and the app finds the port. A 7-step picture guide is built in.
 - **Matches 316 tested lists** from the CleanYourTV community (many brands), updated weekly; suggests close models; unknown TVs get safe general rules.
 - **Disables, never uninstalls** ads, tracking and junk. Leaves HDMI inputs, the remote, keyboards, Play Store, the Wi-Fi owner, core Android packages and the Home in use alone. Google Home / casting and voice search are never pre-ticked.
-- **Clean Home** (the CleanYourTV launcher with CleanTV's patches): clock, Vietnamese lunar date, ward-level weather, an 8-app dock, 7 themes, your own wallpaper, 65 Advanced options. The Home key lands on it, and remote keys keep working from each model's key map.
+- **Clean Home** (the CleanYourTV launcher with CleanTV's patches): clock, Vietnamese lunar date, ward-level weather, an 8-app dock, 8 themes, your own wallpaper, 65 Advanced options. The Home key lands on it, and remote keys keep working from each model's key map.
+- ⚠️ New for the clean Home (from CleanTV 2.9 – 3.0): open an app at power-on (picked on the TV), hold volume to keep raising / lowering, a bright white clock and date, the Frosted look (backdrop in the focused app's colour, frosted dock, even icon tiles), your own wallpaper fitted with blurred edges and sharper, weather for cities outside Vietnam. The app remembers the look in use the next time it connects.
 - **Backs up before any change**, on the phone and on the TV; one-tap **Restore**. The TV-side backup is shared with CleanTV. If the link drops while Home is being replaced, the TV restores its stock Home by itself. A restore script for a computer and a command preview are included; ADB switches off when you leave the app.
 - **TV screenshot** and a list of **cleaned TVs**.
 - ⚠️ Fixes brought over from CleanTV 2.8.3 – 3.0.0:
@@ -209,7 +211,7 @@ From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic an
 
 ### Also
 
-- ⚠️ Pan and pinch-zoom your own wallpaper for the clean Home.
+- ⚠️ Pan and pinch-zoom your own wallpaper for the clean Home, or fit it whole with blurred edges.
 - ⚠️ **Back up & move phones**: TV backups, setup sets, recent TVs and optionally the ADB key in one zip file, imported on another phone.
 - Runs on an **Android phone** or **on the TV itself** (for iPhone users). iOS-style light / dark interface (always dark on the TV), Vietnamese / English.
 - ⚠️ **Updates itself** from GitHub Releases: Android 12+ installs new versions while the app is closed, older Android asks for one tap; can be turned off under TiviKit updates. No usage data.
@@ -234,7 +236,7 @@ Every APK on [Releases](https://github.com/Circling5714/tivikit/releases) is sig
 
 ### Privacy
 
-No usage data: CleanTV's anonymous counter, "send package list" button and website links are switched off at build time (`GUI_SO_LIEU`, `LIEN_KET_VGS`). The phone only goes online to update TiviKit itself (it asks GitHub Releases about every 12 hours and when opened, downloads the new APK and checks its SHA-256 before installing), to download apps you pick (GitHub, VideoLAN, Kodi or your own link) and to check installed apps for updates (GitHub). Control goes straight from the phone to the TV on your home network. On the TV, the clean Home gets weather from Open-Meteo, ad-blocking DNS sends lookups to the provider you choose, and a rooted LG TV downloads the Vibehack installer from GitHub when you install it.
+No usage data: CleanTV's anonymous counter, "send package list" button and website links are switched off at build time (`GUI_SO_LIEU`, `LIEN_KET_VGS`). The phone only goes online to update TiviKit itself (it asks GitHub Releases about every 12 hours and when opened, downloads the new APK and checks its SHA-256 before installing), to download apps you pick (GitHub, VideoLAN, Kodi or your own link), to check installed apps for updates (GitHub) and to look up weather places outside Vietnam (Open-Meteo's geocoding, only the text you typed). Control goes straight from the phone to the TV on your home network. On the TV, the clean Home gets weather from Open-Meteo, ad-blocking DNS sends lookups to the provider you choose, and a rooted LG TV downloads the Vibehack installer from GitHub when you install it.
 
 ---
 

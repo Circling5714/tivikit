@@ -18,6 +18,20 @@ class ThemeTest {
         assertTrue(THEMES.none { it.id == "vgs" || it.anhNen.orEmpty().contains("vgs") || "${it.tenVi} ${it.moTaVi} ${it.moTaEn}".contains("VGS") })
     }
 
+    /** "Apple TV" là nhãn hiệu của Apple: giao diện kiểu đó của CleanTV mang tên Kính mờ. */
+    @Test fun khongDungTenAppleTv() {
+        assertTrue(THEMES.none { "${it.tenVi} ${it.tenEn} ${it.moTaVi} ${it.moTaEn}".contains("Apple") })
+        assertEquals(true, themeTheoId("kinh-mo")?.cauHinh?.get("uniform_tiles"))
+    }
+
+    /** config.json ghi id giao diện để lần kết nối sau mở đúng giao diện (CleanTV 2.9.0). */
+    @Test fun ghiIdGiaoDienVaoCauHinh() {
+        val o = org.json.JSONObject()
+        themeTheoId("kinh-mo")!!.ghiVao(o)
+        assertEquals("kinh-mo", o.getString("vgs_theme"))
+        assertEquals(false, o.getBoolean("wallpaper"))
+    }
+
     @Test fun idVgsCuThanhGiaoDienTiviKit() {
         assertEquals("tivikit", themeTheoId("vgs")?.id)
         assertEquals("aurora", themeTheoId("aurora")?.id)

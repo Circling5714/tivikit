@@ -9,17 +9,19 @@ app hỏi GitHub (github.com/Circling5714/tivikit) có bản mới không, kho�
 bản mới từ đó và kiểm tra mã SHA-256 trước khi cài; không gửi kèm gì (GitHub thấy địa chỉ IP như mọi trang web).
 Tắt tự cài ở mục Cập nhật TiviKit. Ngoài ra app chỉ nói chuyện với tivi trong mạng nhà bạn (ADB qua Wi-Fi; tivi LG
 qua giao thức điều khiển của LG), trừ khi bạn tự bấm tải app từ đường link hoặc Gợi ý app: khi đó điện thoại tải file
-từ đúng địa chỉ đó (GitHub, videolan.org, kodi.tv…) như tải bằng trình duyệt. Trên tivi, Home sạch tự lấy thời tiết
-từ Open-Meteo; chọn DNS chặn quảng cáo (AdGuard, NextDNS hay máy chủ bạn nhập) thì tivi gửi truy vấn tên miền tới
-nhà cung cấp đó.
+từ đúng địa chỉ đó (GitHub, videolan.org, kodi.tv…) như tải bằng trình duyệt. Ô tìm nơi xem thời tiết, khi gõ tên
+ít khớp phường/xã trong nước, hỏi thêm dịch vụ tìm địa danh của Open-Meteo (chỉ gửi chữ bạn gõ). Trên tivi, Home sạch
+tự lấy thời tiết từ Open-Meteo; chọn DNS chặn quảng cáo (AdGuard, NextDNS hay máy chủ bạn nhập) thì tivi gửi truy vấn
+tên miền tới nhà cung cấp đó.
 TiviKit sends nothing to any server: no anonymous stats, no package-list button. To update itself, the app asks
 GitHub (github.com/Circling5714/tivikit) for a new version about every 12 hours and when it opens, downloads the new
 APK from there and checks its SHA-256 before installing; nothing else is sent (GitHub sees your IP address like any
 website). Turn auto-install off under TiviKit updates. Otherwise the app only talks to the TV on your home network
 (ADB over Wi-Fi; LG TVs over LG's remote-control protocol), except when you download an app from a link or the
 suggestions: the phone then fetches the file from that address (GitHub, videolan.org, kodi.tv…), like a browser
-would. On the TV, the clean Home gets its weather from Open-Meteo; with an ad-blocking DNS (AdGuard, NextDNS or your
-own server) the TV sends its DNS lookups to that provider.
+would. The weather place search asks Open-Meteo's geocoding service when few Vietnamese wards match (only the text
+you typed is sent). On the TV, the clean Home gets its weather from Open-Meteo; with an ad-blocking DNS (AdGuard,
+NextDNS or your own server) the TV sends its DNS lookups to that provider.
 
 TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the following open-source software.
 
