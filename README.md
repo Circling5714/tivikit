@@ -90,6 +90,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 - ⚠️ Chế độ tivi LG chưa thử trên tivi LG nào.
 - Khôi phục và khoá trẻ em gốc đã chạy trong CleanTV 2.8.2; với TiviKit thì chưa thử lại.
 - Mỗi lần dựng đều chạy unit test của app và các app phụ, nhưng unit test không thay được việc thử trên tivi thật.
+- Danh sách thử trên tivi thật, xếp theo rủi ro: [docs/THU-TREN-TIVI.md](docs/THU-TREN-TIVI.md).
 
 ### Dựng từ mã nguồn
 
@@ -239,6 +240,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 - ⚠️ The LG mode hasn't been tried on any LG TV.
 - Restore and the original kids lock ran in CleanTV 2.8.2; not re-tested with TiviKit.
 - Every build runs the unit tests of the app and the helper apps; they don't replace a real TV.
+- A real-TV test checklist, riskiest first (Vietnamese): [docs/THU-TREN-TIVI.md](docs/THU-TREN-TIVI.md).
 
 ### Build
 
