@@ -46,7 +46,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit
   - ✅ 40 app gợi ý trong 7 nhóm (YouTube và video, truyền hình / phim Việt Nam, anime và phim châu Á có bản quyền, phim nhạc quốc tế, phim từ máy chủ trong nhà, game, tiện ích): tải bản đúng chip của tivi từ GitHub hoặc trang chính thức; app chỉ có trên CH Play thì mở trang CH Play trên tivi. Đã cài SmartTube từ GitHub lên box TX3; các nguồn khác chưa thử.
   - ⚠️ Cập nhật app đã cài: so phiên bản với bản mới nhất, cập nhật một chạm.
 - ⚠️ **Điều khiển + gõ chữ** (chỉ trên điện thoại): remote trên điện thoại, gõ mật khẩu, tìm kiếm. Gõ tiếng Việt có dấu nhờ bộ gõ phụ `vn.tivikit.go`, tự cài lên tivi lần đầu gửi chữ có dấu; ô nhập không nhận bộ gõ thì gửi chữ không dấu.
-- ⚠️ **Xem màn hình tivi trực tiếp** ngay trên màn Điều khiển, cách làm của [scrcpy](https://github.com/Genymobile/scrcpy): tivi tự quay màn hình bằng bộ mã hoá H.264 và gửi qua ADB, trễ chưa tới nửa giây; chạm lên hình là bấm đúng chỗ đó, phím remote cũng nhạy hơn. Phim có bản quyền (Netflix…) và cổng HDMI ra màn đen. Tivi không quay được video thì app dùng ảnh chụp làm mới 1,5 giây một lần. Phần quay đã chạy trên box TX3 (bộ mã hoá Amlogic, khung đầu sau ~0,5 giây); phần hiện hình trên điện thoại chưa thử.
+- ✅ **Xem màn hình tivi trực tiếp** ngay trên màn Điều khiển, cách làm của [scrcpy](https://github.com/Genymobile/scrcpy): tivi tự quay màn hình bằng bộ mã hoá H.264 và gửi qua ADB, trễ chưa tới nửa giây; khung hình ghim trên cùng, trượt xuống bấm remote vẫn thấy tivi; chạm lên hình là bấm đúng chỗ đó, phím remote cũng nhạy hơn. Phim có bản quyền (Netflix…) và cổng HDMI ra màn đen. Tivi không quay được video thì app dùng ảnh chụp làm mới 1,5 giây một lần. Đã xem được trên tivi thật từ điện thoại (bản thử 26/10/2026).
 - ✅ **Nút remote**: gán một nút thật trên remote (VD nút YouTube) để mở app khác như SmartTube. App đọc mã nút lúc bạn bấm rồi ghi vào Home sạch, nên cần cài Home sạch trước.
 - **Kênh nhanh TV360**: ô trên Home sạch hoặc nút remote mở thẳng VTV1, VTV3, HTV7… trong app TV360 (tivi cần có app TV360). ✅ Một ô đã thử; ⚠️ nhiều ô (tới 6) chưa thử.
 - ✅ **Hẹn giờ**: bật / tắt tivi và mở app theo lịch; báo trước 60 giây khi sắp tắt, cho hoãn 30 phút. Có nút thử "tivi tự bật sau 2 phút"; tivi ngủ sâu hoặc rút điện thì không tự bật được.
@@ -84,6 +84,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit
 ### Tình trạng thử nghiệm
 
 - ✅ Ngày 26/10/2026, TiviKit 1.0 (gói `vn.tivikit`) trên box Tanix TX3 Mini (Android 9): dọn tivi, cài Home sạch, cài SmartTube từ danh sách gợi ý, DNS chặn quảng cáo (NextDNS).
+- ✅ Ngày 26/10/2026, bản thử của 1.3.0: xem màn hình tivi trực tiếp trên điện thoại, khung ghim khi trượt xuống. Phần quay màn hình cũng đã chạy riêng trên box TX3 Mini (bộ mã hoá Amlogic, khung đầu sau ~0,5 giây).
 - ✅ Ngày 25/10/2026 trên một tivi Skyworth, ở bản thử trước khi đổi tên gói sang `vn.tivikit`: cài file APK, Nút remote, Kênh nhanh TV360 (một ô), Hẹn giờ.
 - ⚠️ Việc tự chuyển ô Kênh nhanh, lịch Hẹn giờ và nút remote đã gán từ bản thử cũ (`com.icm.cleantv`) sang gói mới chưa thử.
 - ⚠️ Chế độ tivi LG chưa thử trên tivi LG nào.
@@ -185,7 +186,7 @@ From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic an
   - ✅ 40 suggested apps in 7 groups, downloaded for the TV's chip from GitHub or official sites; Play-only apps open their Play Store page on the TV. SmartTube from GitHub was installed on the TX3 Mini; other sources not yet.
   - ⚠️ App updates: compares versions with the latest release, one-tap update.
 - ⚠️ **Remote + typing** (phone only): a remote on the phone, passwords and searches. Vietnamese with accents goes through a helper keyboard (`vn.tivikit.go`); fields that don't accept it get plain letters.
-- ⚠️ **Live TV screen** on the remote screen, the [scrcpy](https://github.com/Genymobile/scrcpy) way: the TV encodes its screen in H.264 and streams it over ADB, under half a second behind; tap the picture to press that spot, and remote keys respond faster. Copy-protected films (Netflix…) and HDMI inputs show black. A TV that can't encode video falls back to screenshots refreshed every 1.5 s. Streaming ran on the TX3 Mini (Amlogic encoder, first frame after ~0.5 s); the phone-side display hasn't been tried yet.
+- ✅ **Live TV screen** on the remote screen, the [scrcpy](https://github.com/Genymobile/scrcpy) way: the TV encodes its screen in H.264 and streams it over ADB, under half a second behind; the picture stays pinned at the top while you scroll the remote; tap the picture to press that spot, and remote keys respond faster. Copy-protected films (Netflix…) and HDMI inputs show black. A TV that can't encode video falls back to screenshots refreshed every 1.5 s. Tried from a phone with a real TV (test build, 26 Oct 2026).
 - ✅ **Remote buttons**: make a real remote button (e.g. YouTube) open another app such as SmartTube. Needs the clean Home.
 - **TV360 quick channel**: Home tiles or remote buttons open VTV1, VTV3, HTV7… straight in the TV360 app. ✅ One tile tried; ⚠️ more tiles (up to 6) not yet.
 - ✅ **Timer**: turn the TV on / off and open apps on a schedule, with a 60-second warning and a 30-minute snooze, plus a "turn on in 2 minutes" test. A TV in deep standby can't be woken.
@@ -223,6 +224,7 @@ From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic an
 ### Test status
 
 - ✅ 26 Oct 2026, TiviKit 1.0 (`vn.tivikit`) on a Tanix TX3 Mini (Android 9): cleaning, installing the clean Home, SmartTube from the suggestions, ad-blocking DNS (NextDNS).
+- ✅ 26 Oct 2026, a 1.3.0 test build: the live TV screen on a phone, pinned while scrolling. Screen capture also ran on its own on the TX3 Mini (Amlogic encoder, first frame after ~0.5 s).
 - ✅ 25 Oct 2026 on one Skyworth TV, with a test build from before the package rename to `vn.tivikit`: APK install, Remote buttons, TV360 quick channel (one tile), Timer.
 - ⚠️ The automatic move of quick-channel tiles, timers and button mappings from the old test build (`com.icm.cleantv`) hasn't been tried.
 - ⚠️ The LG mode hasn't been tried on any LG TV.
