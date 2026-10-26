@@ -4,6 +4,7 @@
 #    tự phát hành không ai duyệt (môi trường phat-hanh-tu-dong); còn code chưa phát hành thì chờ chủ kho duyệt;
 #  - không qua, hoặc bỏ quá nhiều mẫu một lần: đẩy nhánh mau-tivi/cap-nhat, mở pull request để xem (kho chưa cho Actions
 #    tạo pull request thì mở issue trỏ tới nhánh), không phát hành, lần chạy báo lỗi.
+# Cuối mỗi lần chạy: kho 45 ngày chưa có commit thì tạo một commit nhỏ để GitHub không tắt lịch (bước Giữ lịch chạy).
 name: Cập nhật mẫu tivi
 
 on:
@@ -87,3 +88,20 @@ jobs:
           fi
           echo "::error::$BAO"
           exit 1
+
+      # GitHub tắt workflow chạy theo lịch khi kho công khai 60 ngày không có hoạt động. Kho 45 ngày chưa có commit nào
+      # (CleanYourTV ít đổi) thì ghi ngày vào .github/giu-lich.txt để có một commit; phat_hanh.py chi-du-lieu bỏ qua
+      # .github/ nên không chặn bản tự phát hành. Chạy cả khi các bước trên lỗi.
+      - name: Giữ lịch chạy
+        if: always()
+        run: |
+          git fetch -q origin "$GITHUB_REF_NAME"
+          cuoi=$(git log -1 --format=%ct FETCH_HEAD)
+          if [ $(( $(date +%s) - cuoi )) -lt $(( 45 * 86400 )) ]; then echo "Kho có commit trong 45 ngày qua, khỏi giữ lịch."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -f -B giu-lich FETCH_HEAD
+          date -u +%Y-%m-%d > .github/giu-lich.txt
+          git add .github/giu-lich.txt
+          git commit -q -m "Nội bộ: giữ lịch Cập nhật mẫu tivi (kho 45 ngày chưa có commit)"
+          git push -q origin "HEAD:$GITHUB_REF_NAME"
