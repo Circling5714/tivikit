@@ -213,33 +213,16 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     /** HomeKeyService cần bật: phím Home lạ, phím app remote, nút gán riêng, mở app khi bật từ chế độ chờ, luôn về Home. */
     val canDichVuPhim get() = nutHome || dungPhimRemote || phimRieng.isNotEmpty() || (moKhiBat && moKhiThuc) || luonVeHome
 
-    /** Ô kênh VTVgo ở đầu dock, theo thứ tự chọn: (tên trên ô, mã kênh). Xem KenhVtvGo. */
+    /**
+     * Ô kênh VTVgo kiểu cũ ở đầu dock (ô link của Home sạch, KenhVtvGo): (tên trên ô, mã kênh), đọc từ tivi để Áp dụng Home
+     * sạch giữ nguyên. Ô kênh VTVgo mới là ô Kênh nhanh (app phụ, KenhNhanhTivi), màn đó chuyển được ô kiểu cũ sang.
+     */
     val kenhChon = mutableStateListOf<Pair<String, String>>()
-    /** Danh sách kênh của VTVgo (tải khi mở hộp chọn kênh); rỗng = chưa tải. */
+    /** Danh sách kênh của VTVgo (tải khi mở hộp chọn kênh của Kênh nhanh); rỗng = chưa tải. */
     var dsKenhGo by mutableStateOf<List<vn.tivikit.dulieu.KenhVtvGo.Kenh>>(emptyList())
     var moChonKenh by mutableStateOf(false)
     var dangTaiKenh by mutableStateOf(false)
     val coVtvGo get() = trangThai?.caiDat?.contains(vn.tivikit.dulieu.KenhVtvGo.GOI) == true
-    fun coKenh(ma: String) = kenhChon.any { it.second == ma }
-
-    /** Chọn / bỏ ô kênh; hai kênh trùng tên gói giả (vgs.kenh.<slug>) thì không thêm, tối đa KenhVtvGo.TOI_DA ô. */
-    fun batTatKenh(ten: String, ma: String) {
-        val i = kenhChon.indexOfFirst { it.second == ma }
-        if (i >= 0) { kenhChon.removeAt(i); return }
-        val s = vn.tivikit.dulieu.KenhVtvGo.slug(ten)
-        if (s.isEmpty() || kenhChon.any { vn.tivikit.dulieu.KenhVtvGo.slug(it.first) == s } || kenhChon.size >= vn.tivikit.dulieu.KenhVtvGo.TOI_DA) return
-        kenhChon.add(ten to ma)
-    }
-
-    /** Tivi chưa có VTVgo bản tivi: mở trang của nó trên CH Play của tivi, người dùng bấm Cài đặt bằng remote. */
-    var baoVtvGo by mutableStateOf("")
-    fun moVtvGoChPlay() = chay(t("Đang mở VTVgo trên CH Play của tivi…", "Opening VTVgo in the TV's Play Store…")) {
-        damBaoKetNoi()
-        val out = io { tv.moCHPlay(vn.tivikit.dulieu.KenhVtvGo.GOI) }
-        if (out.contains("Error")) error(t("Tivi không mở được CH Play: ${out.trim().lines().lastOrNull()}", "The TV couldn't open the Play Store: ${out.trim().lines().lastOrNull()}"))
-        baoVtvGo = t("Đã mở VTVgo trên CH Play của tivi: bấm Cài đặt bằng remote, mở VTVgo một lần, rồi kết nối lại TiviKit.",
-            "VTVgo is open in the TV's Play Store: press Install with the remote, open VTVgo once, then reconnect TiviKit.")
-    }
 
     fun moHopKenh() {
         moChonKenh = true
@@ -1651,10 +1634,10 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     private suspend fun napAnhKenh() { tv.anhKenh = anhKenhChon() }
 
     /**
-     * Ảnh các ô kênh VTVgo đang chọn (thumbnail của VTVgo, tải một lần rồi cất): (tên file sau "kenh-", ảnh). Launcher
-     * không có mạng nên gửi kèm; Áp dụng Home sạch và màn Kênh nhanh đều dùng.
+     * Ảnh các ô kênh VTVgo kiểu cũ (thumbnail của VTVgo, tải một lần rồi cất): (tên file sau "kenh-", ảnh). Launcher không
+     * có mạng nên gửi kèm khi Áp dụng Home sạch.
      */
-    internal suspend fun anhKenhChon(): List<Pair<String, ByteArray>> {
+    private suspend fun anhKenhChon(): List<Pair<String, ByteArray>> {
         if (!coVtvGo || kenhChon.isEmpty()) return emptyList()
         val ds = dsKenhGo.ifEmpty { io { vn.tivikit.dulieu.KenhVtvGo.docNho(ctx).ifEmpty { vn.tivikit.dulieu.KenhVtvGo.tai(ctx) } } }
         return kenhChon.toList().mapNotNull { (ten, ma) ->

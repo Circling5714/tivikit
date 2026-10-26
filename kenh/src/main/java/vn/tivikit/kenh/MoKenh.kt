@@ -8,19 +8,22 @@ import android.os.Bundle
 import android.widget.Toast
 
 /**
- * Ô / nút "Kênh nhanh" (25/10/2026): mở thẳng một kênh trực tiếp của TV360 rồi tự đóng, không hiện gì. Đi qua cổng nhận
- * lệnh trợ lý giọng nói của TV360 bản tivi (PostmanAssistant, cũng là đường Google Assistant gọi khi nói "Xem VTV1 trên
- * TV360"): lệnh SWITCH_CHANNEL kèm số kênh và tên kênh, TV360 tự tìm kênh trong danh sách của nó — đang tắt thì mở lên,
- * đang chạy nền thì đưa lên, đang xem kênh khác thì chuyển kênh. TV360 không nhận (bản sau đổi cổng) thì mở TV360 như
- * thường; chưa cài thì mở trang TV360 trên CH Play.
+ * Ô / nút "Kênh nhanh" (25/10/2026): mở thẳng một kênh trực tiếp rồi tự đóng, không hiện gì.
+ * - TV360: đi qua cổng nhận lệnh trợ lý giọng nói của TV360 bản tivi (PostmanAssistant, cũng là đường Google Assistant
+ *   gọi khi nói "Xem VTV1 trên TV360"): lệnh SWITCH_CHANNEL kèm số kênh và tên kênh, TV360 tự tìm kênh trong danh sách
+ *   của nó — đang tắt thì mở lên, đang chạy nền thì đưa lên, đang xem kênh khác thì chuyển kênh.
+ * - VTVgo (26/10/2026): link vtvgo://play của kênh, như ô kênh của Home sạch.
+ * App không nhận (bản sau đổi cổng / link) thì mở app như thường; chưa cài thì mở trang của app trên CH Play.
  */
 class MoKenh : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         val k = Kho(this).kenh
-        val duoc = mo(lenhKenh(k)) || mo(packageManager.getLeanbackLaunchIntentForPackage(Kenh.TV360)) ||
-            mo(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${Kenh.TV360}")))
-        if (!duoc) Toast.makeText(this, R.string.chua_co_tv360, Toast.LENGTH_LONG).show()
+        val app = if (k.laVtvGo) Kenh.VTVGO else Kenh.TV360
+        val lenh = if (k.laVtvGo) Intent(Intent.ACTION_VIEW, Uri.parse(Kenh.linkVtvGo(k.ma))).setPackage(Kenh.VTVGO) else lenhKenh(k)
+        val duoc = mo(lenh) || mo(packageManager.getLeanbackLaunchIntentForPackage(app)) ||
+            mo(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$app")))
+        if (!duoc) Toast.makeText(this, if (k.laVtvGo) R.string.chua_co_vtvgo else R.string.chua_co_tv360, Toast.LENGTH_LONG).show()
         finish()
     }
 

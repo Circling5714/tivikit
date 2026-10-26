@@ -3,9 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <!-- Android 11+: thấy được TV360 để hỏi màn mở của nó (dự phòng khi cổng nhận lệnh không có). -->
+    <!-- Android 11+: thấy được TV360 / VTVgo để hỏi màn mở của nó (dự phòng khi cổng nhận lệnh / link không có). -->
     <queries>
         <package android:name="com.viettel.tv360.tv" />
+        <package android:name="vn.vtv.vtvgotv" />
     </queries>
 
     <!-- Không banner: Home sạch vẽ ô bằng biểu tượng kèm tên (app_labels đặt tên ô là tên kênh, VD VTV1). -->

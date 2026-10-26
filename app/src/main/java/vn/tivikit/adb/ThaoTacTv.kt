@@ -1309,9 +1309,10 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }
 
     /**
-     * Ô kênh VTVgo (màn Kênh nhanh): gửi ảnh ô ([anh]: tên file sau "kenh-", ảnh), rồi ghi link_tiles và các ô ở đầu dock
-     * vào config.json ĐANG CÓ (như ghiOKenh: không đụng giao diện, ảnh nền), khởi động lại Home sạch cho thấy ngay.
-     * false = Home sạch đang dùng dock mặc định (config.json không có dock_apps): chưa ghi gì.
+     * Ô kênh VTVgo kiểu cũ (ô link của Home sạch): gửi ảnh ô ([anh]: tên file sau "kenh-", ảnh), rồi ghi lại link_tiles
+     * và các ô ở đầu dock theo [kenh] vào config.json ĐANG CÓ (như ghiOKenh: không đụng giao diện, ảnh nền), khởi động lại
+     * Home sạch. Kênh nhanh dùng để bỏ các ô đã chuyển thành ô Kênh nhanh. false = Home sạch đang dùng dock mặc định
+     * (config.json không có dock_apps): chưa ghi gì.
      */
     fun ghiKenhVtvGo(kenh: List<Pair<String, String>>, anh: List<Pair<String, ByteArray>>): Boolean {
         val j = cauHinhDeSua()

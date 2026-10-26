@@ -5,9 +5,10 @@ import org.json.JSONObject
 
 /**
  * Kênh nhanh (25/10/2026, muốn một nút mở thẳng VTV1 trên TV360; cùng ngày mở rộng thành nhiều ô): mỗi ô kênh là một
- * app phụ nhỏ trên tivi (module kenh/, flavor o1 … o6) gửi lệnh chuyển kênh cho TV360 rồi tự đóng. Mỗi ô một app vì
- * Home sạch mở app và gán nút remote theo tên gói. Kênh chọn theo số kênh TV360 hiện trong danh sách kênh
- * (shortcutKeyboard, 3 chữ số), tên dự phòng khi TV360 đổi số. Ô trên Home sạch mang tên kênh qua app_labels.
+ * app phụ nhỏ trên tivi (module kenh/, flavor o1 … o6) mở thẳng một kênh rồi tự đóng. Mỗi ô một app vì Home sạch mở app
+ * và gán nút remote theo tên gói. Ô TV360: kênh chọn theo số kênh TV360 hiện trong danh sách kênh (shortcutKeyboard, 3
+ * chữ số), tên dự phòng khi TV360 đổi số. Ô VTVgo (26/10/2026, trước là ô link của Home sạch, KenhVtvGo): mã kênh của
+ * VTVgo. Ô trên Home sạch mang tên kênh qua app_labels.
  */
 object KenhNhanh {
     /** Số ô kênh tối đa (số flavor của module kenh/). */
@@ -15,6 +16,7 @@ object KenhNhanh {
     /** Gói của ô 1 (giữ tên của bản một ô trước đây); ô n là GOI + n. */
     const val GOI = "vn.tivikit.kenh"
     const val TV360 = "com.viettel.tv360.tv"
+    const val VTVGO = KenhVtvGo.GOI
 
     fun goiCua(o: Int): String = if (o == 1) GOI else "$GOI$o"
     /** Màn mở kênh của ô [o] (bấm ô / nút remote cũng vào đây). */
@@ -25,7 +27,14 @@ object KenhNhanh {
     fun oCua(p: String): Int? = (1..SO_O).firstOrNull { goiCua(it) == p }
     fun laGoiKenh(p: String): Boolean = oCua(p) != null
 
-    data class Kenh(val so: String, val ten: String)
+    /** Kênh của một ô: TV360 theo số kênh [so]; có [ma] thì là ô VTVgo (mã kênh của vtvgo://play), [so] rỗng. */
+    data class Kenh(val so: String, val ten: String, val ma: String = "") {
+        val laVtvGo: Boolean get() = ma.isNotEmpty()
+        /** App mở kênh này. */
+        val app: String get() = if (laVtvGo) VTVGO else TV360
+        /** Cùng một kênh trên cùng app (để không làm hai ô một kênh). */
+        fun trung(k: Kenh): Boolean = laVtvGo == k.laVtvGo && if (laVtvGo) ma == k.ma else so == k.so
+    }
 
     /** Kênh hay xem, số theo danh sách kênh trên tv360.vn (25/10/2026). */
     val GOI_Y = listOf(
@@ -43,12 +52,21 @@ object KenhNhanh {
      */
     fun tenSach(s: String): String = s.replace(Regex("[,'\"`\$\\\\=\\r\\n]"), " ").trim().replace(Regex("\\s+"), " ").take(30)
 
-    /** Cấu hình gửi cho app phụ (content call … --method dat). */
-    fun json(k: Kenh): String = JSONObject().put("so", k.so).put("ten", k.ten).toString()
+    /** Cấu hình gửi cho app phụ (content call … --method dat), như Kenh.json của module kenh/. */
+    fun json(k: Kenh): String = JSONObject().put("ten", k.ten)
+        .apply { if (k.laVtvGo) put("app", "vtvgo").put("ma", k.ma) else put("so", k.so) }.toString()
+
+    private val MA_GO = Regex("[A-Za-z0-9_-]{1,60}")
 
     fun tuJson(j: JSONObject?): Kenh? {
-        val so = chuanSo(j?.optString("so")) ?: return null
-        return Kenh(so, j!!.optString("ten").trim())
+        if (j == null) return null
+        val ten = j.optString("ten").trim()
+        if (j.optString("app") == "vtvgo") {
+            val ma = j.optString("ma").trim()
+            return if (MA_GO.matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma) else null
+        }
+        val so = chuanSo(j.optString("so")) ?: return null
+        return Kenh(so, ten)
     }
 
     private fun chu(a: JSONArray?): List<String> = if (a == null) emptyList()
@@ -69,14 +87,15 @@ object KenhNhanh {
     }
 
     /**
-     * Thêm (cuối dock, có rồi thì giữ chỗ) / bỏ ô [goi] trong dock_apps. true = xong, false = dock đã đủ [toiDa] ô,
-     * null = config.json không có dock_apps (Home sạch đang dùng dock mặc định, ghi vào là mất dock đó).
+     * Thêm (cuối dock, có rồi thì giữ chỗ) / bỏ ô [goi] trong dock_apps. true = xong, false = dock đã đủ [toiDa] app (ô
+     * link kiểu cũ vgs.kenh.* không tính, như cauHinhHome), null = config.json không có dock_apps (Home sạch đang dùng dock
+     * mặc định, ghi vào là mất dock đó).
      */
     fun datDock(j: JSONObject, goi: String, trongDock: Boolean, toiDa: Int): Boolean? {
         val ds = chu(j.optJSONArray("dock_apps") ?: return null)
         val moi = when {
             trongDock && goi in ds -> ds
-            trongDock -> if (ds.size >= toiDa) return false else ds + goi
+            trongDock -> if (ds.count { !it.startsWith(KenhVtvGo.TIEN_TO) } >= toiDa) return false else ds + goi
             else -> ds - goi
         }
         j.put("dock_apps", JSONArray(moi))

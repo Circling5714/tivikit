@@ -37,7 +37,7 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 | Tuỳ chỉnh → Mở một app khi bật tivi → Áp dụng → Mở màn chọn app trên tivi → chọn SmartTube | Tắt nguồn rồi bật lại (rút điện), SmartTube tự mở |
 | Bật thêm "Cả khi bật lại từ chế độ chờ" → Áp dụng | Tắt bằng remote, bật lại bằng remote: SmartTube tự mở |
 | Tuỳ chỉnh → Luôn mở Home sạch khi bật tivi → Áp dụng | Đang ở HDMI / app, tắt rồi bật: khoảng 1 giây sau Home sạch hiện |
-| Kênh nhanh → thẻ VTVgo (cần VTVgo bản tivi) → chọn VTV1, VTV3 → Lưu lên tivi | Đầu dock có hai ô kênh có ảnh; bấm ô mở thẳng kênh trong VTVgo; giao diện, ảnh nền không đổi |
+| Kênh nhanh → Thêm ô kênh → VTVgo (cần VTVgo bản tivi) → VTV3 → Thêm lên tivi; rồi gán một nút remote cho ô | Ô "VTV3" trên Home sạch và nút remote đều mở thẳng VTV3 trong VTVgo |
 | Giao diện Kính mờ; Chữ giờ, ngày trắng sáng; ảnh riêng "vừa khung" | Hình đúng như xem trước; đổi lại giao diện khác không dính khoá của Kính mờ |
 | Thời tiết: gõ "Osaka" | Có kết quả ở Nhật, chọn được, Home sạch hiện thời tiết Osaka |
 | Remote → Giữ nút âm lượng để tăng / giảm liên tục (nên thử trên Sony) | Giữ nút âm lượng trên remote thật thì âm lượng chạy liên tục |
@@ -70,7 +70,7 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 | Gửi ảnh, video → chọn một ảnh | Ảnh nằm trong Download/TiviKit trên tivi và mở xem được |
 | Bộ cài đặt mẫu → tạo bộ có 1 app + DNS → Cài cho tivi này | App được cài, DNS đặt đúng |
 | Sao lưu & chuyển máy → Lưu ra file → Nhập trên điện thoại khác | Tivi đã dọn, bộ cài đặt hiện đủ trên máy mới |
-| Kênh nhanh, thẻ TV360, với 2 ô trở lên | Mỗi ô mở đúng kênh của nó |
+| Kênh nhanh với 2 ô trở lên (TV360 và VTVgo lẫn nhau) | Mỗi ô mở đúng kênh trong đúng app của nó |
 | Nối TiviKit vào một điện thoại (Gỡ lỗi không dây) | Hiện cảnh báo đỏ "không khai là tivi", nút dọn bị khoá |
 | Chế độ tivi LG (nếu có tivi LG) | Ghép đôi được, remote và gõ chữ chạy |
 

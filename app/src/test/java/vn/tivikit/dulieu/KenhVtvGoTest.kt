@@ -44,8 +44,8 @@ class KenhVtvGoTest {
     }
 
     /**
-     * Lưu ô kênh từ màn Kênh nhanh vào config.json đang có (26/10/2026): ô kênh đứng đầu dock theo thứ tự chọn, app giữ
-     * nguyên thứ tự, ô kênh cũ bỏ đi, khoá khác không đụng tới; đọc lại ra đúng danh sách vừa ghi.
+     * Ghi ô kênh kiểu cũ vào config.json đang có (Áp dụng Home sạch, Kênh nhanh bỏ ô đã chuyển): ô kênh đứng đầu dock theo
+     * thứ tự, app giữ nguyên thứ tự, ô kênh cũ bỏ đi, khoá khác không đụng tới; đọc lại ra đúng danh sách vừa ghi.
      */
     @Test fun datVao_oKenhDauDock_giuAppVaKhoaKhac() {
         val j = org.json.JSONObject("""{"theme":"tivikit","link_tiles":["VTV9|vn.vtv.vtvgotv|vtvgo://play?mediaType=CHANNEL&contentId=39|#283593"],

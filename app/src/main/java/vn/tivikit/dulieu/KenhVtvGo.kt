@@ -13,12 +13,14 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Ô kênh truyền hình trên Home sạch (CleanTV 2.10.0 – 3.0.0): mỗi kênh một ô ở đầu dock, bấm là mở thẳng kênh đó trong
- * app VTVgo bằng vtvgo://play?mediaType=CHANNEL&contentId=<mã>. Launcher vẽ ô theo link_tiles của bản vá (LinkTiles.java);
- * ô mang tên gói giả vgs.kenh.<slug> trong dock_apps nên đổi chỗ / bỏ khỏi Home như app thường.
- * Danh sách kênh lấy từ API công khai của VTVgo (display/v21.0/catalogs/with-channels, không cần đăng nhập), nhớ vào máy.
- * Ảnh ô là thumbnail kênh của VTVgo, tải lúc Áp dụng rồi gửi kèm (launcher không có mạng); app không đóng sẵn logo của đài,
- * tải không được thì launcher vẽ ô chữ.
+ * Kênh của VTVgo. Danh sách kênh lấy từ API công khai của VTVgo (display/v21.0/catalogs/with-channels, không cần đăng
+ * nhập), nhớ vào máy; ô Kênh nhanh VTVgo (app phụ, KenhNhanh) mở kênh bằng vtvgo://play?mediaType=CHANNEL&contentId=<mã>.
+ *
+ * Ô kênh kiểu cũ trên Home sạch (CleanTV 2.10.0 – 3.0.0; TiviKit 1.2 – 1.4 chọn ở màn Home sạch): mỗi kênh một ô link ở
+ * đầu dock. Launcher vẽ ô theo link_tiles của bản vá (LinkTiles.java); ô mang tên gói giả vgs.kenh.<slug> trong dock_apps
+ * nên đổi chỗ / bỏ khỏi Home như app thường. Ảnh ô là thumbnail kênh của VTVgo, gửi kèm khi Áp dụng (launcher không có
+ * mạng); app không đóng sẵn logo của đài, tải không được thì launcher vẽ ô chữ. Ô kiểu này không gán được nút remote nên
+ * màn Kênh nhanh chuyển chúng thành ô app phụ.
  */
 object KenhVtvGo {
     const val GOI = "vn.vtv.vtvgotv"
@@ -61,7 +63,7 @@ object KenhVtvGo {
         return p[0] to ma
     }
 
-    /** Các ô VTVgo đang có trong config.json [j] (link_tiles): (tên, mã kênh), theo thứ tự. */
+    /** Các ô VTVgo kiểu cũ đang có trong config.json [j] (link_tiles): (tên, mã kênh), theo thứ tự. */
     fun docTu(j: JSONObject): List<Pair<String, String>> =
         j.optJSONArray("link_tiles")?.let { a -> (0 until a.length()).mapNotNull { tuLink(a.optString(it)) } }.orEmpty()
 

@@ -1530,47 +1530,6 @@ private fun TheMayChieu(vm: PhienLamViec) {
 }
 
 /** Hộp chọn tay một mẫu trong toàn bộ danh sách, có ô tìm (23/10/2026). */
-/** Chọn kênh VTVgo bất kỳ (CleanTV 3.0.0): danh sách từ API của VTVgo, nhóm theo gói, tìm theo tên không dấu. */
-@Composable
-internal fun HopChonKenh(vm: PhienLamViec) {
-    var tim by remember { mutableStateOf("") }
-    val khoa = XaPhuong.boDau(tim.trim().lowercase())
-    val ds = remember(khoa, vm.dsKenhGo) {
-        if (khoa.isEmpty()) vm.dsKenhGo else vm.dsKenhGo.filter { k -> khoa.split(" ").all { it in XaPhuong.boDau(k.ten.lowercase()) } }
-    }
-    AlertDialog(
-        onDismissRequest = { vm.moChonKenh = false },
-        confirmButton = { TextButton(onClick = { vm.moChonKenh = false }) { Text(t("Xong", "Done")) } },
-        title = { Text(t("Kênh trên VTVgo", "Channels on VTVgo")) },
-        text = {
-            Column {
-                OutlinedTextField(tim, { tim = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(t("Tìm kênh (vd: vĩnh long, htv9, quảng ngãi)", "Search (e.g. hanoi, vtv5)")) })
-                if (vm.dsKenhGo.isEmpty()) Text(if (vm.dangTaiKenh) t("Đang tải danh sách kênh…", "Loading channels…")
-                    else t("Không tải được danh sách kênh. Kiểm tra mạng của điện thoại rồi mở lại.", "Could not load the channel list. Check the phone's internet and try again."),
-                    fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
-                Text(t("Đã chọn ${vm.kenhChon.size}/${KenhVtvGo.TOI_DA} · kênh có ổ khoá cần đăng nhập VTVgo trên tivi", "${vm.kenhChon.size}/${KenhVtvGo.TOI_DA} picked · locked channels need a VTVgo login on the TV"),
-                    fontSize = 12.sp, color = ChuPhu, modifier = Modifier.padding(vertical = 6.dp))
-                LazyColumn(Modifier.heightIn(max = 400.dp)) {
-                    var nhomTruoc = ""
-                    ds.forEach { k ->
-                        if (k.nhom != nhomTruoc) { nhomTruoc = k.nhom; val n = k.nhom; item(key = "n:" + n + k.ma) { Text(n, fontSize = 12.sp, color = Nhan, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) } }
-                        item(key = k.nhom + k.ma) {
-                            val chon = vm.coKenh(k.ma)
-                            Row(Modifier.fillMaxWidth().clickable { vm.batTatKenh(k.tenO, k.ma) }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(if (chon) Icons.Rounded.CheckCircle else Icons.Rounded.AddCircleOutline, null, tint = if (chon) Xanh else ChuPhu, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(10.dp))
-                                Text(k.ten + if (k.canDangNhap) " 🔒" else "", fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        containerColor = The1,
-    )
-}
-
 @Composable
 private fun HopChonMau(vm: PhienLamViec) {
     var tim by remember { mutableStateOf("") }

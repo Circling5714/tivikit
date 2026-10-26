@@ -45,6 +45,29 @@ class KenhNhanhTest {
         assertNull(KenhNhanh.tuJson(null))
     }
 
+    /** Ô VTVgo (26/10/2026): cùng dạng JSON với app phụ (module kenh/, Kenh.json), mở bằng VTVgo, không trùng ô TV360. */
+    @Test fun oVtvGo_json_vaTrung() {
+        val go = KenhNhanh.Kenh("", "VTV3", "3")
+        val j = JSONObject(KenhNhanh.json(go))
+        assertEquals(listOf("vtvgo", "3", "VTV3"), listOf(j.getString("app"), j.getString("ma"), j.getString("ten")))
+        assertFalse(j.has("so"))
+        assertEquals(go, KenhNhanh.tuJson(j))
+        assertEquals(KenhNhanh.VTVGO, go.app)
+        assertEquals(KenhNhanh.TV360, KenhNhanh.Kenh("003", "VTV3").app)
+        assertNull(KenhNhanh.tuJson(JSONObject("""{"app":"vtvgo","ma":"a b","ten":"X"}""")))
+        assertTrue(go.trung(KenhNhanh.Kenh("", "VTV3 HD", "3")))
+        assertFalse(go.trung(KenhNhanh.Kenh("003", "VTV3")))
+        assertFalse(KenhNhanh.Kenh("003", "VTV3").trung(KenhNhanh.Kenh("", "VTV3", "003")))
+    }
+
+    /** Ô link kiểu cũ (vgs.kenh.*) không tính vào số app tối đa của dock, như lúc Áp dụng Home sạch. */
+    @Test fun datDock_khongTinhOLinkCu() {
+        val j = JSONObject().put("dock_apps", JSONArray(listOf("vgs.kenh.vtv1", "vgs.kenh.vtv3", "com.a", "com.b")))
+        assertEquals(true, KenhNhanh.datDock(j, o3, true, 3))
+        assertEquals(listOf("vgs.kenh.vtv1", "vgs.kenh.vtv3", "com.a", "com.b", o3), mang(j, "dock_apps"))
+        assertEquals(false, KenhNhanh.datDock(j, KenhNhanh.GOI, true, 3))
+    }
+
     @Test fun tenO_nhieuO_giuTenCuaAppKhac() {
         val j = JSONObject().put("app_labels", JSONArray(listOf("com.telekom.onetv.tv.pl=TV")))
         KenhNhanh.datTen(j, KenhNhanh.GOI, "VTV1")

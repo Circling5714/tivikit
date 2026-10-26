@@ -2,8 +2,10 @@ package vn.tivikit.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,6 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,34 +24,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
+import vn.tivikit.dulieu.XaPhuong
 import vn.tivikit.t
 
 /**
- * Màn Kênh nhanh (25/10/2026; 26/10/2026 gom cả ô kênh VTVgo từ màn Home sạch về): ô kênh mở thẳng một kênh, mỗi app
- * xem truyền hình một thẻ — TV360 (ô là app phụ, gán được nút remote) và VTVgo (ô link của Home sạch, có logo kênh).
+ * Màn Kênh nhanh (25/10/2026; 26/10/2026 thêm ô VTVgo): các ô kênh (VTV1, VTV3, HTV7…), mỗi ô mở thẳng một kênh trên TV360
+ * hoặc VTVgo, gán được một nút remote. Ô soạn chọn app của ô bằng ô chia đoạn TV360 · VTVgo.
  */
 @Composable
 internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
     val k = vm.kenhNhanh
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(t("Kênh nhanh", "Quick channel"), style = KieuTieuDeLon)
-        Phu(t("Ô kênh trên tivi mở thẳng VTV1, HTV7… trong app xem truyền hình, khỏi phải tìm. Chọn thẻ theo app tivi đang dùng.",
-            "Tiles on the TV that open VTV1, HTV7… straight in a TV app, no searching. Pick the tab for the app the TV uses."))
+        Phu(t("Mỗi ô kênh là một ô trên Home sạch mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360 hoặc VTVgo, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
+            "Each channel tile is a clean Home tile that opens one channel (VTV1, VTV3, HTV7…) in TV360 or VTVgo, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
     }
-    ChonDoan(listOf("TV360", "VTVgo"), k.nguon) { k.nguon = it }
-    if (k.nguon == 0) PhanTv360(vm) else PhanVtvGo(vm)
-}
-
-/** Thẻ TV360: các ô kênh (VTV1, VTV3, HTV7…), mỗi ô mở thẳng một kênh, gán được một nút remote. */
-@Composable
-private fun PhanTv360(vm: PhienLamViec) {
-    val k = vm.kenhNhanh
-    Phu(t("Mỗi ô kênh (VTV1, VTV3, HTV7…) là một ô trên Home sạch mở thẳng kênh đó trên TV360, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
-        "Each channel tile (VTV1, VTV3, HTV7…) is a clean Home tile that opens that channel in TV360, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
-    if (!k.coTv360) CanhBaoKenh(vm, t("Tivi chưa có TV360 bản tivi (hoặc đang bị tắt ở Quản lý app).", "The TV doesn't have TV360 for TV (or it's disabled in Manage apps)."),
-        t("Mở TV360 trên CH Play của tivi", "Open TV360 in the TV's Play Store")) { k.moCHPlay() }
+    if (k.kenhGoCu.isNotEmpty()) CanhBaoKenh(vm,
+        t("Home sạch đang có ${k.kenhGoCu.size} ô kênh VTVgo kiểu cũ (${k.kenhGoCu.joinToString { it.first }}), không gán được nút remote. Chuyển sang ô Kênh nhanh để gán nút remote và hẹn giờ; ô mới chưa có logo kênh.",
+            "The clean Home has ${k.kenhGoCu.size} old-style VTVgo tiles (${k.kenhGoCu.joinToString { it.first }}) that can't take a remote button. Move them to Quick channel tiles for remote buttons and the timer; the new tiles have no channel logo yet."),
+        t("Chuyển sang ô Kênh nhanh", "Move to Quick channel tiles")) { k.chuyenKenhCu() }
 
     The(t("Ô kênh trên tivi (${k.ds.size}/${KenhNhanh.SO_O})", "Channel tiles on the TV (${k.ds.size}/${KenhNhanh.SO_O})"), Icons.Rounded.LiveTv) {
         if (k.ds.isEmpty()) Phu(t("Chưa có ô nào. Chọn kênh ở ô bên dưới rồi bấm Thêm lên tivi.", "No tiles yet. Pick a channel below and tap Add to the TV."))
@@ -56,7 +56,8 @@ private fun PhanTv360(vm: PhienLamViec) {
                 verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     Text(o.kenh?.ten ?: t("Ô ${o.so} (chưa đọc được kênh)", "Tile ${o.so} (channel unreadable)"), fontWeight = FontWeight.SemiBold)
-                    Phu(listOfNotNull(t("ô ${o.so}", "tile ${o.so}"), o.kenh?.let { t("số ${it.so.trimStart('0')}", "number ${it.so.trimStart('0')}") },
+                    Phu(listOfNotNull(t("ô ${o.so}", "tile ${o.so}"),
+                        o.kenh?.let { if (it.laVtvGo) "VTVgo" else t("TV360 số ${it.so.trimStart('0')}", "TV360 no. ${it.so.trimStart('0')}") },
                         if (o.trongDock) t("trong dock", "in the dock") else null).joinToString(" · "))
                 }
                 IconButton(onClick = { k.thu(o) }, enabled = !vm.dangBan) { Icon(Icons.Rounded.PlayCircle, t("Thử trên tivi", "Test on the TV"), tint = Xanh) }
@@ -71,23 +72,8 @@ private fun PhanTv360(vm: PhienLamViec) {
 
     val sua = k.dangSua
     if (sua != null || k.ds.size < KenhNhanh.SO_O) The(if (sua != null) t("Sửa ô $sua", "Edit tile $sua") else t("Thêm ô kênh", "Add a channel tile"), Icons.Rounded.AddToQueue) {
-        Phu(t("Chọn nhanh:", "Pick one:"))
-        KenhNhanh.GOI_Y.chunked(5).forEach { hang ->
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                hang.forEach { g ->
-                    val daCo = k.ds.any { it.so != sua && it.kenh?.so == g.so }
-                    ChonChip(if (daCo) "${g.ten} ✓" else g.ten, KenhNhanh.chuanSo(k.so) == g.so) { k.chon(g) }
-                }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(k.so, { k.so = it.filter(Char::isDigit).take(3) }, modifier = Modifier.width(120.dp), singleLine = true, shape = RoundedCornerShape(12.dp),
-                label = { Text(t("Số kênh", "Number")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            OutlinedTextField(k.ten, { k.ten = it.take(30) }, modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(12.dp),
-                label = { Text(t("Tên kênh", "Channel name")) })
-        }
-        Phu(t("Số kênh là số TV360 hiện cạnh tên kênh trong danh sách kênh (VTV1 là 1, HTV7 là 73). TV360 tìm theo số trước, không thấy thì theo tên; tên cũng là tên ô trên Home sạch. ✓ = kênh đã có ô.",
-            "The number is the one TV360 shows next to the channel in its list (VTV1 is 1, HTV7 is 73). TV360 looks up the number first, then the name; the name is also the tile's name on the clean Home. ✓ = already has a tile."))
+        ChonDoan(listOf("TV360", "VTVgo"), k.app) { k.app = it }
+        if (k.app == 0) SoanTv360(vm) else SoanVtvGo(vm)
         if (vm.daCoHomeSach) Hang(t("Thêm ô vào dock", "Put the tile in the dock"),
             t("Ô mang tên kênh ở hàng dock; tắt thì ô chỉ nằm trong danh sách app.", "A tile named after the channel in the dock; off keeps it in the app list only."),
             k.trongDock) { k.trongDock = it }
@@ -99,55 +85,92 @@ private fun PhanTv360(vm: PhienLamViec) {
         "All ${KenhNhanh.SO_O} tiles are used. Tap the pencil on a tile to change its channel, or remove a tile for another channel."))
     if (k.bao.isNotEmpty()) Phu(k.bao, if (k.baoLech) Cam else Xanh)
 
-    Phu(t("Kênh nhanh dùng cổng nhận lệnh giọng nói của TV360 (cùng đường với \"Xem VTV1 trên TV360\" của Google Assistant), không phải giao diện công khai: bản TV360 sau có thể đổi, khi đó ô chỉ mở TV360 như thường. Hẹn giờ cũng mở được từng ô (VD 18:58 mở VTV1). Khôi phục tivi gỡ hết các ô.",
-        "Quick channel uses TV360's voice-command entry (the one Google Assistant uses for \"Watch VTV1 on TV360\"), not a public interface: a later TV360 may change it, and the tiles then just open TV360. The Timer can open each tile too (e.g. 18:58 opens VTV1). Restoring the TV removes all tiles."))
+    Phu(t("Ô TV360 dùng cổng nhận lệnh giọng nói của TV360 (cùng đường với \"Xem VTV1 trên TV360\" của Google Assistant), không phải giao diện công khai: bản TV360 sau có thể đổi, khi đó ô chỉ mở TV360 như thường. Ô VTVgo mở bằng link kênh của VTVgo. Hẹn giờ cũng mở được từng ô (VD 18:58 mở VTV1). Khôi phục tivi gỡ hết các ô.",
+        "TV360 tiles use TV360's voice-command entry (the one Google Assistant uses for \"Watch VTV1 on TV360\"), not a public interface: a later TV360 may change it, and the tiles then just open TV360. VTVgo tiles open VTVgo's channel link. The Timer can open each tile too (e.g. 18:58 opens VTV1). Restoring the TV removes all tiles."))
+    if (vm.moChonKenh) HopChonKenhGo(vm)
 }
 
-/**
- * Thẻ VTVgo: chọn kênh (VTV1–9, hay kênh địa phương, VTVcab… từ danh sách của VTVgo), mỗi kênh một ô có logo ở đầu dock
- * Home sạch; bấm Lưu mới ghi lên tivi.
- */
+/** Ô soạn, kênh TV360: chọn nhanh hoặc gõ số kênh và tên. */
 @Composable
-private fun PhanVtvGo(vm: PhienLamViec) {
+private fun SoanTv360(vm: PhienLamViec) {
     val k = vm.kenhNhanh
-    Phu(t("Mỗi kênh chọn thành một ô có logo kênh ở đầu dock Home sạch, bấm là xem luôn kênh đó trên VTVgo. Tối đa ${KenhVtvGo.TOI_DA} ô; ô VTVgo chưa gán được nút remote (ô TV360 thì được).",
-        "Each channel you pick becomes a tile with the channel's logo at the start of the clean Home's dock, opening it straight in VTVgo. Up to ${KenhVtvGo.TOI_DA} tiles; VTVgo tiles can't take a remote button yet (TV360 tiles can)."))
-    when {
-        vm.khongCaiHome -> CanhBaoKenh(vm, t("Máy này không cài được Home sạch nên không có ô kênh VTVgo. Dùng thẻ TV360.",
-            "This device can't take the clean Home, so VTVgo tiles aren't possible. Use the TV360 tab."))
-        !vm.daCoHomeSach -> CanhBaoKenh(vm, t("Ô kênh VTVgo nằm trên Home sạch, mà tivi này chưa có Home sạch.", "VTVgo tiles live on the clean Home, which this TV doesn't have yet."),
-            t("Cài Home sạch", "Install the clean Home")) { k.moHomeSach() }
-        k.homeCu -> CanhBaoKenh(vm, t("Home sạch trên tivi là bản cũ, chưa có ô kênh. Mở Home sạch, bấm Áp dụng lên tivi một lần (app tự cập nhật, giữ giao diện), rồi quay lại đây.",
-            "The clean Home on the TV is an old version without channel tiles. Open Clean Home, press Apply to the TV once (the app updates it and keeps your look), then come back here."),
-            t("Mở Home sạch", "Open Clean Home")) { k.moHomeSach() }
-        !vm.coVtvGo -> {
-            CanhBaoKenh(vm, t("Tivi chưa có VTVgo bản tivi: cài từ CH Play của tivi, mở VTVgo một lần, rồi mở lại màn này.",
-                "The TV doesn't have VTVgo for TV: install it from the TV's Play Store, open it once, then reopen this screen."),
-                t("Mở VTVgo trên CH Play của tivi", "Open VTVgo in the TV's Play Store")) { vm.moVtvGoChPlay() }
-            if (vm.baoVtvGo.isNotEmpty()) Phu(vm.baoVtvGo, Xanh)
-        }
-        else -> The(t("Ô kênh VTVgo (${vm.kenhChon.size}/${KenhVtvGo.TOI_DA})", "VTVgo tiles (${vm.kenhChon.size}/${KenhVtvGo.TOI_DA})"), Icons.Rounded.LiveTv) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                KenhVtvGo.VTV.forEach { (ten, ma, _) -> ChonChip(ten, vm.coKenh(ma)) { vm.batTatKenh(ten, ma) } }
-            }
-            // Kênh khác (địa phương, VTVcab…) đã chọn từ hộp danh sách: hiện riêng để bỏ chọn được.
-            val khac = vm.kenhChon.filter { (_, ma) -> KenhVtvGo.VTV.none { it.second == ma } }
-            if (khac.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                khac.forEach { (ten, ma) -> ChonChip(ten, true) { vm.batTatKenh(ten, ma) } }
-            }
-            NutPhu(t("Thêm kênh khác trên VTVgo (địa phương, VTVcab…)", "More VTVgo channels (local, VTVcab…)"), Icons.Rounded.Search) { vm.moHopKenh() }
-            if (vm.kenhChon.size >= KenhVtvGo.TOI_DA) Phu(t("Tối đa ${KenhVtvGo.TOI_DA} kênh.", "Up to ${KenhVtvGo.TOI_DA} channels."))
-            Phu(t("Ô đứng ở đầu dock theo thứ tự chọn. Ảnh ô tải từ VTVgo lúc lưu; không tải được thì ô hiện tên kênh.",
-                "Tiles sit at the start of the dock in the order picked. Pictures come from VTVgo when you save; without them the tile shows the channel name."))
-            NutChinh(when {
-                k.goChuaLuu -> t("Lưu lên tivi", "Save to the TV")
-                vm.kenhChon.isEmpty() -> t("Chưa chọn kênh nào", "No channel picked")
-                else -> t("Đã lưu trên tivi", "Saved on the TV")
-            }, enabled = !vm.dangBan && k.goChuaLuu, icon = Icons.Rounded.Check) { k.luuVtvGo() }
+    if (!k.coTv360) CanhBaoKenh(vm, t("Tivi chưa có TV360 bản tivi (hoặc đang bị tắt ở Quản lý app).", "The TV doesn't have TV360 for TV (or it's disabled in Manage apps)."),
+        t("Mở TV360 trên CH Play của tivi", "Open TV360 in the TV's Play Store")) { k.moCHPlay(KenhNhanh.TV360) }
+    Phu(t("Chọn nhanh:", "Pick one:"))
+    KenhNhanh.GOI_Y.chunked(5).forEach { hang ->
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            hang.forEach { g -> ChonChip(if (k.daCoTv360(g)) "${g.ten} ✓" else g.ten, KenhNhanh.chuanSo(k.so) == g.so) { k.chon(g) } }
         }
     }
-    if (k.baoGo.isNotEmpty()) Phu(k.baoGo, Xanh)
-    if (vm.moChonKenh) HopChonKenh(vm)
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        OutlinedTextField(k.so, { k.so = it.filter(Char::isDigit).take(3) }, modifier = Modifier.width(120.dp), singleLine = true, shape = RoundedCornerShape(12.dp),
+            label = { Text(t("Số kênh", "Number")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        OutlinedTextField(k.ten, { k.ten = it.take(30) }, modifier = Modifier.weight(1f), singleLine = true, shape = RoundedCornerShape(12.dp),
+            label = { Text(t("Tên kênh", "Channel name")) })
+    }
+    Phu(t("Số kênh là số TV360 hiện cạnh tên kênh trong danh sách kênh (VTV1 là 1, HTV7 là 73). TV360 tìm theo số trước, không thấy thì theo tên; tên cũng là tên ô trên Home sạch. ✓ = kênh đã có ô.",
+        "The number is the one TV360 shows next to the channel in its list (VTV1 is 1, HTV7 is 73). TV360 looks up the number first, then the name; the name is also the tile's name on the clean Home. ✓ = already has a tile."))
+}
+
+/** Ô soạn, kênh VTVgo: VTV1–9, hoặc kênh khác (địa phương, VTVcab…) từ danh sách của VTVgo. */
+@Composable
+private fun SoanVtvGo(vm: PhienLamViec) {
+    val k = vm.kenhNhanh
+    if (!vm.coVtvGo) CanhBaoKenh(vm, t("Tivi chưa có VTVgo bản tivi: cài từ CH Play của tivi, mở VTVgo một lần, rồi mở lại màn này.",
+        "The TV doesn't have VTVgo for TV: install it from the TV's Play Store, open it once, then reopen this screen."),
+        t("Mở VTVgo trên CH Play của tivi", "Open VTVgo in the TV's Play Store")) { k.moCHPlay(KenhNhanh.VTVGO) }
+    Phu(t("Chọn kênh:", "Pick a channel:"))
+    val dangChon = k.kenhGo
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        KenhVtvGo.VTV.forEach { (ten, ma, _) -> ChonChip(if (k.daCoGo(ma)) "$ten ✓" else ten, dangChon?.second == ma) { k.chonGo(ten, ma) } }
+    }
+    // Hàng chip cuộn ngang nên kênh đang chọn (hay kênh khác chọn từ hộp danh sách) có thể khuất: ghi rõ ra.
+    if (dangChon != null) Text(t("Kênh của ô: ${dangChon.first}", "Tile channel: ${dangChon.first}"), fontWeight = FontWeight.SemiBold, color = ChuChinh)
+    NutPhu(t("Kênh khác trên VTVgo (địa phương, VTVcab…)", "Other VTVgo channels (local, VTVcab…)"), Icons.Rounded.Search) { vm.moHopKenh() }
+    Phu(t("Ô mở thẳng kênh trong app VTVgo; kênh có ổ khoá cần đăng nhập VTVgo trên tivi. ✓ = kênh đã có ô.",
+        "The tile opens the channel straight in the VTVgo app; locked channels need a VTVgo login on the TV. ✓ = already has a tile."))
+}
+
+/** Chọn một kênh VTVgo bất kỳ cho ô soạn (CleanTV 3.0.0): danh sách từ API của VTVgo, nhóm theo gói, tìm theo tên không dấu. */
+@Composable
+private fun HopChonKenhGo(vm: PhienLamViec) {
+    val k = vm.kenhNhanh
+    var tim by remember { mutableStateOf("") }
+    val khoa = XaPhuong.boDau(tim.trim().lowercase())
+    val ds = remember(khoa, vm.dsKenhGo) {
+        if (khoa.isEmpty()) vm.dsKenhGo else vm.dsKenhGo.filter { g -> khoa.split(" ").all { it in XaPhuong.boDau(g.ten.lowercase()) } }
+    }
+    AlertDialog(
+        onDismissRequest = { vm.moChonKenh = false },
+        confirmButton = { TextButton(onClick = { vm.moChonKenh = false }) { Text(t("Đóng", "Close")) } },
+        title = { Text(t("Kênh trên VTVgo", "Channels on VTVgo")) },
+        text = {
+            Column {
+                OutlinedTextField(tim, { tim = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("Tìm kênh (vd: vĩnh long, htv9, quảng ngãi)", "Search (e.g. hanoi, vtv5)")) })
+                if (vm.dsKenhGo.isEmpty()) Text(if (vm.dangTaiKenh) t("Đang tải danh sách kênh…", "Loading channels…")
+                    else t("Không tải được danh sách kênh. Kiểm tra mạng của điện thoại rồi mở lại.", "Could not load the channel list. Check the phone's internet and try again."),
+                    fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+                Text(t("Bấm một kênh để chọn cho ô · ✓ = đã có ô · kênh có ổ khoá cần đăng nhập VTVgo trên tivi", "Tap a channel for the tile · ✓ = already has a tile · locked channels need a VTVgo login on the TV"),
+                    fontSize = 12.sp, color = ChuPhu, modifier = Modifier.padding(vertical = 6.dp))
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    var nhomTruoc = ""
+                    ds.forEach { g ->
+                        if (g.nhom != nhomTruoc) { nhomTruoc = g.nhom; val n = g.nhom; item(key = "n:" + n + g.ma) { Text(n, fontSize = 12.sp, color = Nhan, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) } }
+                        item(key = g.nhom + g.ma) {
+                            val chon = k.kenhGo?.second == g.ma
+                            Row(Modifier.fillMaxWidth().clickable { k.chonGo(g.tenO, g.ma); vm.moChonKenh = false }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (chon) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked, null, tint = if (chon) Xanh else ChuPhu, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Text(g.ten + (if (g.canDangNhap) " 🔒" else "") + (if (k.daCoGo(g.ma)) " ✓" else ""), fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = The1,
+    )
 }
 
 /** Khung cam báo điều kiện còn thiếu, kèm một nút làm việc đó ([nut] null = không nút). */
