@@ -16,7 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -66,13 +69,14 @@ private fun HangGoiY(vm: PhienLamViec, g: GoiY.App, daCai: String?) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(The2).padding(start = 12.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(g.ten, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(8.dp))
-                Text(when { g.laCHPlay -> "CH Play"; g.khongChinhThuc -> t("cộng đồng · GitHub", "community · GitHub"); else -> t("mã nguồn mở", "open source") },
-                    fontSize = 11.sp, color = ChuPhu)
-                if (daCai != null) { Spacer(Modifier.width(8.dp)); Text(t("đã cài", "installed"), fontSize = 11.sp, color = Xanh) }
-            }
+            // Tên, nguồn, "đã cài" là một dòng chữ tự xuống dòng (27/10/2026): để trong Row thì máy chữ to ép phần cuối
+            // thành một cột từng chữ. Khoảng trắng không ngắt trong mỗi nhãn: xuống dòng thì cả nhãn xuống cùng nhau.
+            val nguon = when { g.laCHPlay -> "CH Play"; g.khongChinhThuc -> t("cộng đồng · GitHub", "community · GitHub"); else -> t("mã nguồn mở", "open source") }
+            Text(buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(g.ten) }
+                withStyle(SpanStyle(fontSize = 11.sp, color = ChuPhu)) { append("  " + nguon.replace(' ', '\u00A0')) }
+                if (daCai != null) withStyle(SpanStyle(fontSize = 11.sp, color = Xanh)) { append("  " + t("đã cài", "installed").replace(' ', '\u00A0')) }
+            })
             Phu(g.moTa)
         }
         when {
