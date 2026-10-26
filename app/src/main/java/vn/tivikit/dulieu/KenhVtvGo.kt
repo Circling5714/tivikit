@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import java.io.ByteArrayOutputStream
 import java.io.File
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -58,6 +59,23 @@ object KenhVtvGo {
         if (p.size < 3 || p[1] != GOI) return null
         val ma = Regex("contentId=([A-Za-z0-9_-]+)").find(p[2])?.groupValues?.get(1) ?: return null
         return p[0] to ma
+    }
+
+    /** Các ô VTVgo đang có trong config.json [j] (link_tiles): (tên, mã kênh), theo thứ tự. */
+    fun docTu(j: JSONObject): List<Pair<String, String>> =
+        j.optJSONArray("link_tiles")?.let { a -> (0 until a.length()).mapNotNull { tuLink(a.optString(it)) } }.orEmpty()
+
+    /**
+     * Đặt các ô [kenh] vào config.json [j]: link_tiles, và tên gói giả của chúng ở đầu dock_apps, trước các app đang có
+     * (ô kênh cũ bỏ đi). false = [j] không có dock_apps (Home sạch đang dùng dock mặc định, ghi vào là mất dock đó): chưa
+     * đổi gì.
+     */
+    fun datVao(j: JSONObject, kenh: List<Pair<String, String>>): Boolean {
+        val dock = j.optJSONArray("dock_apps") ?: return false
+        val app = (0 until dock.length()).map { dock.optString(it).trim() }.filter { it.isNotEmpty() && !it.startsWith(TIEN_TO) }
+        if (kenh.isEmpty()) j.remove("link_tiles") else j.put("link_tiles", JSONArray(kenh.map { (ten, ma) -> oLink(ten, ma) }))
+        j.put("dock_apps", JSONArray(kenh.map { TIEN_TO + slug(it.first) } + app))
+        return true
     }
 
     fun docNho(ctx: Context): List<Kenh> =

@@ -43,6 +43,32 @@ class KenhVtvGoTest {
         assertNull(KenhVtvGo.tuLink("hỏng"))
     }
 
+    /**
+     * Lưu ô kênh từ màn Kênh nhanh vào config.json đang có (26/10/2026): ô kênh đứng đầu dock theo thứ tự chọn, app giữ
+     * nguyên thứ tự, ô kênh cũ bỏ đi, khoá khác không đụng tới; đọc lại ra đúng danh sách vừa ghi.
+     */
+    @Test fun datVao_oKenhDauDock_giuAppVaKhoaKhac() {
+        val j = org.json.JSONObject("""{"theme":"tivikit","link_tiles":["VTV9|vn.vtv.vtvgotv|vtvgo://play?mediaType=CHANNEL&contentId=39|#283593"],
+            "dock_apps":["vgs.kenh.vtv9","com.google.android.youtube.tv","vn.tivikit.kenh"," "]}""")
+        assertTrue(KenhVtvGo.datVao(j, listOf("VTV1" to "1", "Vĩnh Long 1" to "vl1")))
+        val dock = j.getJSONArray("dock_apps").let { a -> (0 until a.length()).map { a.getString(it) } }
+        assertEquals(listOf("vgs.kenh.vtv1", "vgs.kenh.vnhlong1", "com.google.android.youtube.tv", "vn.tivikit.kenh"), dock)
+        assertEquals(listOf("VTV1" to "1", "Vĩnh Long 1" to "vl1"), KenhVtvGo.docTu(j))
+        assertEquals("tivikit", j.getString("theme"))
+    }
+
+    @Test fun datVao_boHetKenh_vaKhongCoDock() {
+        val j = org.json.JSONObject("""{"link_tiles":["VTV1|vn.vtv.vtvgotv|vtvgo://play?mediaType=CHANNEL&contentId=1|#D71920"],"dock_apps":["vgs.kenh.vtv1","com.a.b"]}""")
+        assertTrue(KenhVtvGo.datVao(j, emptyList()))
+        assertTrue(!j.has("link_tiles"))
+        assertEquals("[\"com.a.b\"]", j.getJSONArray("dock_apps").toString())
+        assertEquals(emptyList<Pair<String, String>>(), KenhVtvGo.docTu(j))
+        // Home sạch đang dùng dock mặc định: không ghi gì (ghi là mất dock đó).
+        val macDinh = org.json.JSONObject("""{"theme":"tivikit"}""")
+        assertTrue(!KenhVtvGo.datVao(macDinh, listOf("VTV1" to "1")))
+        assertEquals("""{"theme":"tivikit"}""", macDinh.toString())
+    }
+
     /** Launcher bỏ ô có tên quá 24 ký tự; mã kênh VTV1–9 không trùng nhau. */
     @Test fun tenO_toiDa24_vaMaVtvKhongTrung() {
         assertEquals(24, KenhVtvGo.tenNgan("Truyền hình " + "A".repeat(40)).length)

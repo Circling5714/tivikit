@@ -99,7 +99,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
      * hình Home sạch (cauHinhHome) ghép lại vào, để Đổi giao diện không làm mất.
      */
     val phimRieng = mutableStateListOf<String>()
-    /** Kênh nhanh TV360 (ui/KenhNhanhTivi.kt). */
+    /** Kênh nhanh: ô kênh TV360 và VTVgo (ui/KenhNhanhTivi.kt). */
     val kenhNhanh by lazy { KenhNhanhTivi(this) }
     /** Hẹn giờ bật / tắt tivi, mở app (ui/HenGioTivi.kt). */
     val henGio by lazy { HenGioTivi(this) }
@@ -1387,8 +1387,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
             val ds = (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() && !it.startsWith(vn.tivikit.dulieu.KenhVtvGo.TIEN_TO) }
             if (ds.isNotEmpty()) { dock.clear(); dock.addAll(ds.take(DOCK_TOI_DA)) }
         }
-        kenhChon.clear()
-        j.optJSONArray("link_tiles")?.let { a -> (0 until a.length()).mapNotNull { vn.tivikit.dulieu.KenhVtvGo.tuLink(a.optString(it)) }.forEach { kenhChon.add(it) } }
+        kenhChon.clear(); kenhChon.addAll(vn.tivikit.dulieu.KenhVtvGo.docTu(j))
         j.optString("greeting_name").takeIf { it.isNotBlank() }?.let { tenChao = it }
         j.optString("weather_place").takeIf { it.isNotBlank() }?.let { ten ->
             thanhPho = THANH_PHO.firstOrNull { it.ten == ten }
@@ -1486,10 +1485,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     }
 
     private fun cauHinhHome(): String = JSONObject().apply {
-        // Ô kênh VTVgo đứng đầu dock, rồi tới app người dùng chọn.
-        val kenh = if (coVtvGo) kenhChon.toList() else emptyList()
-        if (kenh.isNotEmpty()) put("link_tiles", JSONArray(kenh.map { (ten, ma) -> vn.tivikit.dulieu.KenhVtvGo.oLink(ten, ma) }))
-        put("dock_apps", JSONArray(kenh.map { vn.tivikit.dulieu.KenhVtvGo.TIEN_TO + vn.tivikit.dulieu.KenhVtvGo.slug(it.first) } + dock.toList()))
+        // Ô kênh VTVgo (chọn ở màn Kênh nhanh) đứng đầu dock, rồi tới app người dùng chọn.
+        put("dock_apps", JSONArray(dock.toList()))
+        vn.tivikit.dulieu.KenhVtvGo.datVao(this, if (coVtvGo) kenhChon.toList() else emptyList())
         if (tenChao.isNotBlank()) put("greeting_name", tenChao.trim())
         themeChon.ghiVao(this)
         if (anhNenRieng != null) { put("wallpaper", true); put("vgs_anh_rieng", true) }
@@ -1650,11 +1648,16 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
             t(". Bấm \"Áp dụng lên tivi\" để đưa lên tivi.", ". Press \"Apply to the TV\" to send it.")
     }
 
-    /** Ảnh các ô kênh VTVgo đang chọn (thumbnail của VTVgo, tải một lần rồi cất); launcher không có mạng nên gửi kèm. */
-    private suspend fun napAnhKenh() {
-        if (!coVtvGo || kenhChon.isEmpty()) { tv.anhKenh = emptyList(); return }
+    private suspend fun napAnhKenh() { tv.anhKenh = anhKenhChon() }
+
+    /**
+     * Ảnh các ô kênh VTVgo đang chọn (thumbnail của VTVgo, tải một lần rồi cất): (tên file sau "kenh-", ảnh). Launcher
+     * không có mạng nên gửi kèm; Áp dụng Home sạch và màn Kênh nhanh đều dùng.
+     */
+    internal suspend fun anhKenhChon(): List<Pair<String, ByteArray>> {
+        if (!coVtvGo || kenhChon.isEmpty()) return emptyList()
         val ds = dsKenhGo.ifEmpty { io { vn.tivikit.dulieu.KenhVtvGo.docNho(ctx).ifEmpty { vn.tivikit.dulieu.KenhVtvGo.tai(ctx) } } }
-        tv.anhKenh = kenhChon.toList().mapNotNull { (ten, ma) ->
+        return kenhChon.toList().mapNotNull { (ten, ma) ->
             io { vn.tivikit.dulieu.KenhVtvGo.anhO(ctx, ma, ds.firstOrNull { it.ma == ma }?.anh) }?.let { vn.tivikit.dulieu.KenhVtvGo.slug(ten) + ".jpg" to it }
         }
     }

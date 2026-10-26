@@ -4,13 +4,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import vn.tivikit.dulieu.KenhNhanh
+import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.PhimRieng
 import vn.tivikit.t
 
 /**
- * Kênh nhanh TV360 (25/10/2026, muốn một nút mở thẳng VTV1; cùng ngày thành nhiều ô): tối đa KenhNhanh.SO_O ô kênh, mỗi
- * ô một app phụ trên tivi (module kenh/) mang một kênh. Thêm / sửa ô (cài app của ô, đặt kênh, đặt tên ô trên Home sạch
- * theo tên kênh, thêm vào dock nếu muốn), bấm thử, gán nút remote (màn Nút remote chọn sẵn ô đó), bỏ ô.
+ * Kênh nhanh (25/10/2026, muốn một nút mở thẳng VTV1; cùng ngày thành nhiều ô; 26/10/2026 gom cả ô kênh VTVgo về đây),
+ * mỗi app xem truyền hình một thẻ:
+ * - TV360: tối đa KenhNhanh.SO_O ô kênh, mỗi ô một app phụ trên tivi (module kenh/) mang một kênh. Thêm / sửa ô (cài app
+ *   của ô, đặt kênh, đặt tên ô trên Home sạch theo tên kênh, thêm vào dock nếu muốn), bấm thử, gán nút remote (màn Nút
+ *   remote chọn sẵn ô đó), bỏ ô.
+ * - VTVgo: ô link_tiles của Home sạch 3.0 (KenhVtvGo) có ảnh logo kênh, tối đa KenhVtvGo.TOI_DA ô ở đầu dock; trước đây
+ *   chọn ở màn Home sạch. Lưu thẳng vào config.json đang có trên tivi, không đụng giao diện. Lựa chọn nằm ở vm.kenhChon,
+ *   chung với lúc Áp dụng Home sạch.
  */
 class KenhNhanhTivi(private val vm: PhienLamViec) {
     /** Một ô kênh đã cài trên tivi: số ô, kênh đang đặt (null = không đọc được), có trong dock Home sạch không. */
@@ -38,18 +44,36 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     var baoLech by mutableStateOf(false)
         private set
 
+    /** Thẻ đang xem: 0 TV360, 1 VTVgo. */
+    var nguon by mutableStateOf(0)
+
+    /** Ô kênh VTVgo đang có trên tivi (đọc lúc mở màn, đổi sau khi lưu): so với vm.kenhChon để biết đã lưu chưa. */
+    var kenhGoTrenTv by mutableStateOf<List<Pair<String, String>>>(emptyList())
+        private set
+    val goChuaLuu: Boolean get() = vm.kenhChon.toList() != kenhGoTrenTv
+    /** Home sạch trên tivi không phải bản đi kèm app (bản trước 1.2.0 chưa có ô kênh): Áp dụng ở màn Home sạch trước. */
+    var homeCu by mutableStateOf(false)
+        private set
+    var baoGo by mutableStateOf("")
+        private set
+
     fun mo() = vm.chay(t("Đang đọc Kênh nhanh trên tivi…", "Reading Quick channel on the TV…")) {
         vm.damBaoKetNoi()
-        bao = ""; baoLech = false; dangSua = null
-        docLai()
+        bao = ""; baoLech = false; dangSua = null; baoGo = ""
+        docLai(napGo = true)
         // Ô soạn gợi ý kênh hay xem đầu tiên chưa có ô nào.
         KenhNhanh.GOI_Y.firstOrNull { g -> ds.none { it.kenh?.so == g.so } }?.let { chon(it) }
         trongDock = true
+        // Mở sẵn thẻ của app tivi đang dùng: chưa có ô TV360 mà đã có ô VTVgo, hoặc tivi chỉ có VTVgo, thì thẻ VTVgo.
+        nguon = if (ds.isEmpty() && (kenhGoTrenTv.isNotEmpty() || (!coTv360 && vm.coVtvGo))) 1 else 0
         vm.man = Man.KENH_NHANH
     }
 
-    /** Đọc lại các ô trên tivi (app nào đã cài, kênh của nó, có trong dock không) và tên ô trên Home sạch. */
-    private suspend fun docLai() {
+    /**
+     * Đọc lại các ô trên tivi (app nào đã cài, kênh của nó, có trong dock không) và tên ô trên Home sạch. [napGo]: đọc cả
+     * ô VTVgo vào vm.kenhChon (lúc mở màn; lưu ô TV360 xong thì giữ nguyên lựa chọn VTVgo đang soạn).
+     */
+    private suspend fun docLai(napGo: Boolean = false) {
         val tt = vm.io { vm.tv.docTrangThai() }
         vm.trangThai = tt
         coTv360 = KenhNhanh.TV360 in tt.caiDat && KenhNhanh.TV360 !in tt.daTat
@@ -59,6 +83,40 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         ds = (1..KenhNhanh.SO_O).filter { KenhNhanh.goiCua(it) in tt.caiDat }.map { o ->
             O(o, KenhNhanh.tuJson(vm.io { vm.tv.docKenh(o) }), KenhNhanh.goiCua(o) in dock)
         }
+        if (napGo) {
+            kenhGoTrenTv = j?.let { KenhVtvGo.docTu(it) }.orEmpty()
+            vm.kenhChon.clear(); vm.kenhChon.addAll(kenhGoTrenTv)
+            homeCu = vm.daCoHomeSach && !vm.io { vm.tv.homeLaBanDiKem(apkHome()) }
+        }
+    }
+
+    private fun apkHome(): ByteArray = vn.tivikit.CapNhat.moAsset(vm.ctx, vm.tv.apkHome).use { it.readBytes() }
+
+    /**
+     * Lưu các ô kênh VTVgo đang chọn lên Home sạch: ảnh ô, link_tiles và đầu dock (ThaoTacTv.ghiKenhVtvGo). Home sạch cũ
+     * thì không tự cập nhật ở đây: lần đổi khoá gỡ Home sạch là mất ảnh nền, màn Home sạch mới gửi lại được.
+     */
+    fun luuVtvGo() = vm.chay(t("Đang lưu ô kênh VTVgo…", "Saving the VTVgo tiles…")) {
+        vm.damBaoKetNoi()
+        baoGo = ""
+        homeCu = !vm.io { vm.tv.homeLaBanDiKem(apkHome()) }
+        if (homeCu) error(t("Home sạch trên tivi chưa phải bản mới nhất nên chưa có ô kênh. Bấm Mở Home sạch, Áp dụng lên tivi một lần (app tự cập nhật, giữ giao diện), rồi quay lại lưu kênh.",
+            "The clean Home on the TV isn't the latest yet, so it has no channel tiles. Tap Open Clean Home, press Apply to the TV once (the app updates it and keeps your look), then come back and save."))
+        val kenh = vm.kenhChon.toList()
+        if (kenh.isNotEmpty()) vm.thongBao = t("Đang lấy ảnh ${kenh.size} ô kênh…", "Fetching ${kenh.size} channel tile pictures…")
+        val anh = vm.anhKenhChon()
+        vm.thongBao = t("Đang ghi lên Home sạch…", "Writing to the clean Home…")
+        if (!vm.io { vm.tv.ghiKenhVtvGo(kenh, anh) }) error(t("Home sạch đang dùng dock mặc định: bấm Mở Home sạch, Áp dụng lên tivi một lần, rồi lưu lại kênh.",
+            "The clean Home uses its default dock: tap Open Clean Home, press Apply to the TV once, then save the channels again."))
+        kenhGoTrenTv = kenh
+        baoGo = if (kenh.isEmpty()) t("Đã bỏ hết ô kênh VTVgo khỏi Home sạch.", "All VTVgo tiles are removed from the clean Home.")
+            else t("Đã lưu ${kenh.size} ô kênh ở đầu dock Home sạch: ${kenh.joinToString { it.first }}. Bấm Home trên remote để xem.",
+                "Saved ${kenh.size} channel tiles at the start of the clean Home's dock: ${kenh.joinToString { it.first }}. Press Home on the remote to see them.")
+    }
+
+    /** Sang màn Home sạch (cài, hoặc Áp dụng để cập nhật Home sạch cũ); bấm quay lại thì về màn chính. */
+    fun moHomeSach() {
+        if (vm.daCoHomeSach) { vm.man = Man.CHINH; vm.moDoiTheme() } else vm.boQuaDon(Man.CHINH)
     }
 
     fun chon(k: KenhNhanh.Kenh) { so = k.so.trimStart('0'); ten = k.ten }
@@ -174,5 +232,8 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     }
 
     /** Kết nối tivi khác. */
-    fun quen() { ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true }
+    fun quen() {
+        ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true
+        nguon = 0; kenhGoTrenTv = emptyList(); homeCu = false; baoGo = ""
+    }
 }

@@ -8,6 +8,7 @@ import vn.tivikit.dulieu.GoiCu
 import vn.tivikit.dulieu.HenGio
 import vn.tivikit.dulieu.KeHoach
 import vn.tivikit.dulieu.KenhNhanh
+import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.KhoSaoLuu
 import vn.tivikit.dulieu.PhanApk
 import vn.tivikit.dulieu.PhimRieng
@@ -490,13 +491,18 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         return lai
     }
 
+    /** Home sạch trên tivi đúng là bản [apk] đi kèm app (so SHA-256 của file APK đã cài). */
+    fun homeLaBanDiKem(apk: ByteArray): Boolean {
+        val bam = java.security.MessageDigest.getInstance("SHA-256").digest(apk).joinToString("") { "%02x".format(it) }
+        val coSan = runCatching { sh("sha256sum \$(pm path $pkgHome | head -n 1 | sed 's/^package://') 2>/dev/null").trim().substringBefore(' ') }.getOrDefault("")
+        return coSan == bam
+    }
+
     /** Cài đè Home sạch bản đi kèm app; bật lại dịch vụ trợ năng mà Android tắt khi cài lại. */
     fun capNhatLauncher(apk: ByteArray): Boolean {
         // Trên tivi đã đúng bản đi kèm thì thôi (24/10/2026): cài lại Home đang chạy làm Home bật lên trước, đẩy CleanTV
         // xuống nền — chạy CleanTV ngay trên TCL 65Q646 kẹt ở "Đang cập nhật Home sạch…" mỗi lần Áp dụng.
-        val bam = java.security.MessageDigest.getInstance("SHA-256").digest(apk).joinToString("") { "%02x".format(it) }
-        val coSan = runCatching { sh("sha256sum \$(pm path $pkgHome | head -n 1 | sed 's/^package://') 2>/dev/null").trim().substringBefore(' ') }.getOrDefault("")
-        if (coSan == bam) return true
+        if (homeLaBanDiKem(apk)) return true
         val truoc = sh("settings get secure enabled_accessibility_services").trim()
         val out = caiApkHome(apk)
         if (truoc.contains(pkgHome)) {
@@ -1300,6 +1306,20 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             sh(KHOI_DONG_LAI_HOME)
         }
         return dock
+    }
+
+    /**
+     * Ô kênh VTVgo (màn Kênh nhanh): gửi ảnh ô ([anh]: tên file sau "kenh-", ảnh), rồi ghi link_tiles và các ô ở đầu dock
+     * vào config.json ĐANG CÓ (như ghiOKenh: không đụng giao diện, ảnh nền), khởi động lại Home sạch cho thấy ngay.
+     * false = Home sạch đang dùng dock mặc định (config.json không có dock_apps): chưa ghi gì.
+     */
+    fun ghiKenhVtvGo(kenh: List<Pair<String, String>>, anh: List<Pair<String, ByteArray>>): Boolean {
+        val j = cauHinhDeSua()
+        if (!KenhVtvGo.datVao(j, kenh)) return false
+        anh.forEach { (ten, du) -> ghiFileTheme("kenh-$ten", du) }
+        ghiFileTheme("config.json", j.toString().toByteArray())
+        sh(KHOI_DONG_LAI_HOME)
+        return true
     }
 
     /**

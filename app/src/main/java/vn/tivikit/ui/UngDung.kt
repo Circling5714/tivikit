@@ -762,16 +762,7 @@ private fun ManHomeSach(vm: PhienLamViec) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             XemTruocHome(vm)
-            // Ba thẻ như ô chia đoạn (segmented control) của iOS: rãnh xám, đoạn đang chọn nổi lên.
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(NenO).padding(2.dp)) {
-                listOf(t("Giao diện", "Look"), t("Home", "Home"), t("Tuỳ chỉnh", "Options")).forEachIndexed { i, ten ->
-                    val chon = vm.theHome == i
-                    Text(ten, fontSize = 14.sp, fontWeight = if (chon) FontWeight.SemiBold else FontWeight.Medium, textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f).then(if (chon) Modifier.shadow(1.dp, RoundedCornerShape(8.dp)) else Modifier)
-                            .clip(RoundedCornerShape(8.dp)).background(if (chon) LocalMau.current.doanChon else Color.Transparent)
-                            .clickable { vm.theHome = i }.padding(vertical = 8.dp))
-                }
-            }
+            ChonDoan(listOf(t("Giao diện", "Look"), t("Home", "Home"), t("Tuỳ chỉnh", "Options")), vm.theHome) { vm.theHome = it }
             when (vm.theHome) {
                 0 -> TheGiaoDien(vm)
                 1 -> TheHomeNoiDung(vm)
@@ -785,6 +776,20 @@ private fun ManHomeSach(vm: PhienLamViec) {
                 enabled = !vm.dangBan, icon = Icons.Rounded.Palette) { vm.apDungTheme() }
             else NutChinh(if (vm.dangBan) t("Đang cài…", "Installing…") else t("Cài Home sạch", "Install clean Home"), enabled = !vm.dangBan, icon = Icons.Rounded.Home) { vm.caiHomeSach() }
             NutXemLenh { vm.lenhHome() }
+        }
+    }
+}
+
+/** Các thẻ như ô chia đoạn (segmented control) của iOS: rãnh xám, đoạn đang chọn nổi lên. */
+@Composable
+internal fun ChonDoan(ds: List<String>, chon: Int, doi: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(NenO).padding(2.dp)) {
+        ds.forEachIndexed { i, ten ->
+            val dangChon = chon == i
+            Text(ten, fontSize = 14.sp, fontWeight = if (dangChon) FontWeight.SemiBold else FontWeight.Medium, textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f).then(if (dangChon) Modifier.shadow(1.dp, RoundedCornerShape(8.dp)) else Modifier)
+                    .clip(RoundedCornerShape(8.dp)).background(if (dangChon) LocalMau.current.doanChon else Color.Transparent)
+                    .clickable { doi(i) }.padding(vertical = 8.dp))
         }
     }
 }
@@ -967,28 +972,11 @@ private fun TheHomeNoiDung(vm: PhienLamViec) {
             }
         }
     }
-    if (vm.moChonKenh) HopChonKenh(vm)
+    // Ô kênh truyền hình (TV360, VTVgo) chọn ở màn Kênh nhanh (26/10/2026: gom một chỗ); ở đây chỉ trỏ sang.
     The(t("Kênh truyền hình trên màn chính", "TV channels on Home"), Icons.Rounded.LiveTv) {
-        if (vm.coVtvGo) {
-            Phu(t("Chọn kênh nào thì kênh đó thành một ô ở đầu dock. Bấm vào là xem luôn kênh đó trên VTVgo, ông bà khỏi phải tìm.",
-                "Pick channels: each becomes a tile at the start of the dock that opens the channel straight in VTVgo."))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                KenhVtvGo.VTV.forEach { (ten, ma, _) -> ChonChip(ten, vm.coKenh(ma)) { vm.batTatKenh(ten, ma) } }
-            }
-            // Kênh khác (địa phương, VTVcab…) đã chọn từ hộp danh sách: hiện riêng để bỏ chọn được.
-            val khac = vm.kenhChon.filter { (_, ma) -> KenhVtvGo.VTV.none { it.second == ma } }
-            if (khac.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                khac.forEach { (ten, ma) -> ChonChip(ten, true) { vm.batTatKenh(ten, ma) } }
-            }
-            NutPhu(t("Thêm kênh khác trên VTVgo (địa phương, VTVcab…)", "More VTVgo channels (local, VTVcab…)"), Icons.Rounded.Search) { vm.moHopKenh() }
-            if (vm.kenhChon.size >= KenhVtvGo.TOI_DA) Phu(t("Tối đa ${KenhVtvGo.TOI_DA} kênh.", "Up to ${KenhVtvGo.TOI_DA} channels."))
-            Phu(t("Ảnh ô kênh tải từ VTVgo lúc Áp dụng; không tải được thì ô hiện tên kênh.", "Tile pictures come from VTVgo when you apply; without them the tile shows the channel name."))
-        } else {
-            Phu(t("Cần app VTVgo bản tivi: cài từ CH Play của tivi, mở một lần, rồi kết nối lại TiviKit.",
-                "Needs the VTVgo app for TV: install it from the TV's Play Store, open it once, then reconnect TiviKit."))
-            NutPhu(t("Mở VTVgo trên CH Play của tivi", "Open VTVgo in the TV's Play Store"), Icons.Rounded.Shop) { vm.moVtvGoChPlay() }
-            if (vm.baoVtvGo.isNotEmpty()) Phu(vm.baoVtvGo, Xanh)
-        }
+        Phu(t("Ô kênh mở thẳng VTV1, HTV7… trên TV360 hoặc VTVgo chọn ở màn Kênh nhanh.",
+            "Tiles that open VTV1, HTV7… straight in TV360 or VTVgo are set up under Quick channel."))
+        NutPhu(t("Mở Kênh nhanh", "Open Quick channel"), Icons.Rounded.LiveTv, enabled = !vm.dangBan) { vm.kenhNhanh.mo() }
     }
     The(t("Thời tiết", "Weather"), Icons.Rounded.WbSunny) {
         OutlinedTextField(vm.timXa, { vm.doiTimXa(it) }, label = { Text(t("Tìm phường / xã hoặc thành phố", "Find your ward or city")) },
@@ -1544,7 +1532,7 @@ private fun TheMayChieu(vm: PhienLamViec) {
 /** Hộp chọn tay một mẫu trong toàn bộ danh sách, có ô tìm (23/10/2026). */
 /** Chọn kênh VTVgo bất kỳ (CleanTV 3.0.0): danh sách từ API của VTVgo, nhóm theo gói, tìm theo tên không dấu. */
 @Composable
-private fun HopChonKenh(vm: PhienLamViec) {
+internal fun HopChonKenh(vm: PhienLamViec) {
     var tim by remember { mutableStateOf("") }
     val khoa = XaPhuong.boDau(tim.trim().lowercase())
     val ds = remember(khoa, vm.dsKenhGo) {
