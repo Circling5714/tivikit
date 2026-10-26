@@ -20,6 +20,10 @@ on:
         description: "Ghi chú ở đầu nhật ký (không bắt buộc)"
         type: string
         required: false
+      ghi_chu_en:
+        description: "Ghi chú tiếng Anh ở đầu nhật ký (không bắt buộc; app đang dùng tiếng Anh đọc phần này)"
+        type: string
+        required: false
       tu_dong:
         description: "Tự phát hành không cần duyệt — chỉ được khi từ bản trước chỉ đổi dữ liệu mẫu tivi (Cập nhật mẫu tivi đặt)"
         type: boolean
@@ -96,7 +100,8 @@ jobs:
         env:
           BAN: ${{ steps.ban.outputs.ban }}
           GHI_CHU: ${{ inputs.ghi_chu }}
-        run: python3 scripts/phat_hanh.py dong-goi "$BAN" app/build/outputs/apk/release/app-release.apk "$GHI_CHU"
+          GHI_CHU_EN: ${{ inputs.ghi_chu_en }}
+        run: python3 scripts/phat_hanh.py dong-goi "$BAN" app/build/outputs/apk/release/app-release.apk "$GHI_CHU" "$GHI_CHU_EN"
 
       - name: Gắn tag và đăng Release
         env:

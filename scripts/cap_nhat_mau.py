@@ -78,12 +78,16 @@ def main(nguon):
     sua_so_mau(n)
 
     phan = [f"+{len(them)} mới"] if them else []
+    phan_en = [f"+{len(them)} new"] if them else []
     if doi:
         phan.append(f"{len(doi)} cập nhật")
+        phan_en.append(f"{len(doi)} updated")
     if bo:
         phan.append(f"−{len(bo)} bỏ")
+        phan_en.append(f"−{len(bo)} removed")
     if not phan:
         phan.append("đổi bảng gói")
+        phan_en.append("package table changes")
     commit = subprocess.run(["git", "-C", nguon, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     tieu_de = f"Mẫu tivi: {n} mẫu từ CleanYourTV ({', '.join(phan)})"
     than = [f"Dữ liệu dựng từ CleanYourTV {commit} (github.com/Gathin23/cleanyourtv) bằng scripts/lam-du-lieu.py."]
@@ -93,20 +97,28 @@ def main(nguon):
         than += ["", "Bỏ (CleanYourTV đã gỡ): " + "; ".join(bo) + "."]
     if doi:
         than += ["", f"Cập nhật {len(doi)} mẫu: " + ", ".join(doi) + "."]
+    # Dòng tiếng Anh cho nhật ký phát hành (scripts/phat_hanh.py đọc "EN: …").
+    than += ["", f"EN: TV lists: {n} models from CleanYourTV ({', '.join(phan_en)})"]
 
     ghi_chu = f"Danh sách tivi cập nhật từ CleanYourTV, nay {n} mẫu"
+    ghi_chu_en = f"TV lists updated from CleanYourTV, now {n} models"
     if them:
         vai = [ten_ngan(im[i]) for i in them[:6]]
         ghi_chu += f": thêm {len(them)} mẫu ({', '.join(vai)}{', …' if len(them) > 6 else ''})"
+        ghi_chu_en += f": {len(them)} new ({', '.join(vai)}{', …' if len(them) > 6 else ''})"
     if doi:
         ghi_chu += f"{',' if them else ':'} cập nhật {len(doi)} mẫu"
+        ghi_chu_en += f"{',' if them else ':'} {len(doi)} updated"
     ghi_chu += "."
+    ghi_chu_en += "."
 
     os.makedirs(RA, exist_ok=True)
     with open(os.path.join(RA, "mau-commit.txt"), "w", encoding="utf-8", newline="\n") as f:
         f.write(tieu_de + "\n\n" + "\n".join(than) + "\n")
     with open(os.path.join(RA, "mau-ghi-chu.txt"), "w", encoding="utf-8", newline="\n") as f:
         f.write(ghi_chu + "\n")
+    with open(os.path.join(RA, "mau-ghi-chu-en.txt"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(ghi_chu_en + "\n")
     bao(tieu_de)
     print("doi=1")
     print(f"so_mau={n}")

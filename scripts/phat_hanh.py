@@ -3,17 +3,18 @@
 
   python3 scripts/phat_hanh.py ban-moi va|tinh-nang|lon
       Tính số bản mới, ghi vào version.properties, in số bản ra.
-  python3 scripts/phat_hanh.py dong-goi <bản> <file apk> [ghi chú]
-      Ghi vào dist/: TiviKit-<bản>.apk, TiviKit-<bản>.apk.sha256, cap-nhat.json (app đọc để tự cập nhật, CapNhat.kt),
-      nhat-ky.md (nội dung GitHub Release).
+  python3 scripts/phat_hanh.py dong-goi <bản> <file apk> [ghi chú] [ghi chú tiếng Anh]
+      Ghi vào dist/: TiviKit-<bản>.apk, TiviKit-<bản>.apk.sha256, cap-nhat.json (app đọc để tự cập nhật, CapNhat.kt;
+      ghiChuEn cho app đang dùng tiếng Anh), nhat-ky.md (nội dung GitHub Release, hai thứ tiếng).
   python3 scripts/phat_hanh.py chi-du-lieu
       Thoát 0 nếu từ tag trước, thứ vào APK chỉ đổi ở dữ liệu mẫu tivi (du-lieu.json và dòng số mẫu): bản tự phát hành
       không cần duyệt được (môi trường phat-hanh-tu-dong). Có code đổi thì thoát 1, kèm danh sách file.
 
 Số bản lấy từ tag v<lớn>.<tính năng>.<vá> gần nhất: va tăng số cuối, tinh-nang tăng số giữa, lon tăng số đầu. Chưa có tag
 thì dùng nguyên version.properties; ai tự sửa version.properties cao hơn tag thì dùng số đó. versionCode = lớn×10000 +
-tính năng×100 + vá (giống app/build.gradle.kts). Nhật ký: tiêu đề các commit từ tag trước, bỏ commit "Phát hành …";
-commit bắt đầu bằng "Sửa" vào mục Sửa lỗi.
+tính năng×100 + vá (giống app/build.gradle.kts). Nhật ký: tiêu đề các commit từ tag trước, bỏ commit "Phát hành …" và
+commit việc nội bộ (tiêu đề bắt đầu bằng "Nội bộ:", "Tài liệu:", "README:", "CI:"); commit bắt đầu bằng "Sửa" vào mục
+Sửa lỗi. Bản tiếng Anh của mỗi mục: dòng "EN: …" trong thân commit (không có thì dùng tiêu đề tiếng Việt).
 """
 import datetime
 import hashlib
@@ -104,13 +105,31 @@ def ban_moi(loai):
     return ban
 
 
+# Commit không đưa vào nhật ký cho người dùng (26/10/2026): việc nội bộ, tài liệu, CI. Commit "Phát hành …" cũng bỏ.
+NOI_BO = re.compile(r"(?i)^(nội bộ|tài liệu|readme|ci):")
+# Dòng tiếng Anh của một mục nhật ký: dòng "EN: …" trong thân commit; không có thì phần tiếng Anh dùng tiêu đề tiếng Việt.
+DONG_EN = re.compile(r"^EN:\s*(.+?)\s*$", re.M)
+
+
+def tach_nhat_ky(ban_ghi):
+    """(mới, sửa) từ các cặp (tiêu đề, thân) cũ trước mới sau; mỗi mục là (tiếng Việt, tiếng Anh)."""
+    muc = []
+    for tieu_de, than in ban_ghi:
+        tieu_de = tieu_de.strip()
+        if not tieu_de or tieu_de.startswith("Phát hành ") or NOI_BO.match(tieu_de):
+            continue
+        en = DONG_EN.search(than or "")
+        muc.append((tieu_de, en.group(1) if en else tieu_de))
+    sua = [m for m in muc if re.match(r"(?i)(sửa|fix)\b", m[0])]
+    return [m for m in muc if m not in sua], sua
+
+
 def nhat_ky():
-    """(mới, sửa): tiêu đề commit từ tag trước tới HEAD, cũ trước mới sau."""
+    """(mới, sửa): các mục (tiếng Việt, tiếng Anh) từ commit sau tag trước tới HEAD, cũ trước mới sau."""
     tag = tag_truoc()
-    r = git("log", "--no-merges", "--reverse", "--pretty=format:%s", f"{tag}..HEAD" if tag else "HEAD")
-    tieu_de = [s.strip() for s in r.stdout.splitlines() if s.strip() and not s.startswith("Phát hành ")]
-    sua = [s for s in tieu_de if re.match(r"(?i)(sửa|fix)\b", s)]
-    return [s for s in tieu_de if s not in sua], sua
+    r = git("log", "--no-merges", "--reverse", "--pretty=format:%s%x1f%b%x1e", f"{tag}..HEAD" if tag else "HEAD")
+    ban_ghi = [tuple((k.split("\x1f", 1) + [""])[:2]) for k in r.stdout.split("\x1e") if k.strip()]
+    return tach_nhat_ky(ban_ghi)
 
 
 def ngoai_du_lieu():
@@ -133,7 +152,15 @@ def ngoai_du_lieu():
     return con
 
 
-def dong_goi(ban, apk, ghi_chu=""):
+def ghi_chu_app(ghi_chu, muc, xem_du):
+    """Nhật ký trong app: ghi chú + một dòng mỗi mục, tối đa DONG_TRONG_APP dòng."""
+    dong = ([ghi_chu] if ghi_chu else []) + [f"- {s}" for s in muc]
+    if len(dong) > DONG_TRONG_APP:
+        dong = dong[:DONG_TRONG_APP - 1] + [xem_du]
+    return "\n".join(dong)
+
+
+def dong_goi(ban, apk, ghi_chu="", ghi_chu_en=""):
     tach(ban)
     os.makedirs(RA, exist_ok=True)
     ten = f"TiviKit-{ban}.apk"
@@ -146,14 +173,17 @@ def dong_goi(ban, apk, ghi_chu=""):
 
     moi, sua = nhat_ky()
     ghi_chu = ghi_chu.strip()
-    dong = ([ghi_chu] if ghi_chu else []) + [f"- {s}" for s in moi + sua]
-    if len(dong) > DONG_TRONG_APP:
-        dong = dong[:DONG_TRONG_APP - 1] + [f"… xem đủ ở github.com/{KHO}/releases"]
+    ghi_chu_en = ghi_chu_en.strip()
+    vi = [m[0] for m in moi + sua]
+    en = [m[1] for m in moi + sua]
     ngay = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).date().isoformat()
     cap_nhat = {"app": {
         "versionCode": ma_ban(ban), "versionName": ban,
         "apk": f"https://github.com/{KHO}/releases/download/v{ban}/{ten}",
-        "co": len(du_lieu), "sha256": sha, "ghiChu": "\n".join(dong), "ghiChuEn": "", "ngay": ngay,
+        "co": len(du_lieu), "sha256": sha,
+        "ghiChu": ghi_chu_app(ghi_chu, vi, f"… xem đủ ở github.com/{KHO}/releases"),
+        "ghiChuEn": ghi_chu_app(ghi_chu_en, en, f"… full notes at github.com/{KHO}/releases") if ghi_chu_en or en else "",
+        "ngay": ngay,
     }}
     with open(os.path.join(RA, "cap-nhat.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(cap_nhat, f, ensure_ascii=False, indent=1)
@@ -161,14 +191,23 @@ def dong_goi(ban, apk, ghi_chu=""):
 
     md = ([ghi_chu, ""] if ghi_chu else [])
     if moi:
-        md += ["## Có gì mới", *[f"- {s}" for s in moi], ""]
+        md += ["## Có gì mới", *[f"- {s[0]}" for s in moi], ""]
     if sua:
-        md += ["## Sửa lỗi", *[f"- {s}" for s in sua], ""]
+        md += ["## Sửa lỗi", *[f"- {s[0]}" for s in sua], ""]
     md += ["## Cài đặt",
            f"- Cài lần đầu: tải `{ten}` bên dưới về điện thoại Android (hoặc tivi) rồi mở để cài.",
            "- Đã có TiviKit 1.1.0 trở lên: app tự cập nhật (Android 12+ không cần bấm, máy cũ hơn chạm thông báo một lần).",
-           f"- SHA-256 của file: `{sha}`",
-           f"- Chứng chỉ ký (SHA-256): `{DAU_CHUNG_CHI}`"]
+           "", "---", "", "### English", ""]
+    if ghi_chu_en:
+        md += [ghi_chu_en, ""]
+    if moi:
+        md += ["**What's new**", "", *[f"- {s[1]}" for s in moi], ""]
+    if sua:
+        md += ["**Fixes**", "", *[f"- {s[1]}" for s in sua], ""]
+    md += [f"Install: download `{ten}` below to an Android phone (or TV) and open it. TiviKit 1.1.0 or later updates itself.",
+           "",
+           f"- SHA-256: `{sha}`",
+           f"- Chứng chỉ ký / Signing certificate (SHA-256): `{DAU_CHUNG_CHI}`"]
     with open(os.path.join(RA, "nhat-ky.md"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(md) + "\n")
     print(f"{ten} {len(du_lieu)} byte, sha256 {sha}, {len(moi)} mục mới, {len(sua)} mục sửa lỗi")
@@ -183,8 +222,8 @@ if __name__ == "__main__":
         b = ban_moi(lenh[1])
         ghi_file_ban(b)
         print(b)
-    elif lenh[0] == "dong-goi" and len(lenh) in (3, 4):
-        dong_goi(lenh[1], lenh[2], lenh[3] if len(lenh) == 4 else "")
+    elif lenh[0] == "dong-goi" and len(lenh) in (3, 4, 5):
+        dong_goi(lenh[1], lenh[2], lenh[3] if len(lenh) >= 4 else "", lenh[4] if len(lenh) == 5 else "")
     elif lenh[0] == "chi-du-lieu" and len(lenh) == 1:
         con = ngoai_du_lieu()
         if con:

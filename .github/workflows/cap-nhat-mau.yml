@@ -61,7 +61,8 @@ jobs:
           git commit -q -F dist/mau-commit.txt
           git push -q origin "HEAD:$GITHUB_REF_NAME"
           if python3 scripts/phat_hanh.py chi-du-lieu; then TU_DONG=true; else TU_DONG=false; fi
-          gh workflow run phat-hanh.yml --ref "$GITHUB_REF_NAME" -f loai=va -f tu_dong=$TU_DONG -f ghi_chu="$(cat dist/mau-ghi-chu.txt)"
+          gh workflow run phat-hanh.yml --ref "$GITHUB_REF_NAME" -f loai=va -f tu_dong=$TU_DONG \
+            -f ghi_chu="$(cat dist/mau-ghi-chu.txt)" -f ghi_chu_en="$(cat dist/mau-ghi-chu-en.txt)"
           if [ "$TU_DONG" = true ]; then CACH="tự phát hành"; else CACH="có code chưa phát hành nên chờ chủ kho duyệt"; fi
           echo "$(head -n 1 dist/mau-commit.txt) — $CACH" >> "$GITHUB_STEP_SUMMARY"
 
