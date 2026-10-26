@@ -173,6 +173,10 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
             t("Lưu bản sao lưu tivi, bộ cài đặt mẫu ra file, nhập trên điện thoại khác", "Save TV backups and setup sets to a file, import on another phone")) { vm.chuyenMay.mo() },
         MucChucNang(Icons.Rounded.SystemUpdate, MauO.la, t("Cập nhật TiviKit", "TiviKit updates"),
             t("Bản ${BuildConfig.VERSION_NAME} · tự cài bản mới: ", "Version ${BuildConfig.VERSION_NAME} · auto-install: ") + if (vm.tuCai) t("bật", "on") else t("tắt", "off")) { vm.moCapNhat = true },
+        MucChucNang(Icons.Rounded.Forum, MauO.xanh, t("Góp ý & liên hệ", "Feedback & contact"),
+            t("Nhóm Telegram t.me/tivikit, báo lỗi trên GitHub", "Telegram group t.me/tivikit, report bugs on GitHub")) { vm.moLienHe = true },
+        MucChucNang(Icons.Rounded.Favorite, MauO.hong, t("Ủng hộ tác giả", "Support the author"),
+            t("Chuyển khoản MB Bank, có nút chép số tài khoản", "Bank transfer (MB Bank), with a copy button")) { vm.moUngHo = true },
         MucChucNang(Icons.Rounded.Gavel, MauO.xam, t("Giấy phép mã nguồn mở", "Open-source licenses"), t("CleanYourTV, CleanTV, thư viện, phông chữ", "CleanYourTV, CleanTV, libraries, fonts")) { vm.moGiayPhep() },
     ))
     if (vm.moCapNhat) HopCapNhat(vm)

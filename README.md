@@ -8,7 +8,7 @@
 >
 > *TiviKit 1.0 builds on CleanTV 2.8.2, and most new features have not been tried on a real TV yet: see [Test status](#test-status).*
 
-[Tải APK bản mới nhất](https://github.com/Circling5714/tivikit/releases/latest) · [Nhật ký các bản](https://github.com/Circling5714/tivikit/releases) · [Tiếng Việt](#tiếng-việt) · [English](#english)
+[Tải APK bản mới nhất](https://github.com/Circling5714/tivikit/releases/latest) · [Nhật ký các bản](https://github.com/Circling5714/tivikit/releases) · [Nhóm Telegram](https://t.me/tivikit) · [Ủng hộ tác giả](#liên-hệ-và-ủng-hộ) · [Tiếng Việt](#tiếng-việt) · [English](#english)
 
 ---
 
@@ -149,9 +149,18 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 | `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi (`lam-du-lieu.py`, `cap_nhat_mau.py`), vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), tải máy chủ scrcpy có kiểm SHA-256 (`tai-scrcpy.sh`), phát hành (`phat_hanh.py`) |
 | `.github/workflows/` | Phát hành (dựng, ký, đăng GitHub Release), Cập nhật mẫu tivi (hằng tuần từ CleanYourTV) và Kiểm tra (unit test mỗi lần đẩy code) |
 
-### Góp ý
+### Liên hệ và ủng hộ
 
-Danh sách tivi mới nên gửi thẳng cho [CleanYourTV](https://github.com/Gathin23/cleanyourtv) để mọi người cùng dùng; TiviKit tự lấy về mỗi tuần.
+- **Nhóm Telegram:** [t.me/tivikit](https://t.me/tivikit): hỏi đáp, góp ý tính năng, báo tivi nào chạy được hay không.
+- **Báo lỗi:** [GitHub Issues](https://github.com/Circling5714/tivikit/issues). Trong app: Góp ý / báo lỗi → Báo lỗi trên GitHub, app điền sẵn bản TiviKit, điện thoại, tivi đang nối và lỗi vừa gặp để bạn xem lại rồi gửi.
+- **Ủng hộ tác giả:** TiviKit miễn phí, không quảng cáo. Thấy hữu ích thì bạn có thể mời tác giả một ly cà phê:
+
+  | Ngân hàng | Số tài khoản | Chủ tài khoản | Nội dung |
+  | --- | --- | --- | --- |
+  | MB Bank | `070991988888` | CAO MINH THI | Ung ho TiviKit |
+
+  Trong app: màn chính → Ủng hộ tác giả, mỗi dòng có nút chép.
+- Danh sách tivi mới nên gửi thẳng cho [CleanYourTV](https://github.com/Gathin23/cleanyourtv) để mọi người cùng dùng; TiviKit tự lấy về mỗi tuần.
 
 ---
 
@@ -243,6 +252,13 @@ Every APK on [Releases](https://github.com/Circling5714/tivikit/releases) is sig
 ### Privacy
 
 No usage data: CleanTV's anonymous counter, "send package list" button and website links are switched off at build time (`GUI_SO_LIEU`, `LIEN_KET_VGS`). The phone only goes online to update TiviKit itself (it asks GitHub Releases about every 12 hours and when opened, downloads the new APK and checks its SHA-256 before installing), to download apps you pick (GitHub, VideoLAN, Kodi or your own link), to check installed apps for updates (GitHub), to look up weather places outside Vietnam (Open-Meteo's geocoding, only the text you typed) and when you pick TV channel tiles (the channel list and pictures from VTVgo). Control goes straight from the phone to the TV on your home network. On the TV, the clean Home gets weather from Open-Meteo, ad-blocking DNS sends lookups to the provider you choose, and a rooted LG TV downloads the Vibehack installer from GitHub when you install it.
+
+### Contact and support
+
+- **Telegram group:** [t.me/tivikit](https://t.me/tivikit) for questions, ideas and which TVs work.
+- **Bug reports:** [GitHub Issues](https://github.com/Circling5714/tivikit/issues). In the app, Feedback / report a bug → Report a bug on GitHub fills in the TiviKit version, phone, connected TV and last error for you to review before sending.
+- **Support the author:** TiviKit is free and ad-free. To buy the author a coffee, bank transfer in Vietnam: MB Bank, account `070991988888`, CAO MINH THI, message "Ung ho TiviKit" (in the app: home screen → Support the author, with copy buttons).
+- New TV lists are best sent to [CleanYourTV](https://github.com/Gathin23/cleanyourtv) so everyone gets them; TiviKit pulls them in weekly.
 
 ---
 

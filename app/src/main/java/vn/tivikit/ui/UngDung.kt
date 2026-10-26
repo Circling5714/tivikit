@@ -139,6 +139,8 @@ fun UngDung(vm: PhienLamViec = viewModel()) {
                 if (vm.loi.isNotEmpty() || (vm.dangBan && vm.man != Man.DANG_TAT)) ThanhTrangThai(vm)
             }
             }
+            if (vm.moLienHe) HopLienHe(vm)
+            if (vm.moUngHo) HopUngHo(vm)
             vm.banMoi?.takeIf { vm.hoiCapNhat }?.let { b ->
                 AlertDialog(
                     onDismissRequest = { vm.hoiCapNhat = false },
@@ -385,12 +387,8 @@ internal fun DauTrang(icon: @Composable () -> Unit, tieuDe: String, phu: String?
 /** Mở hộp góp ý chung của vgs.zone (mục App CleanTV tự chọn theo chữ "CleanTV"), kèm bản app + model tivi. */
 @Composable
 internal fun NutGopY(vm: PhienLamViec) {
-    if (!BuildConfig.LIEN_KET_VGS) return
-    val uri = androidx.compose.ui.platform.LocalUriHandler.current
-    NutPhu(t("Góp ý / báo lỗi", "Feedback / report a bug"), Icons.Rounded.Feedback) {
-        val tu = "CleanTV ${BuildConfig.VERSION_NAME}" + (vm.thongTin?.let { " · ${it.tenHienThi} (${it.device}, Android ${it.android})" } ?: "")
-        uri.openUri("https://vgs.zone/gop-y?tu=" + java.net.URLEncoder.encode(tu, "UTF-8"))
-    }
+    // Góp ý về TiviKit (26/10/2026): nhóm Telegram / báo lỗi trên GitHub, thay cho trang góp ý của VGS.
+    NutPhu(t("Góp ý / báo lỗi", "Feedback / report a bug"), Icons.Rounded.Feedback) { vm.moLienHe = true }
 }
 
 internal fun ngay(ms: Long) = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(ms))
@@ -1264,6 +1262,11 @@ private fun ManXong(vm: PhienLamViec) = Cuon {
     }
     TheKichBan(vm)
     if (BuildConfig.GUI_SO_LIEU) TheGuiDanhSach(vm)
+    // Lời mời ủng hộ chỉ ở đây, sau khi việc đã xong, một dòng nhỏ: không bật hộp chặn, không hỏi lúc mở app.
+    TextButton(onClick = { vm.moUngHo = true }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+        Icon(Icons.Rounded.Favorite, null, Modifier.size(18.dp), tint = DoTuoi); Spacer(Modifier.width(6.dp))
+        Text(t("TiviKit giúp được bạn? Ủng hộ tác giả", "Did TiviKit help? Support the author"))
+    }
     NutGopY(vm)
     NutChinh(t("Tắt ADB & kết thúc", "Turn off ADB & finish"), enabled = !vm.dangBan, icon = Icons.Rounded.Lock) { vm.tatAdbVaKetThuc() }
     NutPhu(t("Về màn chính, dùng tiếp công cụ", "Back to the home screen, keep using the tools"), Icons.Rounded.Home, enabled = !vm.dangBan) { vm.veHub() }

@@ -81,6 +81,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     val dieuKhien by lazy { DieuKhien(this) }
     /** Xem màn hình tivi trên màn Điều khiển (kiểu scrcpy). */
     val xemManHinh by lazy { XemManHinh(this) }
+    /** Hộp Góp ý & liên hệ, hộp Ủng hộ tác giả (LienHeUngHo.kt), mở được từ mọi màn. */
+    var moLienHe by mutableStateOf(false)
+    var moUngHo by mutableStateOf(false)
     /** Quản lý app trên tivi (ui/QuanLyApp.kt). */
     val qlApp by lazy { QuanLyApp(this) }
     /** Gửi ảnh / video / file lên tivi (ui/GuiFile.kt). */
