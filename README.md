@@ -21,7 +21,7 @@
 Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit giữ nguyên cách dọn, chỉ đổi giao diện, tên gói và lớp kết nối. ✅ TiviKit 1.0 đã dọn tivi và cài Home sạch trên box Tanix TX3 Mini (Android 9). ⚠️ Khôi phục chưa thử lại với TiviKit.
 
 - **Kết nối tivi qua Wi-Fi** bằng ADB: quét mạng hoặc gõ IP; Google TV đời mới ghép bằng mã 6 số (Gỡ lỗi không dây), app tự dò cổng. Hướng dẫn 7 bước có hình trong app.
-- **So với 260 danh sách đã thử** của cộng đồng CleanYourTV (78 hãng: TCL, Sony, Xiaomi, Philips, Hisense, Skyworth, onn, Chromecast, máy chiếu…). Chưa khớp mẫu thì gợi ý mẫu gần giống; tivi lạ dùng luật chung an toàn.
+- **So với 260 danh sách đã thử** của cộng đồng CleanYourTV (nhiều hãng: TCL, Sony, Xiaomi, Philips, Hisense, Skyworth, onn, Chromecast, máy chiếu…), tự cập nhật hằng tuần. Chưa khớp mẫu thì gợi ý mẫu gần giống; tivi lạ dùng luật chung an toàn.
 - **Chỉ tắt, không gỡ** quảng cáo, theo dõi, app rác. Không đụng cổng HDMI, remote, bàn phím, CH Play, gói đang giữ Wi-Fi, gói lõi Android và Home đang dùng. Google Home / cast và tìm kiếm giọng nói không bao giờ tích sẵn.
 - **Home sạch** (launcher CleanYourTV kèm bản vá của CleanTV): đồng hồ, lịch âm có can chi, thời tiết theo 3.321 phường/xã, dock 8 app, cụm nút Máy chiếu · Mạng · Màn hình chờ · Cài đặt; 7 giao diện, ảnh nền riêng từ điện thoại hoặc từ tivi / USB, 65 tuỳ chọn Nâng cao.
 - **Nút Home về đúng Home sạch**: app bấm thử nút Home thật; tivi không cho tắt Home gốc thì Home sạch tự mở đè lên. **Nút trên remote vẫn chạy** (YouTube, Netflix, Prime, Cài đặt) theo bảng phím của từng mẫu tivi.
@@ -99,6 +99,7 @@ scripts/dung-go.sh         # Gõ tiếng Việt → go.apk
 - Khoá ký đặt trong `ky.properties` (không nằm trong git), dùng chung cho app và các app phụ; thiếu file này thì bản release ký bằng khoá debug. Giữ một khoá cho mọi bản: đổi khoá thì không cài đè được lên TiviKit và các app phụ đã cài trên tivi.
 - Số phiên bản ở `version.properties` (versionCode = lớn×10000 + tính năng×100 + vá).
 - **Phát hành** bằng GitHub Actions (Actions → Phát hành → Run workflow, chọn bản vá / tính năng / lớn): workflow tự tăng số bản, chạy unit test, dựng và ký APK, viết nhật ký từ tiêu đề commit (`scripts/phat_hanh.py`; commit bắt đầu bằng "Sửa" vào mục Sửa lỗi), gắn tag rồi đăng GitHub Release kèm APK, `.sha256` và `cap-nhat.json` cho tính năng tự cập nhật. Khoá ký nằm trong secrets của môi trường `phat-hanh`.
+- **Mẫu tivi tự cập nhật**: workflow Cập nhật mẫu tivi chạy mỗi thứ Hai (hoặc bấm chạy tay), dựng lại `du-lieu.json` từ CleanYourTV mới nhất (`scripts/cap_nhat_mau.py`), sửa số mẫu, chạy unit test; qua thì commit và gọi Phát hành (chủ kho bấm duyệt), không qua thì mở pull request để xem.
 
 ### Kiểm tra bản cài
 
@@ -135,12 +136,12 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 | `hengio/` | Hẹn giờ bật / tắt tivi, mở app (`vn.tivikit.hengio`) |
 | `go/` | Bộ gõ phụ để gõ tiếng Việt có dấu từ điện thoại (`vn.tivikit.go`) |
 | `patches/launcher-vgs.patch` | Phần CleanTV sửa trên launcher CleanYourTV (thời tiết, font Lexend, cụm nút, máy chiếu, màn chờ…) |
-| `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi, vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), phát hành (`phat_hanh.py`) |
-| `.github/workflows/` | Phát hành (dựng, ký, đăng GitHub Release) và Kiểm tra (unit test mỗi lần đẩy code) |
+| `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi (`lam-du-lieu.py`, `cap_nhat_mau.py`), vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), phát hành (`phat_hanh.py`) |
+| `.github/workflows/` | Phát hành (dựng, ký, đăng GitHub Release), Cập nhật mẫu tivi (hằng tuần từ CleanYourTV) và Kiểm tra (unit test mỗi lần đẩy code) |
 
 ### Góp ý
 
-Danh sách tivi mới nên gửi thẳng cho [CleanYourTV](https://github.com/Gathin23/cleanyourtv) để mọi người cùng dùng; TiviKit nhận được khi dựng lại dữ liệu mẫu tivi (`scripts/dung-launcher.sh`).
+Danh sách tivi mới nên gửi thẳng cho [CleanYourTV](https://github.com/Gathin23/cleanyourtv) để mọi người cùng dùng; TiviKit tự lấy về mỗi tuần.
 
 ---
 
@@ -153,7 +154,7 @@ Danh sách tivi mới nên gửi thẳng cho [CleanYourTV](https://github.com/Ga
 From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic and only changes the interface, package names and connection layer. ✅ TiviKit 1.0 cleaned a Tanix TX3 Mini (Android 9) and installed the clean Home. ⚠️ Restore hasn't been re-tested with TiviKit.
 
 - **Connects over Wi-Fi** with ADB: scan or type the IP; newer Google TVs pair with a 6-digit code and the app finds the port. A 7-step picture guide is built in.
-- **Matches 260 tested lists** from the CleanYourTV community (78 brands); suggests close models; unknown TVs get safe general rules.
+- **Matches 260 tested lists** from the CleanYourTV community (many brands), updated weekly; suggests close models; unknown TVs get safe general rules.
 - **Disables, never uninstalls** ads, tracking and junk. Leaves HDMI inputs, the remote, keyboards, Play Store, the Wi-Fi owner, core Android packages and the Home in use alone. Google Home / casting and voice search are never pre-ticked.
 - **Clean Home** (the CleanYourTV launcher with CleanTV's patches): clock, Vietnamese lunar date, ward-level weather, an 8-app dock, 7 themes, your own wallpaper, 65 Advanced options. The Home key lands on it, and remote keys keep working from each model's key map.
 - **Backs up before any change**, on the phone and on the TV; one-tap **Restore**. The TV-side backup is shared with CleanTV. If the link drops while Home is being replaced, the TV restores its stock Home by itself. A restore script for a computer and a command preview are included; ADB switches off when you leave the app.

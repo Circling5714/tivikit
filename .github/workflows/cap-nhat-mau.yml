@@ -1,0 +1,82 @@
+# Cập nhật mẫu tivi (26/10/2026): mỗi thứ Hai 08:00 giờ Việt Nam (hoặc bấm Run workflow) dựng lại danh sách tivi từ
+# CleanYourTV mới nhất (scripts/cap_nhat_mau.py). Có thay đổi thì chạy unit test:
+#  - qua: commit lên main rồi gọi workflow Phát hành (bản vá) — chủ kho chỉ bấm duyệt bản phát hành;
+#  - không qua: đẩy nhánh mau-tivi/cap-nhat, mở pull request để xem, không phát hành, lần chạy báo lỗi.
+name: Cập nhật mẫu tivi
+
+on:
+  schedule:
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: cap-nhat-mau
+  cancel-in-progress: false
+
+jobs:
+  cap-nhat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Lấy CleanYourTV mới nhất
+        run: git clone -q --depth 1 https://github.com/Gathin23/cleanyourtv "$RUNNER_TEMP/cleanyourtv"
+
+      - name: Dựng lại danh sách tivi
+        id: mau
+        run: python3 scripts/cap_nhat_mau.py "$RUNNER_TEMP/cleanyourtv" >> "$GITHUB_OUTPUT"
+
+      - name: Unit test
+        id: test
+        if: steps.mau.outputs.doi == '1'
+        continue-on-error: true
+        run: ./gradlew --console=plain :app:testReleaseUnitTest
+
+      - name: "Test qua: commit và gọi Phát hành"
+        if: steps.mau.outputs.doi == '1' && steps.test.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/du-lieu.json app/src/main/java/vn/tivikit/dulieu/DuLieu.kt app/src/main/assets/giay-phep.txt README.md
+          git commit -q -F dist/mau-commit.txt
+          git push -q origin "HEAD:$GITHUB_REF_NAME"
+          gh workflow run phat-hanh.yml --ref "$GITHUB_REF_NAME" -f loai=va -f ghi_chu="$(cat dist/mau-ghi-chu.txt)"
+          echo "Đã gọi Phát hành: $(head -n 1 dist/mau-commit.txt)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Test không qua: mở pull request"
+        if: steps.mau.outputs.doi == '1' && steps.test.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NHANH=mau-tivi/cap-nhat
+          LAN_CHAY="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -B "$NHANH"
+          git add app/src/main/assets/du-lieu.json app/src/main/java/vn/tivikit/dulieu/DuLieu.kt app/src/main/assets/giay-phep.txt README.md
+          git commit -q -F dist/mau-commit.txt
+          git push -q -f origin "$NHANH"
+          if [ "$(gh pr view "$NHANH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
+            gh pr comment "$NHANH" --body "Danh sách mới hơn, unit test vẫn chưa qua: $LAN_CHAY"
+          else
+            gh pr create --head "$NHANH" --base "$GITHUB_REF_NAME" --title "$(head -n 1 dist/mau-commit.txt)" \
+              --body "Unit test không qua với danh sách tivi mới từ CleanYourTV nên chưa phát hành. Log: $LAN_CHAY"
+          fi
+          echo "::error::Unit test không qua với danh sách tivi mới; đã mở pull request từ nhánh $NHANH"
+          exit 1
