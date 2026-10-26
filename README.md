@@ -128,7 +128,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 
 ### Quyền riêng tư
 
-- TiviKit **không gửi số liệu sử dụng**. Bộ đếm ẩn danh, nút gửi danh sách gói và các liên kết ra trang web của CleanTV đều tắt khi dựng (`GUI_SO_LIEU`, `LIEN_KET_VGS` trong `app/build.gradle.kts`).
+- TiviKit **không gửi số liệu sử dụng**. Bộ đếm ẩn danh, nút gửi danh sách gói và các liên kết ra trang web của CleanTV đều tắt khi dựng (`GUI_SO_LIEU`, `LIEN_KET_VGS` trong `app/build.gradle.kts`). Báo lỗi và Gửi danh sách cho CleanYourTV chỉ mở trang GitHub điền sẵn trong trình duyệt: bạn xem lại rồi tự bấm gửi, app không gửi gì.
 - Điện thoại chỉ ra Internet để tự cập nhật TiviKit (hỏi GitHub Releases khoảng 12 giờ một lần và khi mở app, tải APK bản mới, kiểm tra SHA-256 rồi mới cài), khi bạn tải app trong mục Cài app (GitHub, VideoLAN, Kodi hoặc đường link bạn nhập), khi kiểm tra bản mới của app đã cài (GitHub), khi tìm nơi xem thời tiết ngoài Việt Nam (dịch vụ tìm địa danh của Open-Meteo, chỉ gửi chữ bạn gõ) và khi bạn chọn ô kênh truyền hình (danh sách kênh và ảnh kênh từ VTVgo).
 - Lệnh điều khiển đi thẳng từ điện thoại tới tivi trong mạng nhà: ADB với Android TV, kết nối điều khiển của LG với tivi LG.
 - Trên tivi: Home sạch lấy thời tiết từ Open-Meteo; bật DNS chặn quảng cáo thì tên miền tivi truy cập đi qua nhà cung cấp bạn chọn (AdGuard, NextDNS…); tivi LG đã root tải script cài Vibehack từ GitHub khi bạn bấm cài.
@@ -161,7 +161,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
   | MB Bank | `070991988888` | CAO MINH THI | Ung ho TiviKit |
 
   Trong app: màn chính → Ủng hộ tác giả, mỗi dòng có nút chép.
-- Danh sách tivi mới nên gửi thẳng cho [CleanYourTV](https://github.com/Gathin23/cleanyourtv) để mọi người cùng dùng; TiviKit tự lấy về mỗi tuần.
+- ⚠️ **Gửi danh sách cho CleanYourTV:** dọn tivi xong và dùng vài ngày không lỗi, vào màn chính → Gửi danh sách cho CleanYourTV. App soạn `debloat.txt` và `tv.json` đúng định dạng `examples/` của [CleanYourTV](https://github.com/Gathin23/cleanyourtv) từ các gói đã tắt (đang nối tivi đó thì đối chiếu lại: bỏ gói tivi đã bật lại, bỏ app bạn tự cài), rồi mở trang tạo issue "My TV" của họ điền sẵn. Không dùng GitHub thì chép hoặc chia sẻ vào nhóm Telegram. TiviKit tự lấy danh sách mới về mỗi tuần.
 
 ---
 
@@ -253,14 +253,14 @@ Every APK on [Releases](https://github.com/Circling5714/tivikit/releases) is sig
 
 ### Privacy
 
-No usage data: CleanTV's anonymous counter, "send package list" button and website links are switched off at build time (`GUI_SO_LIEU`, `LIEN_KET_VGS`). The phone only goes online to update TiviKit itself (it asks GitHub Releases about every 12 hours and when opened, downloads the new APK and checks its SHA-256 before installing), to download apps you pick (GitHub, VideoLAN, Kodi or your own link), to check installed apps for updates (GitHub), to look up weather places outside Vietnam (Open-Meteo's geocoding, only the text you typed) and when you pick TV channel tiles (the channel list and pictures from VTVgo). Control goes straight from the phone to the TV on your home network. On the TV, the clean Home gets weather from Open-Meteo, ad-blocking DNS sends lookups to the provider you choose, and a rooted LG TV downloads the Vibehack installer from GitHub when you install it.
+No usage data: CleanTV's anonymous counter, "send package list" button and website links are switched off at build time (`GUI_SO_LIEU`, `LIEN_KET_VGS`). Bug reports and sharing a TV list with CleanYourTV only open a filled-in GitHub page in your browser; you review it and send it yourself. The phone only goes online to update TiviKit itself (it asks GitHub Releases about every 12 hours and when opened, downloads the new APK and checks its SHA-256 before installing), to download apps you pick (GitHub, VideoLAN, Kodi or your own link), to check installed apps for updates (GitHub), to look up weather places outside Vietnam (Open-Meteo's geocoding, only the text you typed) and when you pick TV channel tiles (the channel list and pictures from VTVgo). Control goes straight from the phone to the TV on your home network. On the TV, the clean Home gets weather from Open-Meteo, ad-blocking DNS sends lookups to the provider you choose, and a rooted LG TV downloads the Vibehack installer from GitHub when you install it.
 
 ### Contact and support
 
 - **Telegram group:** [t.me/tivikit](https://t.me/tivikit) for questions, ideas and which TVs work.
 - **Bug reports:** [GitHub Issues](https://github.com/Circling5714/tivikit/issues). In the app, Feedback / report a bug → Report a bug on GitHub fills in the TiviKit version, phone, connected TV and last error for you to review before sending.
 - **Support the author:** TiviKit is free and ad-free. To buy the author a coffee, bank transfer in Vietnam: MB Bank, account `070991988888`, CAO MINH THI, message "Ung ho TiviKit" (in the app: home screen → Support the author, with copy buttons).
-- New TV lists are best sent to [CleanYourTV](https://github.com/Gathin23/cleanyourtv) so everyone gets them; TiviKit pulls them in weekly.
+- ⚠️ **Share your list with CleanYourTV:** once a cleaned TV has run fine for a few days, home screen → Share your list with CleanYourTV. The app writes `debloat.txt` and `tv.json` in the format of [CleanYourTV](https://github.com/Gathin23/cleanyourtv)'s `examples/` from the packages it disabled (re-checked against the TV when it is connected, leaving out packages that came back and apps you installed) and opens their "My TV" issue form filled in. Without GitHub, copy it or share it to the Telegram group. TiviKit pulls new lists in weekly.
 
 ---
 

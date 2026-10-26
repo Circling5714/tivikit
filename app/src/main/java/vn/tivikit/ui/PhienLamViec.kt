@@ -84,6 +84,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     /** Hộp Góp ý & liên hệ, hộp Ủng hộ tác giả (LienHeUngHo.kt), mở được từ mọi màn. */
     var moLienHe by mutableStateOf(false)
     var moUngHo by mutableStateOf(false)
+    /** Gửi danh sách gói đã tắt cho CleanYourTV (ui/GopNguocTivi.kt). */
+    val gopNguoc by lazy { GopNguocTivi(this) }
     /** Quản lý app trên tivi (ui/QuanLyApp.kt). */
     val qlApp by lazy { QuanLyApp(this) }
     /** Gửi ảnh / video / file lên tivi (ui/GuiFile.kt). */

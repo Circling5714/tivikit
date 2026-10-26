@@ -93,6 +93,7 @@ object KeHoach {
 
     /** Nút mic / tìm bằng giọng nói (22/10/2026: Mi Box S mất giọng nói vì danh sách tắt katniss "personal choice"). */
     private val GIONG_NOI = Regex("""^com\.google\.android\.katniss$|^com\.google\.android\.speech\.pumpkin$|^com\.google\.android\.(apps\.)?tv\.assistant$|^com\.google\.android\.googlequicksearchbox$""")
+    fun laGoiGiongNoi(pkg: String) = GIONG_NOI.containsMatchIn(pkg)
 
     /**
      * Nhóm trong danh sách đúng mẫu mà người làm danh sách ghi là tắt THEO Ý RIÊNG ("off by choice", "personal choice",

@@ -71,6 +71,13 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         return TrangThaiGoi(caiDat, daTat, coBieuTuong, homeHienTai().substringBefore('/'), banPhim)
     }
 
+    /** Gói đang tắt và app người dùng tự cài, trong một lệnh (danh sách gửi CleanYourTV, dulieu/GopNguoc). */
+    fun goiTatVaTuCai(): Pair<Set<String>, Set<String>> {
+        fun ds(s: String) = s.lines().mapNotNull { l -> l.trim().removePrefix("package:").takeIf { it.isNotEmpty() && TEN_GOI.matches(it) } }.toSet()
+        val out = sh("pm list packages -d; echo @@; pm list packages -3")
+        return ds(out.substringBefore("@@")) to ds(out.substringAfter("@@", ""))
+    }
+
     /** Các gói có activity thuộc category này (app hiện biểu tượng). */
     private fun lopActivity(cat: String): Set<String> =
         sh("cmd package query-activities --brief -a android.intent.action.MAIN -c $cat").lines()

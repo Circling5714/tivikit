@@ -141,6 +141,7 @@ fun UngDung(vm: PhienLamViec = viewModel()) {
             }
             if (vm.moLienHe) HopLienHe(vm)
             if (vm.moUngHo) HopUngHo(vm)
+            if (vm.gopNguoc.hien) HopGopNguoc(vm)
             vm.banMoi?.takeIf { vm.hoiCapNhat }?.let { b ->
                 AlertDialog(
                     onDismissRequest = { vm.hoiCapNhat = false },

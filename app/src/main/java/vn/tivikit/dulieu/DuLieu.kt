@@ -129,9 +129,12 @@ data class ThongTinTv(
     val khoaLuu: String get() = (serial.ifBlank { "$model-$device" }).replace(Regex("[^A-Za-z0-9._-]"), "_")
 
     companion object {
+        /** Bảng khoá → giá trị từ đầu ra getprop ("[ro.product.model]: [MiTV-MOOQ1]"). */
+        fun bangGetprop(text: String): Map<String, String> =
+            Regex("""\[([^\]]+)\]: \[([^\]]*)\]""").findAll(text).associate { it.groupValues[1] to it.groupValues[2] }
+
         fun tuGetprop(text: String): ThongTinTv {
-            val p = HashMap<String, String>()
-            Regex("""\[([^\]]+)\]: \[([^\]]*)\]""").findAll(text).forEach { p[it.groupValues[1]] = it.groupValues[2] }
+            val p = bangGetprop(text)
             fun g(vararg k: String) = k.firstNotNullOfOrNull { p[it]?.takeIf { v -> v.isNotBlank() } } ?: ""
             return ThongTinTv(
                 brand = g("ro.product.brand", "ro.product.vendor.brand", "ro.product.system.brand"),
