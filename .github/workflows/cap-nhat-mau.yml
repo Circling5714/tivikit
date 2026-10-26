@@ -1,8 +1,9 @@
 # Cập nhật mẫu tivi (26/10/2026): mỗi thứ Hai 08:00 giờ Việt Nam (hoặc bấm Run workflow) dựng lại danh sách tivi từ
-# CleanYourTV mới nhất (scripts/cap_nhat_mau.py). Có thay đổi thì chạy unit test:
-#  - qua: commit lên main rồi gọi workflow Phát hành (bản vá) — chủ kho chỉ bấm duyệt bản phát hành;
-#  - không qua: đẩy nhánh mau-tivi/cap-nhat, mở pull request để xem (kho chưa cho Actions tạo pull request thì mở issue
-#    trỏ tới nhánh), không phát hành, lần chạy báo lỗi.
+# CleanYourTV mới nhất (scripts/cap_nhat_mau.py). Có thay đổi thì chạy unit test (kể cả chốt chặn chạy qua mọi mẫu):
+#  - qua: commit lên main rồi gọi workflow Phát hành (bản vá). Từ bản trước mà thứ vào APK chỉ đổi ở dữ liệu mẫu tivi thì
+#    tự phát hành không ai duyệt (môi trường phat-hanh-tu-dong); còn code chưa phát hành thì chờ chủ kho duyệt;
+#  - không qua, hoặc bỏ quá nhiều mẫu một lần: đẩy nhánh mau-tivi/cap-nhat, mở pull request để xem (kho chưa cho Actions
+#    tạo pull request thì mở issue trỏ tới nhánh), không phát hành, lần chạy báo lỗi.
 name: Cập nhật mẫu tivi
 
 on:
@@ -48,8 +49,8 @@ jobs:
         continue-on-error: true
         run: ./gradlew --console=plain :app:testReleaseUnitTest
 
-      - name: "Test qua: commit và gọi Phát hành"
-        if: steps.mau.outputs.doi == '1' && steps.test.outcome == 'success'
+      - name: "Ổn: commit và phát hành"
+        if: steps.mau.outputs.doi == '1' && steps.test.outcome == 'success' && steps.mau.outputs.chan == ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -58,13 +59,16 @@ jobs:
           git add app/src/main/assets/du-lieu.json app/src/main/java/vn/tivikit/dulieu/DuLieu.kt app/src/main/assets/giay-phep.txt README.md
           git commit -q -F dist/mau-commit.txt
           git push -q origin "HEAD:$GITHUB_REF_NAME"
-          gh workflow run phat-hanh.yml --ref "$GITHUB_REF_NAME" -f loai=va -f ghi_chu="$(cat dist/mau-ghi-chu.txt)"
-          echo "Đã gọi Phát hành: $(head -n 1 dist/mau-commit.txt)" >> "$GITHUB_STEP_SUMMARY"
+          if python3 scripts/phat_hanh.py chi-du-lieu; then TU_DONG=true; else TU_DONG=false; fi
+          gh workflow run phat-hanh.yml --ref "$GITHUB_REF_NAME" -f loai=va -f tu_dong=$TU_DONG -f ghi_chu="$(cat dist/mau-ghi-chu.txt)"
+          if [ "$TU_DONG" = true ]; then CACH="tự phát hành"; else CACH="có code chưa phát hành nên chờ chủ kho duyệt"; fi
+          echo "$(head -n 1 dist/mau-commit.txt) — $CACH" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: "Test không qua: mở pull request"
-        if: steps.mau.outputs.doi == '1' && steps.test.outcome != 'success'
+      - name: "Chưa ổn: mở pull request"
+        if: steps.mau.outputs.doi == '1' && (steps.test.outcome != 'success' || steps.mau.outputs.chan != '')
         env:
           GH_TOKEN: ${{ github.token }}
+          CHAN: ${{ steps.mau.outputs.chan }}
         run: |
           NHANH=mau-tivi/cap-nhat
           LAN_CHAY="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
@@ -74,12 +78,12 @@ jobs:
           git add app/src/main/assets/du-lieu.json app/src/main/java/vn/tivikit/dulieu/DuLieu.kt app/src/main/assets/giay-phep.txt README.md
           git commit -q -F dist/mau-commit.txt
           git push -q -f origin "$NHANH"
-          BAO="Unit test không qua với danh sách tivi mới từ CleanYourTV nên chưa phát hành. Nhánh: $NHANH. Log: $LAN_CHAY"
+          BAO="Danh sách tivi mới từ CleanYourTV chưa phát hành: ${CHAN:-unit test không qua}. Nhánh: $NHANH. Log: $LAN_CHAY"
           if [ "$(gh pr view "$NHANH" --json state --jq .state 2>/dev/null)" = "OPEN" ]; then
-            gh pr comment "$NHANH" --body "Danh sách mới hơn, unit test vẫn chưa qua: $LAN_CHAY"
+            gh pr comment "$NHANH" --body "$BAO"
           elif ! gh pr create --head "$NHANH" --base "$GITHUB_REF_NAME" --title "$(head -n 1 dist/mau-commit.txt)" --body "$BAO"; then
             # Settings → Actions → General chưa bật "Allow GitHub Actions to create and approve pull requests".
-            gh issue create --title "Cập nhật mẫu tivi chưa qua test: $(head -n 1 dist/mau-commit.txt)" --body "$BAO"
+            gh issue create --title "Cập nhật mẫu tivi chưa phát hành: $(head -n 1 dist/mau-commit.txt)" --body "$BAO"
           fi
-          echo "::error::Unit test không qua với danh sách tivi mới; xem nhánh $NHANH"
+          echo "::error::$BAO"
           exit 1

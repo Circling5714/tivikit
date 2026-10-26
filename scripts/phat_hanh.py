@@ -6,6 +6,9 @@
   python3 scripts/phat_hanh.py dong-goi <bản> <file apk> [ghi chú]
       Ghi vào dist/: TiviKit-<bản>.apk, TiviKit-<bản>.apk.sha256, cap-nhat.json (app đọc để tự cập nhật, CapNhat.kt),
       nhat-ky.md (nội dung GitHub Release).
+  python3 scripts/phat_hanh.py chi-du-lieu
+      Thoát 0 nếu từ tag trước, thứ vào APK chỉ đổi ở dữ liệu mẫu tivi (du-lieu.json và dòng số mẫu): bản tự phát hành
+      không cần duyệt được (môi trường phat-hanh-tu-dong). Có code đổi thì thoát 1, kèm danh sách file.
 
 Số bản lấy từ tag v<lớn>.<tính năng>.<vá> gần nhất: va tăng số cuối, tinh-nang tăng số giữa, lon tăng số đầu. Chưa có tag
 thì dùng nguyên version.properties; ai tự sửa version.properties cao hơn tag thì dùng số đó. versionCode = lớn×10000 +
@@ -29,6 +32,15 @@ RA = os.path.join(GOC, "dist")
 DAU_CHUNG_CHI = "ec4c282ecefa87e7e959d44de052ccb047a8164c383ff39341d910d85af6f653"
 # Nhật ký trong app (banner, thông báo) chỉ chừng này dòng; đầy đủ ở GitHub Release.
 DONG_TRONG_APP = 12
+# Tự phát hành không ai duyệt (26/10/2026) chỉ khi thứ vào APK không đổi ngoài dữ liệu mẫu tivi. Mấy file này không vào APK:
+# workflow, tài liệu, script phát hành / cập nhật mẫu, test.
+NGOAI_APK = re.compile(r"^(\.github/|[^/]+\.md$|NOTICE$|LICENSE$|scripts/(phat_hanh|cap_nhat_mau)\.py$|.+/src/test/)")
+DU_LIEU = "app/src/main/assets/du-lieu.json"
+# Hai file trong APK chỉ được đổi đúng dòng ghi số mẫu (scripts/cap_nhat_mau.py sửa).
+DONG_SO_MAU = {
+    "app/src/main/java/vn/tivikit/dulieu/DuLieu.kt": re.compile(r"\s*const val SO_MAU = \d+$"),
+    "app/src/main/assets/giay-phep.txt": re.compile(r"1\. CleanYourTV — danh sách \d+ mẫu tivi "),
+}
 
 
 def git(*ts):
@@ -101,6 +113,26 @@ def nhat_ky():
     return [s for s in tieu_de if s not in sua], sua
 
 
+def ngoai_du_lieu():
+    """File vào APK đã đổi từ tag trước mà không phải dữ liệu mẫu tivi; rỗng = tự phát hành được."""
+    tag = tag_truoc()
+    if tag is None:
+        return ["(chưa có bản phát hành nào)"]
+    con = []
+    for f in git("diff", "--name-only", f"{tag}..HEAD").stdout.splitlines():
+        f = f.strip()
+        if not f or f == DU_LIEU or NGOAI_APK.match(f):
+            continue
+        mau = DONG_SO_MAU.get(f)
+        if mau:
+            diff = git("diff", "--unified=0", f"{tag}..HEAD", "--", f).stdout.splitlines()
+            dong = [d[1:] for d in diff if d[:1] in "+-" and not d.startswith(("+++", "---"))]
+            if dong and all(mau.match(d) for d in dong):
+                continue
+        con.append(f)
+    return con
+
+
 def dong_goi(ban, apk, ghi_chu=""):
     tach(ban)
     os.makedirs(RA, exist_ok=True)
@@ -153,5 +185,11 @@ if __name__ == "__main__":
         print(b)
     elif lenh[0] == "dong-goi" and len(lenh) in (3, 4):
         dong_goi(lenh[1], lenh[2], lenh[3] if len(lenh) == 4 else "")
+    elif lenh[0] == "chi-du-lieu" and len(lenh) == 1:
+        con = ngoai_du_lieu()
+        if con:
+            print("Có thay đổi vào APK ngoài dữ liệu mẫu tivi, cần duyệt: " + ", ".join(con))
+            sys.exit(1)
+        print("Từ bản trước, thứ vào APK chỉ đổi ở dữ liệu mẫu tivi: tự phát hành được.")
     else:
         sys.exit(__doc__)

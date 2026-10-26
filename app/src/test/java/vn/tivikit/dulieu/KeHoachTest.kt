@@ -16,6 +16,26 @@ class KeHoachTest {
         assertTrue(File("src/main/assets/giay-phep.txt").readText().contains("${DuLieu.SO_MAU} mẫu tivi"))
     }
 
+    /**
+     * Chốt chặn cho bản tự phát hành (26/10/2026): danh sách mẫu tự cập nhật hằng tuần từ CleanYourTV và tự phát hành
+     * không ai duyệt, nên với MỌI mẫu, gói tivi cần để chạy (lõi Android, CH Play, Dịch vụ Google Play, Home, trình cài
+     * app, bàn phím…) không bao giờ được tích sẵn, kể cả khi danh sách mẫu ghi tắt.
+     */
+    @Test fun moiMau_khongTichSanGoiCanGiu() {
+        val canGiu = setOf("com.android.vending", "com.google.android.gms", "com.google.android.gsf", "com.android.systemui",
+            "com.android.tv.settings", "com.google.android.packageinstaller", "com.gathin.tvhome", "com.android.providers.tv")
+        var soMuc = 0
+        for (m in du.mau) {
+            val tt = TrangThaiGoi(caiDat = m.goi.map { it.pkg }.toSet() + canGiu, daTat = emptySet(), coBieuTuong = emptySet(),
+                homeHienTai = "com.gathin.tvhome", banPhim = setOf("com.google.android.inputmethod.latin"))
+            val ds = KeHoach.lap(du, m, tt)
+            soMuc += ds.size
+            val sai = ds.filter { it.chonSan && (KeHoach.laGoiCanGiu(it.pkg, tt) || KeHoach.laGoiLoiAndroid(it.pkg)) }
+            assertTrue("${m.id} tích sẵn gói cần giữ: ${sai.map { it.pkg }}", sai.isEmpty())
+        }
+        assertTrue("bài thử phải chạy qua dữ liệu thật", soMuc > 1000)
+    }
+
     private fun tivi(mauId: String, them: Set<String> = emptySet()): Pair<MauTv, List<MucGoi>> {
         val mau = du.mau.first { it.id == mauId }
         val caiDat = mau.goi.map { it.pkg }.toSet() + them

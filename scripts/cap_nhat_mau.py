@@ -6,7 +6,8 @@
 Dựng lại app/src/main/assets/du-lieu.json bằng scripts/lam-du-lieu.py, so với dữ liệu đang có theo từng mẫu (thêm / bỏ /
 đổi). Không khác thì in "doi=0". Khác thì ghi dữ liệu mới, sửa số mẫu ở DuLieu.SO_MAU, giay-phep.txt và README (mỗi chỗ
 phải khớp đúng một lần, không thì dừng), viết dist/mau-commit.txt (lời commit) và dist/mau-ghi-chu.txt (ghi chú phát hành),
-rồi in "doi=1" và "so_mau=…" (dạng GITHUB_OUTPUT).
+rồi in "doi=1", "so_mau=…" và "chan=…" (dạng GITHUB_OUTPUT). "chan" khác rỗng = không tự phát hành (bỏ quá nhiều mẫu
+một lần: CleanYourTV dọn hàng loạt hay dựng dữ liệu lỗi), workflow mở pull request để xem.
 """
 import json
 import os
@@ -18,6 +19,8 @@ import tempfile
 GOC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DU_LIEU = os.path.join(GOC, "app", "src", "main", "assets", "du-lieu.json")
 RA = os.path.join(GOC, "dist")
+# Một lần cập nhật bỏ quá chừng này mẫu thì không tự phát hành.
+BO_TOI_DA = 5
 # (file, mẫu regex có một nhóm là số mẫu)
 SO_MAU_O = [
     (os.path.join(GOC, "app", "src", "main", "java", "vn", "tivikit", "dulieu", "DuLieu.kt"), r"(const val SO_MAU = )(\d+)"),
@@ -107,6 +110,7 @@ def main(nguon):
     bao(tieu_de)
     print("doi=1")
     print(f"so_mau={n}")
+    print(f"chan=bỏ {len(bo)} mẫu một lần (quá {BO_TOI_DA})" if len(bo) > BO_TOI_DA else "chan=")
 
 
 if __name__ == "__main__":

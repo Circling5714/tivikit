@@ -4,6 +4,8 @@
 # viết nhật ký từ tiêu đề commit (scripts/phat_hanh.py), commit số bản + gắn tag, đăng GitHub Release kèm APK, .sha256 và
 # cap-nhat.json — app đọc cap-nhat.json để tự cập nhật (CapNhat.kt).
 # Khoá ký nằm trong secrets của môi trường "phat-hanh" (Settings → Environments), môi trường bắt chủ kho bấm duyệt.
+# tu_dong (workflow Cập nhật mẫu tivi đặt khi từ bản trước, thứ vào APK chỉ đổi ở dữ liệu mẫu tivi): chạy ở môi trường
+# "phat-hanh-tu-dong" không cần duyệt, và kiểm tra lại điều kiện đó trước khi đụng tới khoá ký.
 name: Phát hành
 
 on:
@@ -18,6 +20,10 @@ on:
         description: "Ghi chú ở đầu nhật ký (không bắt buộc)"
         type: string
         required: false
+      tu_dong:
+        description: "Tự phát hành không cần duyệt — chỉ được khi từ bản trước chỉ đổi dữ liệu mẫu tivi (Cập nhật mẫu tivi đặt)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,12 +35,16 @@ concurrency:
 jobs:
   phat-hanh:
     runs-on: ubuntu-24.04
-    environment: phat-hanh
+    environment: ${{ inputs.tu_dong && 'phat-hanh-tu-dong' || 'phat-hanh' }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Tự phát hành chỉ khi chỉ đổi dữ liệu mẫu tivi
+        if: inputs.tu_dong
+        run: python3 scripts/phat_hanh.py chi-du-lieu
 
       - uses: actions/setup-java@v4
         with:
