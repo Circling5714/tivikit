@@ -4,9 +4,9 @@
 
 **The Android TV toolkit.** An Android app that cleans up and looks after Android TV / Google TV over Wi-Fi: it switches off the maker's ads, tracking and junk, swaps in a clean Home, then installs apps, works as a remote, sends photos, runs on/off timers and a kids lock. No root, nothing uninstalled (only disabled), one-tap restore. LG webOS TVs get a remote mode too.
 
-> **TiviKit 1.0 phát triển tiếp từ CleanTV 2.8.2, và phần lớn tính năng mới chưa được thử trên tivi thật.** Mỗi tính năng bên dưới ghi rõ ✅ đã thử hay ⚠️ chưa thử; xem thêm [Tình trạng thử nghiệm](#tình-trạng-thử-nghiệm).
+> **TiviKit phát triển tiếp từ CleanTV 2.8.2 (kèm các bản sửa đưa về đến CleanTV 3.0.0), và nhiều tính năng mới chưa được thử trên tivi thật.** Mỗi tính năng bên dưới ghi rõ ✅ đã thử hay ⚠️ chưa thử; xem thêm [Tình trạng thử nghiệm](#tình-trạng-thử-nghiệm).
 >
-> *TiviKit 1.0 builds on CleanTV 2.8.2, and most new features have not been tried on a real TV yet: see [Test status](#test-status).*
+> *TiviKit builds on CleanTV 2.8.2 (with fixes ported up to CleanTV 3.0.0), and many new features have not been tried on a real TV yet: see [Test status](#test-status).*
 
 [Tải APK bản mới nhất](https://github.com/Circling5714/tivikit/releases/latest) · [Nhật ký các bản](https://github.com/Circling5714/tivikit/releases) · [Nhóm Telegram](https://t.me/tivikit) · [Ủng hộ tác giả](#liên-hệ-và-ủng-hộ) · [Tiếng Việt](#tiếng-việt) · [English](#english)
 
@@ -18,7 +18,7 @@
 
 ### Dọn tivi và Home sạch
 
-Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit giữ nguyên cách dọn, chỉ đổi giao diện, tên gói và lớp kết nối. ✅ TiviKit 1.0 đã dọn tivi và cài Home sạch trên box Tanix TX3 Mini (Android 9). ⚠️ Khôi phục chưa thử lại với TiviKit.
+Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm các bản sửa đưa về đến 3.0.0; TiviKit giữ nguyên cách dọn, chỉ đổi giao diện, tên gói và lớp kết nối. ✅ TiviKit 1.0 đã dọn tivi và cài Home sạch trên box Tanix TX3 Mini (Android 9). ⚠️ Khôi phục chưa thử lại với TiviKit.
 
 - **Kết nối tivi qua Wi-Fi** bằng ADB: quét mạng hoặc gõ IP; Google TV đời mới ghép bằng mã 6 số (Gỡ lỗi không dây), app tự dò cổng. Hướng dẫn 7 bước có hình trong app.
 - **So với 316 danh sách đã thử** của cộng đồng CleanYourTV (nhiều hãng: TCL, Sony, Xiaomi, Philips, Hisense, Skyworth, onn, Chromecast, máy chiếu…), tự cập nhật hằng tuần. Chưa khớp mẫu thì gợi ý mẫu gần giống; tivi lạ dùng luật chung an toàn.
@@ -170,7 +170,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 
 ### Cleaning and the clean Home
 
-From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic and only changes the interface, package names and connection layer. ✅ TiviKit 1.0 cleaned a Tanix TX3 Mini (Android 9) and installed the clean Home. ⚠️ Restore hasn't been re-tested with TiviKit.
+From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; TiviKit keeps the clean-up logic and only changes the interface, package names and connection layer. ✅ TiviKit 1.0 cleaned a Tanix TX3 Mini (Android 9) and installed the clean Home. ⚠️ Restore hasn't been re-tested with TiviKit.
 
 - **Connects over Wi-Fi** with ADB: scan or type the IP; newer Google TVs pair with a 6-digit code and the app finds the port. A 7-step picture guide is built in.
 - **Matches 316 tested lists** from the CleanYourTV community (many brands), updated weekly; suggests close models; unknown TVs get safe general rules.
@@ -264,8 +264,8 @@ No usage data: CleanTV's anonymous counter, "send package list" button and websi
 
 ## Ghi công / Credits
 
-- TiviKit dựa trên **CleanTV 2.8.2** của AlexVGS ([mã nguồn](https://github.com/vgscity/vgs-cleantv), MIT): app gốc, cách dọn tivi, bản vá Home sạch, khoá trẻ em, sao lưu / khôi phục.
-  *TiviKit builds on CleanTV 2.8.2 by AlexVGS (MIT): the original app, the clean-up logic, the clean Home patches, the kids lock, backup and restore.*
+- TiviKit dựa trên **CleanTV 2.8.2** của AlexVGS ([mã nguồn](https://github.com/vgscity/vgs-cleantv), MIT), kèm các bản sửa và bản vá Home sạch đưa về đến CleanTV 3.0.0: app gốc, cách dọn tivi, bản vá Home sạch, khoá trẻ em, sao lưu / khôi phục.
+  *TiviKit builds on CleanTV 2.8.2 by AlexVGS (MIT), with fixes and the clean Home patch ported up to CleanTV 3.0.0: the original app, the clean-up logic, the clean Home patches, the kids lock, backup and restore.*
 - CleanTV dựa trên **[CleanYourTV](https://github.com/Gathin23/cleanyourtv)** của Gathin và cộng đồng (MIT): màn Home sạch và các danh sách tivi đều từ dự án đó.
   *CleanTV is built on CleanYourTV by Gathin and contributors (MIT): the clean Home launcher and the TV lists come from that project.*
 - Thư viện / libraries: libadb-android, Conscrypt, Bouncy Castle, OkHttp, JSch, AndroidX / Jetpack Compose. Phông / fonts: Inter (app), Lexend và Outfit (Home sạch), OFL. Thời tiết / weather: Open-Meteo (CC BY 4.0). Toạ độ phường/xã / ward coordinates: © OpenStreetMap contributors (ODbL). Chế độ LG cài [LG TV Vibehack](https://github.com/hoangvya19/lg-tv-webos-vibehack) (MIT) lên tivi đã root / the LG mode installs it on rooted TVs.

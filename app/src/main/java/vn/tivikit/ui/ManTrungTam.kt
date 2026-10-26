@@ -185,7 +185,8 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
         NutGopY(vm)
         Text(t("Dựa trên CleanYourTV (github.com/Gathin23/cleanyourtv, MIT) của Gathin và cộng đồng: ${DuLieu.SO_MAU} danh sách tivi và màn Home sạch là của dự án đó.",
             "Built on CleanYourTV (github.com/Gathin23/cleanyourtv, MIT) by Gathin and contributors: the ${DuLieu.SO_MAU} TV lists and the clean Home come from that project.") +
-            "\nTiviKit ${BuildConfig.VERSION_NAME} · " + t("dựa trên CleanTV 2.8.2 của AlexVGS (MIT)", "based on CleanTV 2.8.2 by AlexVGS (MIT)"),
+            "\nTiviKit ${BuildConfig.VERSION_NAME} · " + t("dựa trên CleanTV 2.8.2 của AlexVGS (MIT), kèm các bản sửa đến 3.0.0",
+                "based on CleanTV 2.8.2 by AlexVGS (MIT), with fixes up to 3.0.0"),
             fontSize = 12.sp, lineHeight = 17.sp, color = ChuPhu, textAlign = TextAlign.Center)
     }
 }
