@@ -517,6 +517,16 @@ private fun ManThongTin(vm: PhienLamViec) = Cuon {
             }
         }
     }
+    if (vm.khongPhaiTivi) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(NenLoi).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row {
+            Icon(Icons.Rounded.Warning, null, tint = DoTuoi); Spacer(Modifier.width(8.dp))
+            Phu(t("Máy này không khai là tivi Android (có thể là điện thoại hoặc máy tính bảng). TiviKit chỉ dọn tivi: tắt nhầm gói của điện thoại có thể làm máy không khởi động được.",
+                "This device does not report itself as an Android TV (it may be a phone or tablet). TiviKit only cleans TVs: disabling a phone's packages can stop it from booting."), ChuChinh)
+        }
+        Hang(t("Tôi chắc đây là tivi / hộp tivi / máy chiếu", "I am sure this is a TV / TV box / projector"),
+            t("Chỉ bật nếu đúng là thiết bị xem tivi", "Only if it really is a TV device"), vm.xacNhanLaTivi) { vm.xacNhanLaTivi = it }
+    }
     if (vm.laAndroidCu && !vm.laFireTv) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(NenCanhBao).padding(12.dp)) {
         Icon(Icons.Rounded.Warning, null, tint = Cam); Spacer(Modifier.width(8.dp))
         Phu(t("Máy này chạy Android ${vm.thongTin?.android}: TiviKit dọn được quảng cáo, theo dõi và app rác, nhưng KHÔNG cài được Home sạch (cần Android 8 trở lên).",
@@ -556,7 +566,7 @@ private fun ManThongTin(vm: PhienLamViec) = Cuon {
     }
     if (vm.moChonMau) HopChonMau(vm)
     TheMayChieu(vm)
-    NutChinh(t("Xem danh sách gói", "See packages"), enabled = !vm.dangBan, icon = Icons.AutoMirrored.Rounded.ArrowForward) { vm.lapKeHoach() }
+    NutChinh(t("Xem danh sách gói", "See packages"), enabled = !vm.dangBan && !vm.chanKhongPhaiTivi, icon = Icons.AutoMirrored.Rounded.ArrowForward) { vm.lapKeHoach() }
 }
 
 @Composable

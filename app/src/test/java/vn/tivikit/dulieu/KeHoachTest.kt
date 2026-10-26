@@ -43,6 +43,21 @@ class KeHoachTest {
         return mau to KeHoach.lap(du, mau, tt)
     }
 
+    /** Sony: gói nằm sau màn Cài đặt không bao giờ tích sẵn (CleanTV 2.10.2/2.10.4: Cài đặt mở ra trống, phải reset cứng). */
+    @Test fun sony_goiSauManCaiDat_khongTichSan() {
+        val (_, ds) = tivi("sony-bravia-4k-ur2")
+        for (p in listOf("com.sony.dtv.b2b.hotelmode", "com.sony.dtv.deviceadminsettings")) {
+            val m = ds.first { it.pkg == p }
+            assertFalse("$p không được tích sẵn", m.chonSan)
+        }
+    }
+
+    /** Chế độ cửa hàng (shopsettings) vẫn để danh sách đúng mẫu quyết định. */
+    @Test fun sony_cheDoCuaHang_vanTheoDanhSach() {
+        val (_, ds) = tivi("sony-kdl-43w950d")
+        assertTrue("shopsettings (nhóm demo cửa hàng) vẫn tích sẵn", ds.first { it.pkg == "com.sony.dtv.shopsettings" }.chonSan)
+    }
+
     @Test fun miBoxS_khongTichSanKatniss() {
         val (_, ds) = tivi("xiaomi-mi-box-s")
         val k = ds.first { it.pkg == "com.google.android.katniss" }

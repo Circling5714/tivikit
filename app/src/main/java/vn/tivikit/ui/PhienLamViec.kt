@@ -132,6 +132,10 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     // Tivi
     var thongTin by mutableStateOf<ThongTinTv?>(null)
+    /** Máy đích không khai là tivi (ThaoTacTv.laTivi): chặn dọn / đổi Home cho tới khi người dùng xác nhận đúng là tivi. */
+    var khongPhaiTivi by mutableStateOf(false)
+    var xacNhanLaTivi by mutableStateOf(false)
+    val chanKhongPhaiTivi get() = khongPhaiTivi && !xacNhanLaTivi
     internal var getprop = ""
         private set
     var trangThai by mutableStateOf<TrangThaiGoi?>(null)
@@ -660,6 +664,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         val (info, gp) = io { tv.docThongTin() }
         goiHome = io { tv.pkgHome }
         thongTin = info; getprop = gp
+        khongPhaiTivi = !io { tv.laTivi() }
+        xacNhanLaTivi = false
         // Danh sách cài app thuộc về một tivi: nối lại đúng tivi đó (rớt Wi-Fi giữa lúc gửi) thì giữ để Thử lại.
         abiTvDaDo = null
         if (tiviCuaDsCai != info.khoaLuu) { dsCai.forEach { it.file?.takeIf { f -> f.tam }?.file?.delete() }; dsCai.clear(); apkTrenTv = null; qlApp.quen(); guiFile.quen() }
@@ -687,6 +693,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         saoLuuTuTv = slMay == null && saoLuu != null
         // Xiaomi: sau khi đổi Home, nút INPUT của remote không mở bảng nguồn nữa (upstream #1368) — bật sẵn để Home sạch nhận.
         nutInput = tt.homeHienTai == "com.google.android.apps.tv.launcherx" || info.brand.equals("Xiaomi", ignoreCase = true)
+        // Sony 2015 (bo SVP-DTV15): Cài đặt dễ mở ra trống mà muốn bật lại Gỡ lỗi USB lại phải qua Cài đặt — tự tắt ADB là
+        // khoá chủ nhà ở ngoài, không sửa được nữa (CleanTV 2.10.4: 2 máy phải reset cứng). Mặc định giữ ADB, vẫn tắt được tay.
+        giuAdb = info.device == "SVP-DTV15"
         laMayChieu = tv.coVeMayChieu(tt, info)
         nhoTiviGanDay(host, cong.trim().ifEmpty { "5555" }, info.tenHienThi)
         adb.diemCuoi?.let { (h, p) -> giuKetNoi.daNoi(h, p) }
@@ -750,6 +759,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     fun lapKeHoach() = chay(t("Đang so với ${DuLieu.SO_MAU} mẫu tivi…", "Comparing with ${DuLieu.SO_MAU} TV models…")) {
         val tt = trangThai ?: return@chay
+        if (chanKhongPhaiTivi) return@chay
         val du = io { DuLieu.nap(ctx) }
         val ds = io { KeHoach.lap(du, mauChon, tt) }
         muc = ds
@@ -763,6 +773,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     fun batDauTat() = chay(t("Đang sao lưu…", "Backing up…")) {
         val info = thongTin ?: return@chay
+        if (chanKhongPhaiTivi) return@chay
         nhatKy.clear(); ketQua = null; tienDo = 0f
         manTruocHome = Man.DANG_TAT
         man = Man.DANG_TAT
@@ -1296,9 +1307,14 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         val cauHinh = cauHinhHome()
         val anh = anhNenTheme()
         val bo = boAnhTheme()
-        val loiCai = io { tv.caiLauncher(apk, sl, cauHinh, anh, bo, nutInput, nutHome || dungPhimRemote || phimRieng.isNotEmpty()) { s -> ghiTuIo(s) } }
+        val loiCai = io {
+            tv.caiLauncher(apk, sl, cauHinh, anh, bo, nutInput, nutHome || dungPhimRemote || phimRieng.isNotEmpty(),
+                { vn.tivikit.CapNhat.moAsset(ctx, "tvhome-xiaomi.apk").readBytes() }) { s -> ghiTuIo(s) }
+        }
         // caiLauncher báo lỗi là đã tự trả Home gốc: huỷ canh gác trên tivi.
         if (loiCai != null) { io { tv.boGac() }; error(loiCai) }
+        // Tivi Xiaomi gỡ bản com.gathin.tvhome thì caiLauncher đã cài lại bằng com.ts.launcher: nhớ tên gói mới.
+        goiHome = io { tv.pkgHome }
         if (nutDangPhat) io { tv.choPhepDangPhat() }
         if (dnsChanQc) batDnsAdGuardAnToan(sl)
         if (nutManCho) io { tv.chuanBiManCho(sl) }

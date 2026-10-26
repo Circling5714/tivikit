@@ -26,6 +26,12 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit
 - **Home sạch** (launcher CleanYourTV kèm bản vá của CleanTV): đồng hồ, lịch âm có can chi, thời tiết theo 3.321 phường/xã, dock 8 app, cụm nút Máy chiếu · Mạng · Màn hình chờ · Cài đặt; 7 giao diện, ảnh nền riêng từ điện thoại hoặc từ tivi / USB, 65 tuỳ chọn Nâng cao.
 - **Nút Home về đúng Home sạch**: app bấm thử nút Home thật; tivi không cho tắt Home gốc thì Home sạch tự mở đè lên. **Nút trên remote vẫn chạy** (YouTube, Netflix, Prime, Cài đặt) theo bảng phím của từng mẫu tivi.
 - Máy chiếu (Formovie, XGIMI, JMGO…) ghim màn lấy nét / chỉnh hình vào nút Máy chiếu. Xiaomi bản Trung Quốc có Home sạch riêng. Bo mạch CVTE giữ Home hãng.
+- ⚠️ Các bản sửa đưa về từ CleanTV 2.8.3 – 3.0.0:
+  - Máy không khai là tivi (điện thoại, máy tính bảng) thì khoá nút dọn tới khi bạn xác nhận.
+  - Sony 2015 (Android 8) không tích sẵn các gói nằm sau màn Cài đặt và mặc định giữ ADB.
+  - Kiểm tra nút Home chờ rồi thử lại khi còn app khác ở trước, tự đóng hộp "chọn Home", tắt launcher tự cài đang tranh Home (có ghi vào sao lưu).
+  - Tivi Xiaomi tự gỡ Home sạch thì app cài lại bản mang tên Xiaomi cho phép.
+  - Android 8 gửi ảnh nền và file giao diện có đường dự phòng và kiểm cỡ file sau khi gửi.
 - **Sao lưu trước mọi thay đổi**, trên điện thoại và trên tivi; **Khôi phục** một chạm, đổi điện thoại vẫn khôi phục được. File sao lưu trên tivi dùng chung với CleanTV, nên tivi đã dọn bằng CleanTV vẫn khôi phục được bằng TiviKit.
 - **Tivi tự canh gác**: đang thay Home mà rớt Wi-Fi / hết pin / tắt app thì 3 phút sau tivi tự bật lại Home gốc. Có **kịch bản khôi phục** cho máy tính và **xem trước lệnh** sẽ chạy trên tivi. Rời app thì tivi tự tắt ADB (có tuỳ chọn giữ).
 - **Xem màn hình tivi**: chụp màn hình tivi đang hiện, lưu hoặc chia sẻ. **Tivi đã dọn**: nhớ từng tivi, khôi phục lại lúc nào cũng được.
@@ -159,6 +165,12 @@ From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic an
 - **Clean Home** (the CleanYourTV launcher with CleanTV's patches): clock, Vietnamese lunar date, ward-level weather, an 8-app dock, 7 themes, your own wallpaper, 65 Advanced options. The Home key lands on it, and remote keys keep working from each model's key map.
 - **Backs up before any change**, on the phone and on the TV; one-tap **Restore**. The TV-side backup is shared with CleanTV. If the link drops while Home is being replaced, the TV restores its stock Home by itself. A restore script for a computer and a command preview are included; ADB switches off when you leave the app.
 - **TV screenshot** and a list of **cleaned TVs**.
+- ⚠️ Fixes brought over from CleanTV 2.8.3 – 3.0.0:
+  - A device that doesn't report itself as a TV (a phone, a tablet) can't be cleaned until you confirm it is one.
+  - 2015 Sony sets (Android 8) never pre-tick the packages behind Settings and keep ADB on by default.
+  - The Home-button check waits and retries while another app is in front, closes the system "pick a Home" dialog, and disables user-installed launchers competing for Home (recorded in the backup).
+  - A Xiaomi TV that removes the clean Home gets it again under a name Xiaomi allows.
+  - Wallpaper and theme files reach Android 8 TVs by a fallback route and are size-checked after sending.
 
 ### Tools
 

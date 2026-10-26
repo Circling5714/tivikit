@@ -55,6 +55,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         return ThongTinTv.tuGetprop(gp) to gp
     }
 
+    /** Máy đang nối có phải tivi / hộp tivi / máy chiếu không (laTiviTheoFeatures); lệnh lỗi thì coi như tivi. */
+    fun laTivi(): Boolean = laTiviTheoFeatures(runCatching { sh("pm list features") }.getOrDefault(""))
+
     fun docTrangThai(): TrangThaiGoi {
         fun goi(lenh: String) = sh(lenh).lines().mapNotNull { l ->
             l.trim().removePrefix("package:").takeIf { it.isNotEmpty() && TEN_GOI.matches(it) }
@@ -307,6 +310,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         boAnh: List<Pair<String, ByteArray>>?,
         nutInput: Boolean,
         nutHome: Boolean,
+        apkXiaomi: (() -> ByteArray)? = null,
         bao: (String) -> Unit,
     ): String? {
         val home = homeHienTai().substringBefore('/')
@@ -357,6 +361,14 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         bao(t("Mở thử Home sạch…", "Starting the clean Home…"))
         val start = sh("am start -W -n $cmpHome")
         if (!start.contains("Status: ok") || start.lines().any { it.startsWith("Error") }) {
+            // Xiaomi gỡ ngay launcher không có tên trong danh sách của hãng ("Activity class … does not exist" ngay sau
+            // Success; CleanTV 3.0.0, MiTV-MOOR2): cài lại bằng bản tên com.ts.launcher mà hãng cho phép.
+            val xiaomi = Regex("xiaomi|redmi", RegexOption.IGNORE_CASE).containsMatchIn(sh("getprop ro.product.brand; getprop ro.product.manufacturer"))
+            if (apkXiaomi != null && pkgHome == PKG_HOME && xiaomi && start.contains("does not exist")) {
+                bao(t("Tivi Xiaomi gỡ mất Home sạch, cài lại bằng tên Xiaomi cho phép…", "The Xiaomi TV removed the clean Home; reinstalling under a name Xiaomi allows…"))
+                pkgHomeDaDo = PKG_HOME_XIAOMI
+                return caiLauncher(apkXiaomi(), sl, cauHinh, anhNen, boAnh, nutInput, nutHome, null, bao)
+            }
             return t("Home sạch không mở được, Home gốc vẫn giữ nguyên.\n$start", "The clean Home did not start; the stock Home is untouched.\n$start")
         }
         sh("pm grant $pkgHome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; true")
@@ -383,7 +395,26 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             }
         }
 
-        val bayGio = homeHienTai()
+        var bayGio = homeHienTai()
+        // Hộp "chọn Home" (android/ResolverActivity): tivi còn launcher người dùng tự cài (Launchpad TV, Home TV…) tranh
+        // Home, set-home-activity không thắng được (CleanTV 2.10.7, Xiaomi ASTR0 nội địa: app trả Home gốc mỗi lần cài).
+        // Tắt các launcher tự cài đó (ghi vào sao lưu, Khôi phục bật lại) rồi đặt lại Home sạch.
+        if (bayGio.startsWith("android/") && !giuHomeGoc) {
+            val khac = sh("cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME")
+                .lines().map { it.trim().substringBefore('/') }.filter { it.isNotBlank() && it != pkgHome }.distinct().filter { laLauncherCaiThem(it) }
+            if (khac.isNotEmpty()) {
+                bao(t("Tivi có launcher khác tranh Home (${khac.joinToString()}), tắt để Home sạch làm Home…", "Other launchers compete for Home (${khac.joinToString()}), disabling them…"))
+                khac.forEach { p ->
+                    gacThem(p)
+                    sh("pm disable-user --user 0 $p")
+                    if (p !in sl.daTatTruoc && p !in sl.daTatBoiApp) sl.daTatBoiApp += p
+                }
+                luuSaoLuu(sl)
+                sh("cmd package set-home-activity --user 0 $cmpHome")
+                Thread.sleep(800)
+                bayGio = homeHienTai()
+            }
+        }
         if (!bayGio.startsWith("$pkgHome/") && giuHomeGoc) {
             traHomeGoc(sl)
             return t("Tivi bo mạch CVTE ('${bayGio.ifBlank { "không rõ" }}' vẫn nhận Home). Với loại bo này app không tắt Home gốc vì đã có tivi treo ở màn khởi động sau khi tắt. Tivi vẫn như cũ; Home sạch vẫn mở được từ danh sách ứng dụng.",
@@ -494,7 +525,12 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         val tam = "/data/local/tmp/cyt-${ten.replace('/', '-')}"
         adb.ghiFile(tam, du)
         if (ten.contains('/')) sh("mkdir -p $dir/${ten.substringBeforeLast('/')} 2>/dev/null; true")
-        sh("rm -f $dir/$ten 2>/dev/null; content write --uri content://$pkgHome.theme/$ten < $tam 2>/dev/null || cp $tam $dir/$ten 2>/dev/null; rm -f $tam")
+        sh("rm -f $dir/$ten 2>/dev/null; content write --uri content://$pkgHome.theme/$ten < $tam 2>/dev/null || cp $tam $dir/$ten 2>/dev/null")
+        // Kiểm file thật sự tới nơi (CleanTV 2.10.8, Sony 2015 Android 8: đổi theme không ăn — `content write` có thể chưa
+        // có mà vẫn trả mã 0, file cũ đã xoá). Sai cỡ thì chép thẳng và mở quyền đọc cho Home sạch.
+        val co = sh("wc -c < $dir/$ten 2>/dev/null").trim().toIntOrNull()
+        if (co != du.size) sh("cp $tam $dir/$ten 2>/dev/null; chmod 666 $dir/$ten 2>/dev/null; true")
+        sh("rm -f $tam")
     }
 
     /**
@@ -694,6 +730,22 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
                 lyDo = "setupwraith"
                 chuyenDe(pkg)?.let { return it }
                 return tra(pkg)
+            }
+            // Hộp "chọn Home" của hệ thống (gói android, ResolverActivity): tivi có nhiều launcher (Launchpad TV, Home TV…)
+            // mà chưa có Home mặc định. Đóng hộp rồi lượt sau đặt lại Home sạch và bấm Home (CleanTV 2.10.5, Xiaomi ASTR0
+            // nội địa: mỗi lần đổi giao diện app lại trả Home gốc vì coi hộp này là hỏng).
+            if (pkg == "android" && lan < 3) {
+                bao(t("Tivi đang hỏi chọn Home: đóng hộp, đặt Home sạch làm mặc định rồi thử lại…", "The TV is asking which Home to use: closing it, setting the clean Home as default and retrying…"))
+                sh("input keyevent KEYCODE_BACK")
+                Thread.sleep(1000)
+                return@repeat
+            }
+            // Trên màn vẫn là một app chứ chưa phải Home nào (Cài đặt app vừa mở để thử, hộp cài đặt, app người dùng đang
+            // xem): phím Home chưa ăn, chưa phải Home cũ giành nút. Chờ rồi bấm lại thay vì báo hỏng ngay lượt đầu (CleanTV
+            // 2.10.3: Sony VH21 / BF1, Xiaomi MOOR2, onn 4K… báo "Nút Home vẫn mở com.android.tv.settings").
+            if (lan < 3 && pkg.isNotBlank() && pkg != SETUP && (pkg in KHONG_PHAI_HOME || pkg.contains("packageinstaller") || !coManHome(pkg))) {
+                Thread.sleep(2000)
+                return@repeat
             }
             if (lan == 3 || sl == null || pkg == SETUP || !nenTatVuiGianhHome(pkg)) return tra(pkg)
             bao(t("Nút Home vẫn mở '$pkg', tắt nó…", "The Home button still opens '$pkg', disabling it…"))
@@ -1547,6 +1599,16 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             val trung = khoi.filter { it.contains("SSID: \"$ssid\"") }
             val cua = trung.singleOrNull() ?: return ""
             return Regex("""cname=([^ \n]+)""").find(cua)?.groupValues?.get(1) ?: ""
+        }
+
+        /**
+         * Theo `pm list features`: Android TV khai android.software.leanback hoặc android.hardware.type.television, điện
+         * thoại / máy tính bảng không có cả hai (CleanTV 2.10.12: một người dọn nhầm chính điện thoại, máy không khởi động
+         * được). Không đọc được danh sách thì coi như tivi để không chặn nhầm.
+         */
+        fun laTiviTheoFeatures(f: String): Boolean {
+            if (!f.contains("feature:")) return true
+            return f.contains("feature:android.software.leanback") || f.contains("feature:android.hardware.type.television")
         }
 
         /** Lỗi kiểu kết nối ADB đã đứt (libadb: "connect() must be called first", luồng đóng, mạng reset). */

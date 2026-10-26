@@ -100,7 +100,12 @@ object KeHoach {
      */
     private val THEO_Y_RIENG = Regex("""(by|owner'?s?|personal)\s+choice|\boptional\b(?! (vendor|home-automation))|not used|does not use|keep what you use|comment out what you use|if you (don't|do not) use""", RegexOption.IGNORE_CASE)
 
-    private val KHONG_TU_TICH = setOf("com.google.android.backdrop", "com.google.android.apps.tv.dreamx")
+    // Sony bo SVP-DTV15 (BRAVIA 2015, Android 8): Cài đặt đọc provider hotelsettings của b2b.hotelmode, tắt là Cài đặt
+    // mở ra màn trống (upstream examples/sony-kdl-43w950d; CleanTV 2.10.2). Đời Sony mới tắt được, nên chỉ không tự tích.
+    /** Gói Sony nằm sau màn Cài đặt (theo upstream sony-kdl-43w950d). shopsettings / b2b.prosettings là chế độ cửa hàng, tắt được. */
+    private val SONY_CAI_DAT = Regex("""^com\.sony\.dtv\.(?!shopsettings$|b2b\.prosettings$)(b2b\.hotelmode|.*settings?.*|softwarelicense|homenetwork|handlingnetworksetup|quicksetup)$""")
+
+    private val KHONG_TU_TICH = setOf("com.google.android.backdrop", "com.google.android.apps.tv.dreamx", "com.sony.dtv.b2b.hotelmode")
 
     /** Máy chiếu: gói lo lấy nét, chỉnh hình, motor — không bao giờ tắt (21/10/2026). */
     private val GIU_MAY_CHIEU = Regex("focus|keystone|trapez|tixing|jiaozheng|duijiao|motor|calibr|projector|projection", RegexOption.IGNORE_CASE)
@@ -168,6 +173,15 @@ object KeHoach {
             val canh = t("Nút mic trên remote cần gói này.", "The remote's mic button needs this.")
             ketQua[p] = m.copy(loai = LoaiMuc.GIONG_NOI, chonSan = false,
                 ghiChu = listOf(canh, m.ghiChu.ifBlank { m.nhom }).filter { it.isNotBlank() }.joinToString(" "))
+        }
+
+        // 6) Gói gần màn Cài đặt của Sony: không bao giờ tự tích, kể cả khi danh sách đúng mẫu tắt nó (CleanTV 2.10.4: Sony
+        // 43W800C reset cứng, dọn lại mà Cài đặt vẫn mở ra trống — đã giữ hotelmode nhưng mẫu khác tắt networksettings…).
+        // upstream examples/sony-kdl-43w950d cố ý để nguyên cả nhóm này trên bo SVP-DTV15.
+        for ((p, m) in ketQua.entries.toList()) {
+            if (!SONY_CAI_DAT.matches(p)) continue
+            val canh = t("Màn Cài đặt của tivi Sony có thể cần gói này.", "Sony's Settings screen may need this.")
+            ketQua[p] = m.copy(chonSan = false, ghiChu = listOf(canh, m.ghiChu.ifBlank { m.nhom }).filter { it.isNotBlank() }.joinToString(" "))
         }
 
         // 5) Google Home / cast: nhóm riêng, không tự tích, ghi rõ hậu quả.

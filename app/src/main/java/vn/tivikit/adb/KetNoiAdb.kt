@@ -46,7 +46,7 @@ class KetNoiAdb private constructor(
 
     override fun connect(host: String, port: Int): Boolean {
         val ok = super.connect(host, port)
-        if (ok) { diemCuoi = host to port; coHeadC = null }
+        if (ok) { diemCuoi = host to port; coHeadC = null; coDd = null }
         return ok
     }
 
@@ -271,28 +271,36 @@ class KetNoiAdb private constructor(
     /**
      * Ghi một file lên tivi. Đường nhanh: đẩy thẳng byte vào `head -c <cỡ>` như caiApk (24/10/2026: đường base64 cũ mỗi
      * 3000 ký tự một lệnh shell, theme 14 ảnh thành vài trăm lệnh — TCL 65Q646 chạy CleanTV trên chính tivi kẹt ở "Đang
-     * gửi 14 ảnh"). Cỡ file sai thì quay về đường base64 (toybox có base64 từ Android 6).
+     * gửi 14 ảnh"). Không có `head -c` thì thử `dd`, rồi mới tới đường base64 (toybox có base64 từ Android 6).
      */
     fun ghiFile(duongDan: String, noiDung: ByteArray) {
-        if (coHeadC() && runCatching { ghiNhanh(duongDan, noiDung) }.getOrDefault(false)) return
+        if (coHeadC() && runCatching { ghiNhanh(duongDan, noiDung, "head -c ${noiDung.size}") }.getOrDefault(false)) return
+        // Android 8 không có head -c; dd đọc từng byte thì chậm hơn nhưng có sẵn từ rất lâu (CleanTV 2.10.2, Sony
+        // KDL-43W800C: gửi ảnh nền "xong" mà hình nền không đổi, file trên tivi rỗng).
+        if (coDd() && runCatching { ghiNhanh(duongDan, noiDung, "dd bs=1 count=${noiDung.size} 2>/dev/null") }.getOrDefault(false)) return
         shell("rm -f $duongDan $duongDan.b64")
         val b64 = android.util.Base64.encodeToString(noiDung, android.util.Base64.NO_WRAP)
         b64.chunked(3000).forEach { manh -> shell("printf '%s' '$manh' >> $duongDan.b64") }
         shell("base64 -d $duongDan.b64 > $duongDan; rm -f $duongDan.b64")
+        if (shell("wc -c < $duongDan").trim().toIntOrNull() != noiDung.size) throw java.io.IOException("Tivi không nhận file ${duongDan.substringAfterLast('/')}")
     }
 
-    /** Tivi có `head -c` không, hỏi một lần mỗi kết nối. */
+    /** Tivi có `head -c` / `dd` không, hỏi một lần mỗi kết nối. */
     @Volatile private var coHeadC: Boolean? = null
+    @Volatile private var coDd: Boolean? = null
 
     /**
      * toybox của Android 8 chưa có `head -c` (24/10/2026, Sony BRAVIA 2015 Android 8 kẹt ở "Đang gửi ảnh nền"): lệnh
-     * báo lỗi ngay, phía tivi đóng luồng giữa lúc app còn đẩy byte nên kẹt. Không có thì đi thẳng đường base64.
+     * báo lỗi ngay, phía tivi đóng luồng giữa lúc app còn đẩy byte nên kẹt. Không có thì thử dd, rồi mới tới base64.
      */
     private fun coHeadC(): Boolean = coHeadC ?: (runCatching { shell("echo abc | head -c 2 2>/dev/null").trim() == "ab" }.getOrDefault(false)).also { coHeadC = it }
 
-    private fun ghiNhanh(duongDan: String, noiDung: ByteArray): Boolean {
+    private fun coDd(): Boolean = coDd ?: (runCatching { shell("echo abc | dd bs=1 count=2 2>/dev/null").trim() == "ab" }.getOrDefault(false)).also { coDd = it }
+
+    /** Đẩy byte vào [lenh] (đọc đúng cỡ file từ stdin) rồi ghi ra [duongDan]; đúng cỡ thì true. */
+    private fun ghiNhanh(duongDan: String, noiDung: ByteArray, lenh: String): Boolean {
         val dau = "__TVS_" + java.lang.Long.toHexString(System.nanoTime()) + "__"
-        val stream = openStream("exec:sh -c 'head -c ${noiDung.size} > $duongDan; echo $dau'")
+        val stream = openStream("exec:sh -c '$lenh > $duongDan; echo $dau'")
         val o = stream.openOutputStream()
         val khoi = coKhoi()
         var i = 0
