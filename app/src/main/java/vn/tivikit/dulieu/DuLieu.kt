@@ -27,7 +27,7 @@ class DuLieu(val mau: List<MauTv>, val thongKe: Map<String, ThongKeGoi>) {
 
     companion object {
         /** Số mẫu tivi trong assets/du-lieu.json, để ghi lên giao diện mà không phải nạp dữ liệu (KeHoachTest kiểm tra). */
-        const val SO_MAU = 260
+        const val SO_MAU = 316
 
         @Volatile private var cache: DuLieu? = null
 

@@ -21,7 +21,7 @@
 Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit giữ nguyên cách dọn, chỉ đổi giao diện, tên gói và lớp kết nối. ✅ TiviKit 1.0 đã dọn tivi và cài Home sạch trên box Tanix TX3 Mini (Android 9). ⚠️ Khôi phục chưa thử lại với TiviKit.
 
 - **Kết nối tivi qua Wi-Fi** bằng ADB: quét mạng hoặc gõ IP; Google TV đời mới ghép bằng mã 6 số (Gỡ lỗi không dây), app tự dò cổng. Hướng dẫn 7 bước có hình trong app.
-- **So với 260 danh sách đã thử** của cộng đồng CleanYourTV (nhiều hãng: TCL, Sony, Xiaomi, Philips, Hisense, Skyworth, onn, Chromecast, máy chiếu…), tự cập nhật hằng tuần. Chưa khớp mẫu thì gợi ý mẫu gần giống; tivi lạ dùng luật chung an toàn.
+- **So với 316 danh sách đã thử** của cộng đồng CleanYourTV (nhiều hãng: TCL, Sony, Xiaomi, Philips, Hisense, Skyworth, onn, Chromecast, máy chiếu…), tự cập nhật hằng tuần. Chưa khớp mẫu thì gợi ý mẫu gần giống; tivi lạ dùng luật chung an toàn.
 - **Chỉ tắt, không gỡ** quảng cáo, theo dõi, app rác. Không đụng cổng HDMI, remote, bàn phím, CH Play, gói đang giữ Wi-Fi, gói lõi Android và Home đang dùng. Google Home / cast và tìm kiếm giọng nói không bao giờ tích sẵn.
 - **Home sạch** (launcher CleanYourTV kèm bản vá của CleanTV): đồng hồ, lịch âm có can chi, thời tiết theo 3.321 phường/xã, dock 8 app, cụm nút Máy chiếu · Mạng · Màn hình chờ · Cài đặt; 7 giao diện, ảnh nền riêng từ điện thoại hoặc từ tivi / USB, 65 tuỳ chọn Nâng cao.
 - **Nút Home về đúng Home sạch**: app bấm thử nút Home thật; tivi không cho tắt Home gốc thì Home sạch tự mở đè lên. **Nút trên remote vẫn chạy** (YouTube, Netflix, Prime, Cài đặt) theo bảng phím của từng mẫu tivi.
@@ -154,7 +154,7 @@ Danh sách tivi mới nên gửi thẳng cho [CleanYourTV](https://github.com/Ga
 From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic and only changes the interface, package names and connection layer. ✅ TiviKit 1.0 cleaned a Tanix TX3 Mini (Android 9) and installed the clean Home. ⚠️ Restore hasn't been re-tested with TiviKit.
 
 - **Connects over Wi-Fi** with ADB: scan or type the IP; newer Google TVs pair with a 6-digit code and the app finds the port. A 7-step picture guide is built in.
-- **Matches 260 tested lists** from the CleanYourTV community (many brands), updated weekly; suggests close models; unknown TVs get safe general rules.
+- **Matches 316 tested lists** from the CleanYourTV community (many brands), updated weekly; suggests close models; unknown TVs get safe general rules.
 - **Disables, never uninstalls** ads, tracking and junk. Leaves HDMI inputs, the remote, keyboards, Play Store, the Wi-Fi owner, core Android packages and the Home in use alone. Google Home / casting and voice search are never pre-ticked.
 - **Clean Home** (the CleanYourTV launcher with CleanTV's patches): clock, Vietnamese lunar date, ward-level weather, an 8-app dock, 7 themes, your own wallpaper, 65 Advanced options. The Home key lands on it, and remote keys keep working from each model's key map.
 - **Backs up before any change**, on the phone and on the TV; one-tap **Restore**. The TV-side backup is shared with CleanTV. If the link drops while Home is being replaced, the TV restores its stock Home by itself. A restore script for a computer and a command preview are included; ADB switches off when you leave the app.
