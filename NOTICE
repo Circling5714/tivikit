@@ -58,6 +58,9 @@ TiviKit includes or builds on the following third-party work.
 15. TV channel tiles: the channel list and pictures are fetched at run time from VTVgo's public
     API (api.vtvdigital.org). VTV, VTVgo and the channel logos belong to Vietnam Television;
     no logo is bundled with TiviKit.
+16. scrcpy server (Genymobile) — Apache License 2.0. Bundled unmodified as
+    app/src/main/assets/scrcpy-server.jar (v5.0.1, scripts/tai-scrcpy.sh checks its SHA-256) and
+    pushed to the TV over ADB for the live TV screen. https://github.com/Genymobile/scrcpy
 
 The full licence texts shown inside the app are in app/src/main/assets/giay-phep.txt.
 

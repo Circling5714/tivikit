@@ -79,6 +79,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     /** Remote + gõ chữ (ui/DieuKhien.kt). */
     val dieuKhien by lazy { DieuKhien(this) }
+    /** Xem màn hình tivi trên màn Điều khiển (kiểu scrcpy). */
+    val xemManHinh by lazy { XemManHinh(this) }
     /** Quản lý app trên tivi (ui/QuanLyApp.kt). */
     val qlApp by lazy { QuanLyApp(this) }
     /** Gửi ảnh / video / file lên tivi (ui/GuiFile.kt). */
@@ -747,6 +749,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Nút gán riêng / ô Kênh nhanh thuộc về tivi trước: tivi này đọc lại từ config.json của nó (napTuJson, màn Nút
         // remote, màn Kênh nhanh).
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        xemManHinh.tat()
         tv.quenTivi()
         thongBao = t("Đang đọc thông tin tivi…", "Reading the TV…")
         val (info, gp) = io { tv.docThongTin() }
@@ -1952,6 +1955,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         dsTatTv = null; chonBatLai.clear(); batLaiBao = ""
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        xemManHinh.tat()
         dangDon = false; sauKetNoi = null
         taiLaiSaoLuu()
     }

@@ -53,6 +53,9 @@ TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the followi
 13. LG TV Vibehack — màn hình chính kiểu Apple TV cài lên tivi LG đã root (tải từ GitHub lúc cài, bản v1.2.0) /
     Apple TV-style home screen installed on rooted LG TVs (downloaded at install time, v1.2.0)
     hoangvya19 — https://github.com/hoangvya19/lg-tv-webos-vibehack — MIT License
+14. scrcpy (máy chủ quay màn hình, bản 5.0.1, không sửa) — đẩy lên tivi qua ADB cho Xem màn hình tivi /
+    scrcpy screen server (v5.0.1, unmodified), pushed to the TV over ADB for the live TV screen
+    Genymobile — https://github.com/Genymobile/scrcpy — Apache License 2.0 (mục B / section B)
 
 Tên các hãng tivi chỉ dùng để nói tivi nào chạy được; TiviKit không liên quan tới các hãng đó.
 TV brand names are only used to describe compatibility; TiviKit is not affiliated with them.

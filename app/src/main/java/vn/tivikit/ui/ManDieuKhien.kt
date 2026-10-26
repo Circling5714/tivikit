@@ -3,6 +3,9 @@ package vn.tivikit.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +39,7 @@ import androidx.compose.ui.unit.sp
 import vn.tivikit.adb.PhimTv
 import vn.tivikit.t
 
-/** Màn Điều khiển tivi (25/10/2026): remote trên điện thoại + gõ chữ vào ô nhập đang chọn trên tivi. */
+/** Màn Điều khiển tivi (25/10/2026): remote trên điện thoại + gõ chữ vào ô nhập đang chọn trên tivi + xem màn hình tivi. */
 @Composable
 internal fun ManDieuKhien(vm: PhienLamViec) = Cuon {
     val dk = vm.dieuKhien
@@ -45,6 +48,8 @@ internal fun ManDieuKhien(vm: PhienLamViec) = Cuon {
         Text(t("Điều khiển tivi", "TV remote"), style = KieuTieuDeLon)
         Phu(t("Bấm như remote thật. Nhấn giữ OK để nhấn giữ trên tivi.", "Works like the real remote. Hold OK for a long press on the TV."))
     }
+    // Chạy TiviKit ngay trên tivi thì tự xem chính mình là vô nghĩa.
+    if (!vn.tivikit.ManHinh.laTv && vm.ip.trim() != "127.0.0.1") TheManHinhTv(vm)
     // Ô gõ chữ ở trên cùng (25/10/2026): bàn phím điện thoại mở ra là chiếm nửa dưới màn — ô gõ, nút Gửi và dòng "Đã gửi"
     // phải nằm phía trên nó.
     The(t("Gõ chữ lên tivi", "Type on the TV"), Icons.Rounded.Keyboard) {
@@ -100,6 +105,47 @@ internal fun ManDieuKhien(vm: PhienLamViec) = Cuon {
         dismissButton = { TextButton(onClick = { hoiTat = false }) { Text(t("Thôi", "Cancel")) } },
         containerColor = The1,
     )
+}
+
+/**
+ * Màn hình tivi trực tiếp (26/10/2026, kiểu scrcpy — XemManHinh): bấm Xem thì hình tivi hiện ở đây, chạm lên hình là bấm
+ * đúng chỗ đó trên tivi. App xuống nền thì tạm dừng, rời màn Điều khiển thì tắt (đỡ tốn Wi-Fi và pin).
+ */
+@Composable
+private fun TheManHinhTv(vm: PhienLamViec) {
+    val x = vm.xemManHinh
+    val vongDoi = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(vongDoi) {
+        val nghe = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) x.tamDung()
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_START) x.tiepTuc()
+        }
+        vongDoi.lifecycle.addObserver(nghe)
+        onDispose { vongDoi.lifecycle.removeObserver(nghe); x.tat() }
+    }
+    The(t("Màn hình tivi", "TV screen"), Icons.Rounded.Cast) {
+        if (!x.muonXem) {
+            Phu(t("Xem màn hình tivi ngay trên điện thoại, trễ chưa tới nửa giây; chạm lên hình để bấm đúng chỗ đó. Phim có bản quyền (Netflix…) và cổng HDMI sẽ ra màn đen.",
+                "See the TV screen live on the phone, under half a second behind; tap the picture to press that spot. Copy-protected films (Netflix…) and HDMI inputs show black."))
+            NutPhu(t("Xem màn hình tivi", "Show the TV screen"), Icons.Rounded.Visibility) { x.bat() }
+            return@The
+        }
+        Box(Modifier.fillMaxWidth().aspectRatio(x.rong.toFloat() / x.cao.coerceAtLeast(1)).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
+            if (!x.cheDoAnh) androidx.compose.ui.viewinterop.AndroidView(
+                factory = { c -> android.view.TextureView(c).apply { surfaceTextureListener = x.ngheBeMat } },
+                modifier = Modifier.matchParentSize())
+            val a = x.anh
+            if (a != null && (x.cheDoAnh || !x.coHinh)) androidx.compose.foundation.Image(a.asImageBitmap(), null, Modifier.matchParentSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+            if (!x.coHinh && a == null && !x.laLoi) CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = Color.White, strokeWidth = 3.dp)
+            Box(Modifier.matchParentSize().pointerInput(Unit) { detectTapGestures { o -> x.cham(o.x / size.width, o.y / size.height) } })
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { Phu(x.trangThai, if (x.laLoi) DoTuoi else ChuPhu) }
+            if (x.laLoi) TextButton(onClick = { x.bat() }) { Text(t("Xem lại", "Retry")) }
+            TextButton(onClick = { x.tat() }) { Text(t("Tắt", "Stop")) }
+        }
+    }
 }
 
 /** Vòng điều hướng của remote Android: nhấn giữ OK = `--longpress`. */

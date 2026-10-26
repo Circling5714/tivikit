@@ -37,6 +37,9 @@ class DieuKhien(private val vm: PhienLamViec) {
     private var guiPhim: Job? = null
 
     fun bam(ma: Int, giu: Boolean = false) {
+        // Đang xem màn hình tivi: phím đi qua kênh điều khiển của scrcpy, tivi nhận ngay. Nhấn giữ vẫn đi đường cũ
+        // (`--longpress`): kênh scrcpy chỉ có nhấn / nhả, không tự sinh sự kiện giữ phím.
+        if (!giu && vm.xemManHinh.phim(ma)) return
         hang.trySend(Phim(ma, giu))
         if (guiPhim?.isActive != true) guiPhim = vm.viewModelScope.launch {
             for (p in hang) {

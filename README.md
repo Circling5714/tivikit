@@ -46,6 +46,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai; TiviKit
   - ✅ 40 app gợi ý trong 7 nhóm (YouTube và video, truyền hình / phim Việt Nam, anime và phim châu Á có bản quyền, phim nhạc quốc tế, phim từ máy chủ trong nhà, game, tiện ích): tải bản đúng chip của tivi từ GitHub hoặc trang chính thức; app chỉ có trên CH Play thì mở trang CH Play trên tivi. Đã cài SmartTube từ GitHub lên box TX3; các nguồn khác chưa thử.
   - ⚠️ Cập nhật app đã cài: so phiên bản với bản mới nhất, cập nhật một chạm.
 - ⚠️ **Điều khiển + gõ chữ** (chỉ trên điện thoại): remote trên điện thoại, gõ mật khẩu, tìm kiếm. Gõ tiếng Việt có dấu nhờ bộ gõ phụ `vn.tivikit.go`, tự cài lên tivi lần đầu gửi chữ có dấu; ô nhập không nhận bộ gõ thì gửi chữ không dấu.
+- ⚠️ **Xem màn hình tivi trực tiếp** ngay trên màn Điều khiển, cách làm của [scrcpy](https://github.com/Genymobile/scrcpy): tivi tự quay màn hình bằng bộ mã hoá H.264 và gửi qua ADB, trễ chưa tới nửa giây; chạm lên hình là bấm đúng chỗ đó, phím remote cũng nhạy hơn. Phim có bản quyền (Netflix…) và cổng HDMI ra màn đen. Tivi không quay được video thì app dùng ảnh chụp làm mới 1,5 giây một lần. Phần quay đã chạy trên box TX3 (bộ mã hoá Amlogic, khung đầu sau ~0,5 giây); phần hiện hình trên điện thoại chưa thử.
 - ✅ **Nút remote**: gán một nút thật trên remote (VD nút YouTube) để mở app khác như SmartTube. App đọc mã nút lúc bạn bấm rồi ghi vào Home sạch, nên cần cài Home sạch trước.
 - **Kênh nhanh TV360**: ô trên Home sạch hoặc nút remote mở thẳng VTV1, VTV3, HTV7… trong app TV360 (tivi cần có app TV360). ✅ Một ô đã thử; ⚠️ nhiều ô (tới 6) chưa thử.
 - ✅ **Hẹn giờ**: bật / tắt tivi và mở app theo lịch; báo trước 60 giây khi sắp tắt, cho hoãn 30 phút. Có nút thử "tivi tự bật sau 2 phút"; tivi ngủ sâu hoặc rút điện thì không tự bật được.
@@ -144,7 +145,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 | `hengio/` | Hẹn giờ bật / tắt tivi, mở app (`vn.tivikit.hengio`) |
 | `go/` | Bộ gõ phụ để gõ tiếng Việt có dấu từ điện thoại (`vn.tivikit.go`) |
 | `patches/launcher-vgs.patch` | Phần CleanTV sửa trên launcher CleanYourTV (thời tiết, font Lexend, cụm nút, máy chiếu, màn chờ, ô kênh `link_tiles`, mở app khi bật từ chế độ chờ…), đã chuyển lên commit ghi trong `upstream-commit.txt` |
-| `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi (`lam-du-lieu.py`, `cap_nhat_mau.py`), vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), phát hành (`phat_hanh.py`) |
+| `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi (`lam-du-lieu.py`, `cap_nhat_mau.py`), vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), tải máy chủ scrcpy có kiểm SHA-256 (`tai-scrcpy.sh`), phát hành (`phat_hanh.py`) |
 | `.github/workflows/` | Phát hành (dựng, ký, đăng GitHub Release), Cập nhật mẫu tivi (hằng tuần từ CleanYourTV) và Kiểm tra (unit test mỗi lần đẩy code) |
 
 ### Góp ý
@@ -184,6 +185,7 @@ From CleanTV 2.8.2, a publicly released app; TiviKit keeps the clean-up logic an
   - ✅ 40 suggested apps in 7 groups, downloaded for the TV's chip from GitHub or official sites; Play-only apps open their Play Store page on the TV. SmartTube from GitHub was installed on the TX3 Mini; other sources not yet.
   - ⚠️ App updates: compares versions with the latest release, one-tap update.
 - ⚠️ **Remote + typing** (phone only): a remote on the phone, passwords and searches. Vietnamese with accents goes through a helper keyboard (`vn.tivikit.go`); fields that don't accept it get plain letters.
+- ⚠️ **Live TV screen** on the remote screen, the [scrcpy](https://github.com/Genymobile/scrcpy) way: the TV encodes its screen in H.264 and streams it over ADB, under half a second behind; tap the picture to press that spot, and remote keys respond faster. Copy-protected films (Netflix…) and HDMI inputs show black. A TV that can't encode video falls back to screenshots refreshed every 1.5 s. Streaming ran on the TX3 Mini (Amlogic encoder, first frame after ~0.5 s); the phone-side display hasn't been tried yet.
 - ✅ **Remote buttons**: make a real remote button (e.g. YouTube) open another app such as SmartTube. Needs the clean Home.
 - **TV360 quick channel**: Home tiles or remote buttons open VTV1, VTV3, HTV7… straight in the TV360 app. ✅ One tile tried; ⚠️ more tiles (up to 6) not yet.
 - ✅ **Timer**: turn the TV on / off and open apps on a schedule, with a 60-second warning and a 30-minute snooze, plus a "turn on in 2 minutes" test. A TV in deep standby can't be woken.
