@@ -1,0 +1,326 @@
+{
+  "fill_dock": {
+    "ten": "Lấp chỗ trống trên dock",
+    "moTa": "Dock chưa đủ app thì lấy app đầu tiên trong lưới bù vào (mặc định bật). Tắt thì để ô trống."
+  },
+  "hidden_apps": {
+    "ten": "Ẩn app khỏi Home",
+    "moTa": "Các app này không bao giờ hiện thành ô trên Home. Ghi tên gói, cách nhau bằng dấu phẩy."
+  },
+  "live_tv_package": {
+    "ten": "App xem truyền hình (Live TV)",
+    "moTa": "Tên gói app xem kênh truyền hình của tivi, dùng cho nút Live TV và mục Nguồn vào."
+  },
+  "live_tv_action": {
+    "ten": "Lệnh mở app truyền hình",
+    "moTa": "Lệnh (action) để mở app truyền hình khi app đó không có lối vào bình thường trên Android TV."
+  },
+  "live_tv_input_id": {
+    "ten": "Bộ thu kênh cho dòng Live TV",
+    "moTa": "Mã bộ thu chính xác cho dòng Live TV trong menu Nguồn vào. Để trống thì tự chọn. Sai mã thì mở app truyền hình như thường."
+  },
+  "source_panel_service": {
+    "ten": "Bảng chọn nguồn của hãng (dịch vụ)",
+    "moTa": "Bảng chọn nguồn riêng của tivi, cho tivi không có danh sách nguồn chuẩn của Android. Không có app truyền hình thì nút Nguồn vào mở thẳng bảng này."
+  },
+  "source_panel_action": {
+    "ten": "Bảng chọn nguồn của hãng (lệnh)",
+    "moTa": "Lệnh mở bảng chọn nguồn riêng của tivi (ví dụ máy chiếu BYINTEK U4)."
+  },
+  "source_panel_extra": {
+    "ten": "Tham số cho bảng chọn nguồn",
+    "moTa": "Một số kèm theo khi mở bảng chọn nguồn (Coocaa OS: control_center_command=100)."
+  },
+  "coocaa_sources": {
+    "ten": "Nguồn vào của Coocaa (Skyworth Trung Quốc)",
+    "moTa": "Tivi Coocaa OS: liệt kê nguồn từ com.skyworth.tv trong menu Nguồn vào, trước bảng chọn nguồn."
+  },
+  "launch_actions": {
+    "ten": "Mở thẳng một màn của app",
+    "moTa": "Bấm ô app là mở thẳng một màn bên trong app thay vì màn đầu (ví dụ mở thẳng lịch phát sóng). Lệnh không còn chạy thì mở app như thường."
+  },
+  "app_labels": {
+    "ten": "Đổi tên hiện của app",
+    "moTa": "Tên hiện trên ô thay cho tên gốc của app. Dạng tên.gói=Tên mới, ví dụ com.telekom.onetv.tv.pl=TV."
+  },
+  "app_banners": {
+    "ten": "Ảnh ô app có sẵn",
+    "moTa": "Dùng ảnh banner có sẵn trong launcher cho ô app (banner_tv: nền hồng có biểu tượng Live TV)."
+  },
+  "input_action": {
+    "ten": "Lệnh mở cổng HDMI/AV",
+    "moTa": "Lệnh gửi kèm khi mở một cổng HDMI/AV mà tivi không tự xử lý (máy chiếu XGIMI: com.xgimi.action.hdmiPlayer). Chỉ cần cho tivi đặc biệt."
+  },
+  "input_uri_scheme": {
+    "ten": "Kiểu địa chỉ cổng HDMI/AV",
+    "moTa": "Kiểu địa chỉ dùng khi mở cổng HDMI/AV thay cho content:// (YaOS: live-tv)."
+  },
+  "columns": {
+    "ten": "Số app mỗi hàng",
+    "moTa": "Số ô app trên một hàng. Từ 5 trở lên thì ô tự nhỏ lại cho vừa."
+  },
+  "rows_below_dock": {
+    "ten": "Số hàng hiện dưới dock",
+    "moTa": "Số hàng app còn thấy dưới dock. Không đủ chỗ thì ô tự nhỏ lại."
+  },
+  "dock_title": {
+    "ten": "Tên app to phía trên dock",
+    "moTa": "Hiện tên app đang chọn bằng chữ to phía trên dock (mặc định bật). Tắt thì chỉ còn viền sáng quanh app."
+  },
+  "dock_row": {
+    "ten": "Dock thành hàng riêng",
+    "moTa": "Dock là một hàng riêng có dải nền (mặc định bật). Tắt thì app trên dock thành mấy ô đầu của một lưới chung."
+  },
+  "reorder_button": {
+    "ten": "Nút sắp xếp app trên cùng",
+    "moTa": "Thêm nút sắp xếp app lên thanh trên cùng (mặc định tắt). Lúc nào cũng sắp xếp được bằng cách giữ OK ở nút Cài đặt."
+  },
+  "show_network_pill": {
+    "ten": "Hiện nút Wi-Fi / mạng",
+    "moTa": "Nút Wi-Fi/Ethernet trên thanh trên cùng (mặc định bật). Tắt để ẩn."
+  },
+  "show_inputs_pill": {
+    "ten": "Hiện nút Nguồn vào",
+    "moTa": "Nút Nguồn vào (HDMI…) trên thanh trên cùng khi tivi có nguồn vào (mặc định bật). Tắt để ẩn; nút Input trên remote vẫn chạy như cũ."
+  },
+  "icon_only_buttons": {
+    "ten": "Nút tròn chỉ có biểu tượng",
+    "moTa": "Nút Wi-Fi và Cài đặt thành nút tròn chỉ có biểu tượng; nút Nguồn vào vẫn giữ chữ (mặc định tắt)."
+  },
+  "top_menu": {
+    "ten": "Gom nút trên cùng vào một bánh răng",
+    "moTa": "Nguồn vào, Wi-Fi và Cài đặt gom vào một nút bánh răng giữa thanh trên cùng: bấm OK hiện menu 3 mục, giữ OK mở menu của launcher (mặc định tắt)."
+  },
+  "launcher_settings_button": {
+    "ten": "Nút Cài đặt mở cài đặt Home sạch",
+    "moTa": "Nút Cài đặt trên cùng mở thẳng cài đặt của Home sạch (có Sắp xếp app và Cài đặt tivi) thay vì cài đặt tivi (mặc định tắt)."
+  },
+  "wifi_label_width": {
+    "ten": "Độ dài tên Wi-Fi trên nút",
+    "moTa": "Khi dùng nút tròn chỉ có biểu tượng: vẫn hiện tên mạng Wi-Fi tới độ rộng này (dp), dài quá thì cắt. 0 là chỉ còn biểu tượng."
+  },
+  "wallpaper_true_color": {
+    "ten": "Ảnh nền màu đầy đủ",
+    "moTa": "Ảnh nền màu đầy đủ 32-bit, hết bị sọc ở nền tối như bầu trời đêm, nhưng tốn gấp đôi bộ nhớ. Chỉ nên bật cho tivi có từ 2 GB RAM (mặc định tắt)."
+  },
+  "shamsi_date": {
+    "ten": "Lịch Ba Tư (Shamsi)",
+    "moTa": "Hiện ngày theo lịch Ba Tư (dùng ở Iran, Afghanistan) phía trên ngày dương."
+  },
+  "module_cards": {
+    "ten": "Thẻ mở rộng (module card)",
+    "moTa": "Tìm các thẻ mở rộng cài thêm và hỏi có hiện không (mặc định bật). Tắt để bỏ hẳn tính năng này."
+  },
+  "boot_to_live_tv": {
+    "ten": "Bật tivi là vào truyền hình",
+    "moTa": "Lần đầu về Home sau khi bật tivi thì mở app truyền hình (đặt ở App xem truyền hình), mỗi lần bật tivi một lần."
+  },
+  "focus_overshoot": {
+    "ten": "Hiệu ứng nảy khi chọn app",
+    "moTa": "Viền sáng và ô đang chọn nảy nhẹ qua đích rồi mới dừng (mặc định bật). Tắt thì trượt thẳng, cuộn mượt."
+  },
+  "vpn_app": {
+    "ten": "App VPN",
+    "moTa": "App mà nút mạng mở khi tivi có cài VPN; hiện thêm nhãn đỏ \"VPN off\" khi VPN chưa bật."
+  },
+  "animations": {
+    "ten": "Hiệu ứng chuyển động cơ bản",
+    "moTa": "Hiệu ứng khi chọn app, kính mờ, tên app và ô hiện ra (mặc định bật). Tắt cho tivi rất yếu."
+  },
+  "advanced_effects": {
+    "ten": "Hiệu ứng nâng cao",
+    "moTa": "Ô nổi lên, phóng to biểu tượng, đổi màu nền mượt và hiệu ứng mở app (mặc định tắt). Chỉ nên bật cho tivi khoẻ."
+  },
+  "show_home_settings_shortcut": {
+    "ten": "Ô chọn Home mặc định",
+    "moTa": "Giữ ô \"Home mặc định\" trên Home khi tivi có bảng chọn Home (mặc định tắt)."
+  },
+  "background_color": {
+    "ten": "Màu nền",
+    "moTa": "Màu nền phía sau mọi thứ, mặc định đen. Ghi mã màu, ví dụ #140A3A."
+  },
+  "sky_intensity": {
+    "ten": "Độ đậm nền bầu trời theo giờ",
+    "moTa": "Nền chuyển màu tối theo giờ trong ngày, từ 0 đến 100. 0 là tắt (mặc định)."
+  },
+  "wallpaper_order": {
+    "ten": "Thứ tự đổi ảnh nền",
+    "moTa": "Bộ ảnh nền đổi theo kiểu nào: Ngẫu nhiên (mặc định, không lặp lại ảnh đang hiện) hay Lần lượt (theo tên file, hết thì quay lại đầu).",
+    "chon": {
+      "shuffle": "Ngẫu nhiên",
+      "sequential": "Lần lượt"
+    }
+  },
+  "dock_opacity": {
+    "ten": "Độ đậm dải nền dock",
+    "moTa": "Độ đậm của dải nền dock (%), thấp thì thấy ảnh nền xuyên qua. Mặc định 100. Trên tivi chọn được 100, 70, 50, 30 trong cài đặt Home sạch."
+  },
+  "wallpaper_captions": {
+    "ten": "Tên ảnh nền",
+    "moTa": "Với bộ ảnh nền tự đổi: hiện tên ảnh đang chiếu dưới các nút góc trên (mặc định tắt)."
+  },
+  "tile_menu": {
+    "ten": "Giữ OK để mở menu app",
+    "moTa": "Giữ OK trên một app: menu Di chuyển, Thêm vào dock / Thay app khác, Bỏ khỏi Home, Thông tin app. CleanTV bật sẵn; tắt thì giữ OK mở thẳng trang Thông tin app."
+  },
+  "festival": {
+    "ten": "Giao diện lễ hội",
+    "moTa": "Bật giao diện lễ hội của Ấn Độ (đèn dầu, chuông, hoa cúc, mưa cánh hoa). dussehra và diwali có sẵn lời chúc."
+  },
+  "festival_until": {
+    "ten": "Ngày tắt giao diện lễ hội",
+    "moTa": "Ngày cuối hiện giao diện lễ hội, qua ngày đó tự tắt. Ghi dạng 2026-11-01; ghi sai thì tắt luôn."
+  },
+  "greeting": {
+    "ten": "Lời chào ngày lễ",
+    "moTa": "Lời chào thay cho \"Xin chào\" khi đang bật giao diện lễ hội."
+  },
+  "accent_color": {
+    "ten": "Màu viền sáng ngày lễ",
+    "moTa": "Màu viền sáng quanh app đang chọn khi bật giao diện lễ hội; mặc định vàng đèn dầu."
+  },
+  "settings_key_keycodes": {
+    "ten": "Nút remote mở Cài đặt",
+    "moTa": "Mã nút trên remote dùng để mở Cài đặt (ví dụ nút bánh răng TCL Google TV: 83). Cần bật bắt phím Home."
+  },
+  "settings_key_panel": {
+    "ten": "Nút Cài đặt mở bảng nhanh",
+    "moTa": "Các nút trên mở một bảng cài đặt nhanh (Cài đặt tivi, Màn hình, Mạng, Ứng dụng, cài đặt Home sạch) thay vì Cài đặt của tivi."
+  },
+  "restore_key_services": {
+    "ten": "Tự bật lại bắt phím remote",
+    "moTa": "Khi hệ thống buộc dừng Home sạch, tự bật lại dịch vụ bắt phím remote (Home, Input) để nút trên remote không bị \"đơ\" (mặc định tắt)."
+  },
+  "input_key_keycodes": {
+    "ten": "Thêm nút remote mở Nguồn vào",
+    "moTa": "Mã các nút remote khác cũng mở bảng chọn Nguồn vào (nút TV và TV_INPUT luôn mở)."
+  },
+  "app_keys": {
+    "ten": "Nút remote mở app",
+    "moTa": "Gán nút remote để mở app, dạng 190:com.google.android.youtube.tv hoặc scan:490:com.wbd.hbomax (remote Sony dùng chung mã cho các nút app)."
+  },
+  "key_filter": {
+    "ten": "Lọc phím remote",
+    "moTa": "Tắt (false) để dịch vụ bắt phím ngừng lọc phím mà vẫn bật. Dùng cho tivi bị mất giữ phím âm lượng (TCL Google TV Android 12); khi đó các nút gán ở trên cũng thôi chạy."
+  },
+  "stock_home_redirect": {
+    "ten": "Chặn Home gốc tự bật lại",
+    "moTa": "Tên gói Home gốc của hãng. Nếu phần mềm tivi tự bật lại Home gốc (như XGIMI), màn đó bị chuyển ngay về Home sạch."
+  },
+  "glow_style": {
+    "ten": "Kiểu ánh sáng sau app",
+    "moTa": "Kiểu ánh sáng theo màu app phía sau app đang chọn: radial (toả tròn, mặc định) hoặc horizon (màu loang từ mép trên xuống)."
+  },
+  "cinematic_home": {
+    "ten": "Home kiểu điện ảnh",
+    "moTa": "Phần trên màn hình hiện ảnh lớn của app đang chọn, tên to hơn, \"Mở lần cuối\", chấm vị trí, viền sáng theo màu app và dock trong suốt (mặc định tắt)."
+  },
+  "ambient_glow": {
+    "ten": "Ánh sáng nền theo màu app",
+    "moTa": "Ánh sáng phía sau dock theo màu app đang chọn (mặc định bật). Tắt để nền chỉ là màu nền hoặc ảnh nền, hợp với ảnh chụp tĩnh."
+  },
+  "icon_only_inputs": {
+    "ten": "Nút Nguồn vào chỉ có biểu tượng",
+    "moTa": "Nút Nguồn vào (HDMI…) cũng thành nút tròn chỉ có biểu tượng như Wi-Fi và Cài đặt (mặc định tắt)."
+  },
+  "library_apps": {
+    "ten": "App có sẵn trong thư viện",
+    "moTa": "Các app này được thêm sẵn lên Home như thể bạn đã thêm trong Thư viện app; vẫn bỏ ra được. Ghi tên gói, cách nhau bằng dấu phẩy (mặc định trống)."
+  },
+  "dock_even_padding": {
+    "ten": "Viền dải dock đều",
+    "moTa": "Khoảng cách từ mép dải dock tới các ô bằng khoảng cách giữa các ô, đều cả bốn phía (mặc định tắt)."
+  },
+  "wifi_status_color": {
+    "ten": "Biểu tượng Wi-Fi đổi màu",
+    "moTa": "Biểu tượng Wi-Fi xanh lá khi tivi có mạng, trắng khi mất mạng (mặc định tắt)."
+  },
+  "app_library_selection": {
+    "ten": "Chọn app Home trong Thư viện",
+    "moTa": "Trong Thư viện app, bấm OK để tích / bỏ tích app hiện ở Home; app đã tích xếp trước. Cần bật Thư viện app."
+  },
+  "wallpaper_moods": {
+    "ten": "Ảnh nền theo buổi",
+    "moTa": "Bộ ảnh xoay vòng chia theo sáng / chiều / tối: {\"morning\": [...], \"evening\": [...], \"night\": [...]} với tên file trong wallpapers/. Giờ mặt trời mọc / lặn tính theo vị trí; buổi nào thiếu thì xoay hết các ảnh."
+  },
+  "cinematic_dots": {
+    "ten": "Chấm vị trí dưới tên app (Home điện ảnh)",
+    "moTa": "Khi bật Home điện ảnh, hiện các chấm vị trí dock dưới tên app (mặc định bật)."
+  },
+  "cinematic_white_focus": {
+    "ten": "Viền chọn màu trắng (Home điện ảnh)",
+    "moTa": "Khi bật Home điện ảnh, viền chọn trên dock giữ màu trắng thay vì lấy màu của app (mặc định tắt)."
+  },
+  "cinematic_scrim": {
+    "ten": "Độ tối nền sau tên app (Home điện ảnh)",
+    "moTa": "0 đến 100, mặc định 100. Thấp hơn thì hình nền lộ ra nhiều hơn."
+  },
+  "cinematic_art": {
+    "ten": "Độ đậm ảnh app (Home điện ảnh)",
+    "moTa": "0 đến 100, mặc định 50: độ rõ của ảnh làm mờ từ app đang chọn. 0 là không che hình nền."
+  },
+  "fade_rows": {
+    "ten": "Hàng app mờ dần khi cuộn",
+    "moTa": "Hàng app mờ dần khi cuộn lên dưới đồng hồ thay vì bị cắt thẳng. Tốn thêm khoảng 6 MB bộ nhớ đồ hoạ ở 1080p (mặc định tắt)."
+  },
+  "gamepad_passthrough": {
+    "ten": "Nhường phím cho tay cầm game",
+    "moTa": "Bật thì khi có tay cầm game kết nối, dịch vụ bắt phím của Home sạch ngừng lọc phím để game nhận đủ nút (vd Steam Link với tay Xbox); các nút remote gán sẵn tạm không chạy tới khi rút tay cầm. Cần bật key_filter. Mặc định tắt."
+  },
+  "top_bar_apps": {
+    "ten": "App thành nút tròn trên thanh trên cùng",
+    "moTa": "Các app này hiện thành nút tròn có logo ở thanh trên cùng, bên trái ô mạng, và không còn là ô trong lưới. Ghi tên gói, cách nhau bằng dấu phẩy."
+  },
+  "wifi_status_warnings": {
+    "ten": "Icon mạng đổi màu khi có sự cố",
+    "moTa": "Khi bật tô màu icon mạng: cam khi có Wi-Fi mà không vào được Internet (mạng cần đăng nhập), đỏ khi mất mạng (mặc định tắt)."
+  },
+  "uniform_tiles": {
+    "ten": "Ô icon đều nhau",
+    "moTa": "Mỗi ô app là icon trên nền màu lấy từ icon, tên chỉ hiện dưới ô đang chọn, thay cho ảnh banner của app (mặc định tắt)."
+  },
+  "lunar_utc_offset": {
+    "ten": "Múi giờ tính âm lịch",
+    "moTa": "Số giờ lệch UTC dùng để tính âm lịch: 7 là lịch Việt Nam, 8 là lịch Trung Quốc; thỉnh thoảng lệch nhau một ngày. Để trống: 7 khi tivi tiếng Việt, 8 khi khác."
+  },
+  "show_greeting": {
+    "ten": "Lời chào trên đồng hồ",
+    "moTa": "Dòng \"Chào buổi tối\" phía trên đồng hồ (mặc định bật); tắt để ẩn."
+  },
+  "header_white": {
+    "ten": "Ngày màu trắng",
+    "moTa": "Ngày và vạch giữa đồng hồ với ngày trắng như đồng hồ thay vì mờ (mặc định tắt)."
+  },
+  "open_on_start_choice": {
+    "ten": "Chọn app mở khi bật tivi",
+    "moTa": "Thêm dòng \"Mở khi khởi động\" vào Cài đặt launcher: chọn một app, lần đầu về Home sau mỗi lần bật tivi sẽ mở app đó (mặc định tắt)."
+  },
+  "consume_volume_keys": {
+    "ten": "Sửa nút âm lượng nhảy hai nấc",
+    "moTa": "Dịch vụ phím tự giữ và lặp nút tăng/giảm âm lượng. Dùng khi bấm một lần mà âm lượng nhảy hai nấc (TCL BeyondTV4). Cần bật lọc phím (key_filter). Mặc định tắt."
+  },
+  "clock_wallpaper": {
+    "ten": "Màn chờ đồng hồ trên hình nền",
+    "moTa": "Màn chờ đồng hồ hiện trên hình nền của Home thay vì nền đen có ánh màu; đồng hồ vẫn dịch chỗ mỗi phút (mặc định tắt)."
+  },
+  "clock_wallpaper_dim": {
+    "ten": "Độ tối hình nền sau đồng hồ",
+    "moTa": "Hình nền sau đồng hồ tối bao nhiêu phần trăm (mặc định 50)."
+  },
+  "clock_glow": {
+    "ten": "Ánh màu của màn chờ đồng hồ",
+    "moTa": "Ánh màu quanh đồng hồ ở màn chờ (mặc định bật); tắt để chỉ còn đồng hồ trên nền đen, hợp với tivi OLED."
+  },
+  "glass_style": {
+    "ten": "Kiểu viền ô đang chọn",
+    "moTa": "glass (mặc định: tấm kính mờ có vệt sáng), rim (chỉ viền sắc, dịu nhất) hoặc halo (viền kèm ánh sáng nhẹ bên ngoài)."
+  },
+  "single_row": {
+    "ten": "Tất cả app một hàng",
+    "moTa": "Mọi app nằm trên hàng dock, app dock đứng đầu, cuộn ngang; không còn lưới bên dưới (mặc định tắt; cần dock_row)."
+  },
+  "dock_band_all": {
+    "ten": "Dải nền chạy suốt hàng",
+    "moTa": "Khi bật một hàng: dải nền sau dock chạy sau mọi app trong hàng, không chỉ app dock (mặc định tắt)."
+  }
+}

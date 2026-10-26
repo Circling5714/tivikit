@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- Android 11+: thấy được TV360 để hỏi màn mở của nó (dự phòng khi cổng nhận lệnh không có). -->
+    <queries>
+        <package android:name="com.viettel.tv360.tv" />
+    </queries>
+
+    <!-- Không banner: Home sạch vẽ ô bằng biểu tượng kèm tên (app_labels đặt tên ô là tên kênh, VD VTV1). -->
+    <application
+        android:label="@string/ten_app"
+        android:icon="@drawable/ic_kenh"
+        android:allowBackup="false"
+        android:supportsRtl="true"
+        tools:ignore="MissingTvBanner">
+        <!-- Không hiện gì: gửi lệnh cho TV360 rồi đóng ngay (Theme.NoDisplay bắt buộc finish() trước onResume). -->
+        <activity
+            android:name=".MoKenh"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <!-- Kênh chỉ đặt được từ ADB (TiviKit), app khác trên tivi không đổi được. -->
+        <provider
+            android:name=".CauHinhProvider"
+            android:authorities="${applicationId}"
+            android:exported="true" />
+    </application>
+</manifest>

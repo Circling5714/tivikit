@@ -1,0 +1,61 @@
+TiviKit includes or builds on the following third-party work.
+
+1. CleanTV 2.8.2 by VGS (Vietnam Gaming Setup) / AlexVGS: TiviKit is a modified version of
+   this app. https://github.com/vgscity/vgs-cleantv
+   MIT License, full text in LICENSE. The names "CleanTV" and "VGS", the VGS and CleanTV logos
+   and the VGS wallpaper are not covered by that licence (see the end of LICENSE).
+
+2. CleanYourTV — the clean Home launcher (built from upstream + patches/launcher-vgs.patch
+   into app/src/main/assets/tvhome.apk) and the TV debloat lists
+   (app/src/main/assets/du-lieu.json). https://github.com/Gathin23/cleanyourtv
+   MIT License
+
+   Copyright (c) 2026 Gathin
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+   ---
+
+   The Outfit typeface in launcher/app/src/main/res/font/outfit.ttf is copyright
+   The Outfit Project Authors and licensed under the SIL Open Font License 1.1,
+   see launcher/FONT-LICENSE-OFL.txt.
+
+3. libadb-android (MuntashirAkon) — Apache License 2.0. https://github.com/MuntashirAkon/libadb-android
+4. Conscrypt (Google) — Apache License 2.0. https://github.com/google/conscrypt
+5. Bouncy Castle (bcpkix) — MIT-style Bouncy Castle Licence. https://www.bouncycastle.org/licence.html
+6. AndroidX, Jetpack Compose, Kotlin — Apache License 2.0.
+7. OkHttp (Square) — Apache License 2.0. https://github.com/square/okhttp
+8. JSch, mwiede fork (SSH to rooted LG TVs) — BSD 3-Clause License. https://github.com/mwiede/jsch
+9. Inter font (app UI, subset to Latin + Vietnamese) — SIL Open Font License 1.1. https://github.com/rsms/inter
+10. Lexend font — SIL Open Font License 1.1 (upstream/launcher FONT-LICENSE-LEXEND-OFL.txt in the patch).
+11. LG webOS protocol details from aiowebostv (Home Assistant, Apache License 2.0,
+    https://github.com/home-assistant-libs/aiowebostv) and LGWebOSRemote (MIT,
+    https://github.com/klattimer/LGWebOSRemote).
+12. Weather data by Open-Meteo.com — CC BY 4.0. https://open-meteo.com
+13. Optional ad-blocking DNS: AdGuard DNS (dns.adguard-dns.com) and NextDNS (dns.nextdns.io),
+    public services; no code included.
+14. LG TV Vibehack (hoangvya19) — MIT License. Not bundled: the LG mode downloads its installer
+    (pinned to v1.2.0) onto a rooted LG TV when the user installs it.
+    https://github.com/hoangvya19/lg-tv-webos-vibehack
+
+The full licence texts shown inside the app are in app/src/main/assets/giay-phep.txt.
+
+Ward/commune coordinates (app/src/main/assets/xa.json): centroids from OpenStreetMap,
+© OpenStreetMap contributors, available under the Open Database License (ODbL 1.0),
+https://www.openstreetmap.org/copyright. Ward names: vietmap-company/vietnam_administrative_address.

@@ -1,0 +1,660 @@
+[
+{
+"khoa": "fill_dock",
+"kieu": "bool",
+"moTa": "Fill the dock slots dock_apps leaves free with the first grid apps (true by default); false leaves them empty",
+"canThan": false,
+"ten": "Lấp chỗ trống trên dock",
+"moTaVi": "Dock chưa đủ app thì lấy app đầu tiên trong lưới bù vào (mặc định bật). Tắt thì để ô trống."
+},
+{
+"khoa": "hidden_apps",
+"kieu": "ds",
+"moTa": "Never shown as tiles",
+"canThan": true,
+"ten": "Ẩn app khỏi Home",
+"moTaVi": "Các app này không bao giờ hiện thành ô trên Home. Ghi tên gói, cách nhau bằng dấu phẩy."
+},
+{
+"khoa": "live_tv_package",
+"kieu": "chu",
+"moTa": "The Live TV app and, if it has no leanback entry, the action to start it with",
+"canThan": true,
+"ten": "App xem truyền hình (Live TV)",
+"moTaVi": "Tên gói app xem kênh truyền hình của tivi, dùng cho nút Live TV và mục Nguồn vào."
+},
+{
+"khoa": "live_tv_action",
+"kieu": "chu",
+"moTa": "The Live TV app and, if it has no leanback entry, the action to start it with",
+"canThan": true,
+"ten": "Lệnh mở app truyền hình",
+"moTaVi": "Lệnh (action) để mở app truyền hình khi app đó không có lối vào bình thường trên Android TV."
+},
+{
+"khoa": "live_tv_input_id",
+"kieu": "chu",
+"moTa": "Exact system tuner for the Inputs menu's Live TV row; opens its channel collection. Empty keeps automatic selection. Missing input or unsupported collection falls back to the app's normal launch. [HAAM satellite example](../docs/devices/haam-r4.md)",
+"canThan": true,
+"ten": "Bộ thu kênh cho dòng Live TV",
+"moTaVi": "Mã bộ thu chính xác cho dòng Live TV trong menu Nguồn vào. Để trống thì tự chọn. Sai mã thì mở app truyền hình như thường."
+},
+{
+"khoa": "source_panel_service",
+"kieu": "chu",
+"moTa": "The TV's own source panel, for sets with no TvInputManager: a service, or an activity (BYINTEK U4). Without a Live TV app, the Inputs pill opens it directly",
+"canThan": true,
+"ten": "Bảng chọn nguồn của hãng (dịch vụ)",
+"moTaVi": "Bảng chọn nguồn riêng của tivi, cho tivi không có danh sách nguồn chuẩn của Android. Không có app truyền hình thì nút Nguồn vào mở thẳng bảng này."
+},
+{
+"khoa": "source_panel_action",
+"kieu": "chu",
+"moTa": "The TV's own source panel, for sets with no TvInputManager: a service, or an activity (BYINTEK U4). Without a Live TV app, the Inputs pill opens it directly",
+"canThan": true,
+"ten": "Bảng chọn nguồn của hãng (lệnh)",
+"moTaVi": "Lệnh mở bảng chọn nguồn riêng của tivi (ví dụ máy chiếu BYINTEK U4)."
+},
+{
+"khoa": "source_panel_extra",
+"kieu": "chu",
+"moTa": "One int extra sent with the source panel (Coocaa OS: control_center_command=100)",
+"canThan": true,
+"ten": "Tham số cho bảng chọn nguồn",
+"moTaVi": "Một số kèm theo khi mở bảng chọn nguồn (Coocaa OS: control_center_command=100)."
+},
+{
+"khoa": "coocaa_sources",
+"kieu": "bool",
+"moTa": "Coocaa OS (Skyworth, China): list the sources from com.skyworth.tv in the Inputs menu, ahead of the source panel",
+"canThan": true,
+"ten": "Nguồn vào của Coocaa (Skyworth Trung Quốc)",
+"moTaVi": "Tivi Coocaa OS: liệt kê nguồn từ com.skyworth.tv trong menu Nguồn vào, trước bảng chọn nguồn."
+},
+{
+"khoa": "launch_actions",
+"kieu": "ds",
+"moTa": "Tiles that open a screen of the app instead of its start screen; an action that no longer resolves opens the app normally (MagentaTV's guide: com.telekom.onetv.tv.pl=com.telekom.onetv.tv.pl.action.PROGRAM_GUIDE)",
+"canThan": true,
+"ten": "Mở thẳng một màn của app",
+"moTaVi": "Bấm ô app là mở thẳng một màn bên trong app thay vì màn đầu (ví dụ mở thẳng lịch phát sóng). Lệnh không còn chạy thì mở app như thường."
+},
+{
+"khoa": "app_labels",
+"kieu": "ds",
+"moTa": "A tile's name instead of the app's own (MagentaTV as com.telekom.onetv.tv.pl=TV)",
+"canThan": true,
+"ten": "Đổi tên hiện của app",
+"moTaVi": "Tên hiện trên ô thay cho tên gốc của app. Dạng tên.gói=Tên mới, ví dụ com.telekom.onetv.tv.pl=TV."
+},
+{
+"khoa": "app_banners",
+"kieu": "ds",
+"moTa": "A tile's artwork from a banner_* drawable bundled with the launcher (banner_tv: magenta with the Live TV glyph)",
+"canThan": true,
+"ten": "Ảnh ô app có sẵn",
+"moTaVi": "Dùng ảnh banner có sẵn trong launcher cho ô app (banner_tv: nền hồng có biểu tượng Live TV)."
+},
+{
+"khoa": "input_action",
+"kieu": "chu",
+"moTa": "Action sent with an HDMI/AV row's channel URI when nothing handles the standard VIEW (XGIMI: com.xgimi.action.hdmiPlayer). Only a handler-less set gets here; any app that claims the channel MIME type takes the row instead, so check with query-activities ([#805](https://github.com/Gathin23/cleanyourtv/issues/805))",
+"canThan": true,
+"ten": "Lệnh mở cổng HDMI/AV",
+"moTaVi": "Lệnh gửi kèm khi mở một cổng HDMI/AV mà tivi không tự xử lý (máy chiếu XGIMI: com.xgimi.action.hdmiPlayer). Chỉ cần cho tivi đặc biệt."
+},
+{
+"khoa": "input_uri_scheme",
+"kieu": "chu",
+"moTa": "Scheme an HDMI/AV row's passthrough URI is sent with instead of content://, with no MIME type (YaOS: live-tv, which its source player answers)",
+"canThan": true,
+"ten": "Kiểu địa chỉ cổng HDMI/AV",
+"moTaVi": "Kiểu địa chỉ dùng khi mở cổng HDMI/AV thay cho content:// (YaOS: live-tv)."
+},
+{
+"khoa": "columns",
+"kieu": "so",
+"min": 1,
+"max": 8,
+"moTa": "Tiles per row; tiles shrink to fit from 5 up",
+"canThan": false,
+"ten": "Số app mỗi hàng",
+"moTaVi": "Số ô app trên một hàng. Từ 5 trở lên thì ô tự nhỏ lại cho vừa."
+},
+{
+"khoa": "rows_below_dock",
+"kieu": "so",
+"min": 0,
+"max": 3,
+"moTa": "Grid rows left visible under the dock; tiles shrink if the dock, its title and that many rows would not fit the screen height",
+"canThan": false,
+"ten": "Số hàng hiện dưới dock",
+"moTaVi": "Số hàng app còn thấy dưới dock. Không đủ chỗ thì ô tự nhỏ lại."
+},
+{
+"khoa": "dock_row",
+"kieu": "bool",
+"moTa": "The dock as its own row with a band (true); false makes the dock apps the first tiles of one plain grid",
+"canThan": false,
+"ten": "Dock thành hàng riêng",
+"moTaVi": "Dock là một hàng riêng có dải nền (mặc định bật). Tắt thì app trên dock thành mấy ô đầu của một lưới chung."
+},
+{
+"khoa": "reorder_button",
+"kieu": "bool",
+"moTa": "A reorder button in the top bar (false by default); reordering is always in the Settings button's long-press menu",
+"canThan": false,
+"ten": "Nút sắp xếp app trên cùng",
+"moTaVi": "Thêm nút sắp xếp app lên thanh trên cùng (mặc định tắt). Lúc nào cũng sắp xếp được bằng cách giữ OK ở nút Cài đặt."
+},
+{
+"khoa": "show_network_pill",
+"kieu": "bool",
+"moTa": "The Wi-Fi/Ethernet pill in the top bar (true by default); false hides it",
+"canThan": false,
+"ten": "Hiện nút Wi-Fi / mạng",
+"moTaVi": "Nút Wi-Fi/Ethernet trên thanh trên cùng (mặc định bật). Tắt để ẩn."
+},
+{
+"khoa": "top_bar_apps",
+"kieu": "ds",
+"moTa": "Apps shown as round buttons with their own logo in the top bar, left of the network pill; they leave the grid",
+"canThan": false,
+"ten": "App thành nút tròn trên thanh trên cùng",
+"moTaVi": "Các app này hiện thành nút tròn có logo ở thanh trên cùng, bên trái ô mạng, và không còn là ô trong lưới. Ghi tên gói, cách nhau bằng dấu phẩy."
+},
+{
+"khoa": "show_inputs_pill",
+"kieu": "bool",
+"moTa": "The Inputs pill in the top bar, shown when the TV has inputs (true by default); false hides it, and with top_menu it also leaves Inputs out of the gear's menu (streamers with no HDMI input, such as the Chromecast with Google TV); what the remote's Input button does is unchanged",
+"canThan": false,
+"ten": "Hiện nút Nguồn vào",
+"moTaVi": "Nút Nguồn vào (HDMI…) trên thanh trên cùng khi tivi có nguồn vào (mặc định bật). Tắt để ẩn; nút Input trên remote vẫn chạy như cũ."
+},
+{
+"khoa": "icon_only_buttons",
+"kieu": "bool",
+"moTa": "Wi-Fi and Settings as round icon buttons; Inputs keeps its label (false by default)",
+"canThan": false,
+"ten": "Nút tròn chỉ có biểu tượng",
+"moTaVi": "Nút Wi-Fi và Cài đặt thành nút tròn chỉ có biểu tượng; nút Nguồn vào vẫn giữ chữ (mặc định tắt)."
+},
+{
+"khoa": "icon_only_inputs",
+"kieu": "bool",
+"moTa": "The Inputs pill as a round icon button too, its label kept as the TalkBack description (false by default). Works with or without icon_only_buttons",
+"canThan": false,
+"ten": "Nút Nguồn vào chỉ có biểu tượng",
+"moTaVi": "Nút Nguồn vào (HDMI…) cũng thành nút tròn chỉ có biểu tượng như Wi-Fi và Cài đặt (mặc định tắt)."
+},
+{
+"khoa": "top_menu",
+"kieu": "bool",
+"moTa": "Inputs, Wi-Fi and Settings folded into one round gear, centred on the header: OK drops a menu with the three plus Reorder apps, hold OK keeps the launcher menu (false by default)",
+"canThan": false,
+"ten": "Gom nút trên cùng vào một bánh răng",
+"moTaVi": "Nguồn vào, Wi-Fi và Cài đặt gom vào một nút bánh răng giữa thanh trên cùng: bấm OK hiện menu 3 mục, giữ OK mở menu của launcher (mặc định tắt)."
+},
+{
+"khoa": "launcher_settings_button",
+"kieu": "bool",
+"moTa": "Make the header Settings action open Launcher settings directly with a matching 22dp home icon; also changes the Settings row when top_menu is on. Hold OK keeps module-card and ordering tools. The settings page includes Reorder apps and TV settings (false by default)",
+"canThan": false,
+"ten": "Nút Cài đặt mở cài đặt Home sạch",
+"moTaVi": "Nút Cài đặt trên cùng mở thẳng cài đặt của Home sạch (có Sắp xếp app và Cài đặt tivi) thay vì cài đặt tivi (mặc định tắt)."
+},
+{
+"khoa": "wifi_status_color",
+"kieu": "bool",
+"moTa": "The Wi-Fi pill's icon green while the TV is online, white while it is not (false by default)",
+"canThan": false,
+"ten": "Biểu tượng Wi-Fi đổi màu",
+"moTaVi": "Biểu tượng Wi-Fi xanh lá khi tivi có mạng, trắng khi mất mạng (mặc định tắt)."
+},
+{
+"khoa": "wifi_status_warnings",
+"kieu": "bool",
+"moTa": "With wifi_status_color, the icon orange while connected without internet (a captive portal waiting for its login page) and red while offline, instead of white (false by default)",
+"canThan": false,
+"ten": "Icon mạng đổi màu khi có sự cố",
+"moTaVi": "Khi bật tô màu icon mạng: cam khi có Wi-Fi mà không vào được Internet (mạng cần đăng nhập), đỏ khi mất mạng (mặc định tắt)."
+},
+{
+"khoa": "wifi_label_width",
+"kieu": "so",
+"min": 0,
+"max": 300,
+"moTa": "With icon_only_buttons, keep the network name on the Wi-Fi pill up to this width in dp, cut with an ellipsis; 0 leaves only the icon",
+"canThan": false,
+"ten": "Độ dài tên Wi-Fi trên nút",
+"moTaVi": "Khi dùng nút tròn chỉ có biểu tượng: vẫn hiện tên mạng Wi-Fi tới độ rộng này (dp), dài quá thì cắt. 0 là chỉ còn biểu tượng."
+},
+{
+"khoa": "wallpaper_true_color",
+"kieu": "bool",
+"moTa": "Decode wallpapers in 32-bit colour (8 MB at 1080p) instead of RGB_565 (4 MB), which bands dark gradients such as a night sky; for TVs with 2 GB or more (false by default)",
+"canThan": false,
+"ten": "Ảnh nền màu đầy đủ",
+"moTaVi": "Ảnh nền màu đầy đủ 32-bit, hết bị sọc ở nền tối như bầu trời đêm, nhưng tốn gấp đôi bộ nhớ. Chỉ nên bật cho tivi có từ 2 GB RAM (mặc định tắt)."
+},
+{
+"khoa": "uniform_tiles",
+"kieu": "bool",
+"moTa": "Each app tile is its icon on a card tinted from that icon, with the name only under the focused tile, instead of the app's own banner (false by default)",
+"canThan": false,
+"ten": "Ô icon đều nhau",
+"moTaVi": "Mỗi ô app là icon trên nền màu lấy từ icon, tên chỉ hiện dưới ô đang chọn, thay cho ảnh banner của app (mặc định tắt)."
+},
+{
+"khoa": "app_library_selection",
+"kieu": "bool",
+"moTa": "OK toggles Home checkmarks in the library; checked apps first, both groups alphabetized. Hiding keeps focus on the adjacent next app (previous at the end). Requires app_library; false preserves the standard open/long-press behavior",
+"canThan": false,
+"ten": "Chọn app Home trong Thư viện",
+"moTaVi": "Trong Thư viện app, bấm OK để tích / bỏ tích app hiện ở Home; app đã tích xếp trước. Cần bật Thư viện app."
+},
+{
+"khoa": "library_apps",
+"kieu": "ds",
+"moTa": "Packages pre-seeded into the App library's \"added\" set at startup (config.xml library_apps, or a theme's config.json). They show on Home as if the owner had added them in the App library UI, and stay removable there (a removed one stays hidden); empty (off) by default",
+"canThan": false,
+"ten": "App có sẵn trong thư viện",
+"moTaVi": "Các app này được thêm sẵn lên Home như thể bạn đã thêm trong Thư viện app; vẫn bỏ ra được. Ghi tên gói, cách nhau bằng dấu phẩy (mặc định trống)."
+},
+{
+"khoa": "shamsi_date",
+"kieu": "bool",
+"moTa": "Show the Solar Hijri date above the Gregorian one",
+"canThan": false,
+"ten": "Lịch Ba Tư (Shamsi)",
+"moTaVi": "Hiện ngày theo lịch Ba Tư (dùng ở Iran, Afghanistan) phía trên ngày dương."
+},
+{
+"khoa": "lunar_utc_offset",
+"kieu": "so",
+"min": 0,
+"max": 14,
+"moTa": "Hours east of UTC the lunar calendar is computed for: 7 is the Vietnamese calendar, 8 the Chinese one; they differ by a day now and then (and by a month in 1985). Unset: 7 when the TV is in Vietnamese, 8 otherwise",
+"canThan": false,
+"ten": "Múi giờ tính âm lịch",
+"moTaVi": "Số giờ lệch UTC dùng để tính âm lịch: 7 là lịch Việt Nam, 8 là lịch Trung Quốc; thỉnh thoảng lệch nhau một ngày. Để trống: 7 khi tivi tiếng Việt, 8 khi khác."
+},
+{
+"khoa": "show_greeting",
+"kieu": "bool",
+"moTa": "The greeting above the clock (true by default); false hides it",
+"canThan": false,
+"ten": "Lời chào trên đồng hồ",
+"moTaVi": "Dòng \"Chào buổi tối\" phía trên đồng hồ (mặc định bật); tắt để ẩn."
+},
+{
+"khoa": "header_white",
+"kieu": "bool",
+"moTa": "The date and the line between the clock and the date in the clock's full white instead of dimmed (false by default)",
+"canThan": false,
+"ten": "Ngày màu trắng",
+"moTaVi": "Ngày và vạch giữa đồng hồ với ngày trắng như đồng hồ thay vì mờ (mặc định tắt)."
+},
+{
+"khoa": "module_cards",
+"kieu": "bool",
+"moTa": "Look for module cards and ask about them (true); false turns the feature off",
+"canThan": true,
+"ten": "Thẻ mở rộng (module card)",
+"moTaVi": "Tìm các thẻ mở rộng cài thêm và hỏi có hiện không (mặc định bật). Tắt để bỏ hẳn tính năng này."
+},
+{
+"khoa": "boot_to_live_tv",
+"kieu": "bool",
+"moTa": "Open the Live TV app (live_tv_package) on the first Home after the TV starts, once per boot",
+"canThan": true,
+"ten": "Bật tivi là vào truyền hình",
+"moTaVi": "Lần đầu về Home sau khi bật tivi thì mở app truyền hình (đặt ở App xem truyền hình), mỗi lần bật tivi một lần."
+},
+{
+"khoa": "open_on_start_choice",
+"kieu": "bool",
+"moTa": "true adds an **Open on start** row to Launcher settings: pick an app on the TV, and the first Home after each boot opens it instead (once per boot; boot_to_live_tv wins when both are set; an app that is gone or disabled leaves Home on screen). Off by default",
+"canThan": false,
+"ten": "Chọn app mở khi bật tivi",
+"moTaVi": "Thêm dòng \"Mở khi khởi động\" vào Cài đặt launcher: chọn một app, lần đầu về Home sau mỗi lần bật tivi sẽ mở app đó (mặc định tắt)."
+},
+{
+"khoa": "focus_overshoot",
+"kieu": "bool",
+"moTa": "The highlight and the focused tile swing past their target before settling (true by default); false glides straight there with smooth scrolling",
+"canThan": false,
+"ten": "Hiệu ứng nảy khi chọn app",
+"moTaVi": "Viền sáng và ô đang chọn nảy nhẹ qua đích rồi mới dừng (mặc định bật). Tắt thì trượt thẳng, cuộn mượt."
+},
+{
+"khoa": "vpn_app",
+"kieu": "chu",
+"moTa": "App the network pill opens when a VPN is configured; also shows a red \"VPN off\" badge while no VPN is up",
+"canThan": true,
+"ten": "App VPN",
+"moTaVi": "App mà nút mạng mở khi tivi có cài VPN; hiện thêm nhãn đỏ \"VPN off\" khi VPN chưa bật."
+},
+{
+"khoa": "animations",
+"kieu": "bool",
+"moTa": "Basic focus, glass, title and tile entrance motion; true by default",
+"canThan": false,
+"ten": "Hiệu ứng chuyển động cơ bản",
+"moTaVi": "Hiệu ứng khi chọn app, kính mờ, tên app và ô hiện ra (mặc định bật). Tắt cho tivi rất yếu."
+},
+{
+"khoa": "advanced_effects",
+"kieu": "bool",
+"moTa": "Optional lifted tile, icon zoom, smooth ambient colour and app opening effects; false by default",
+"canThan": false,
+"ten": "Hiệu ứng nâng cao",
+"moTaVi": "Ô nổi lên, phóng to biểu tượng, đổi màu nền mượt và hiệu ứng mở app (mặc định tắt). Chỉ nên bật cho tivi khoẻ."
+},
+{
+"khoa": "show_home_settings_shortcut",
+"kieu": "bool",
+"moTa": "Keep the optional Default-home tile visible when the TV has a home picker; false by default",
+"canThan": true,
+"ten": "Ô chọn Home mặc định",
+"moTaVi": "Giữ ô \"Home mặc định\" trên Home khi tivi có bảng chọn Home (mặc định tắt)."
+},
+{
+"khoa": "background_color",
+"kieu": "chu",
+"moTa": "Colour behind everything; black by default",
+"canThan": false,
+"ten": "Màu nền",
+"moTaVi": "Màu nền phía sau mọi thứ, mặc định đen. Ghi mã màu, ví dụ #140A3A."
+},
+{
+"khoa": "sky_intensity",
+"kieu": "so",
+"min": 0,
+"max": 100,
+"moTa": "Time-of-day backdrop: a dark gradient that follows the clock, 0 hides it (default)",
+"canThan": false,
+"ten": "Độ đậm nền bầu trời theo giờ",
+"moTaVi": "Nền chuyển màu tối theo giờ trong ngày, từ 0 đến 100. 0 là tắt (mặc định)."
+},
+{
+"khoa": "wallpaper_order",
+"kieu": "chon",
+"chon": [
+"shuffle",
+"sequential"
+],
+"moTa": "How a collection advances. shuffle (the default, and what launchers did before this key existed) avoids repeating the current picture; sequential walks the folder in filename order and wraps at the end. An unknown value falls back to shuffle",
+"canThan": false,
+"ten": "Thứ tự đổi ảnh nền",
+"moTaVi": "Bộ ảnh nền đổi theo kiểu nào: Ngẫu nhiên (mặc định, không lặp lại ảnh đang hiện) hay Lần lượt (theo tên file, hết thì quay lại đầu).",
+"chonVi": {
+"shuffle": "Ngẫu nhiên",
+"sequential": "Lần lượt"
+}
+},
+{
+"khoa": "dock_opacity",
+"kieu": "so",
+"min": 30,
+"max": 100,
+"moTa": "Opacity of the dock's band, in percent, so a wallpaper shows through it; 100 by default (the cinematic shelf keeps its own translucent band). Launcher settings on the TV offers 100, 70, 50 or 30, which wins until the next theme push or Follow theme",
+"canThan": false,
+"ten": "Độ đậm dải nền dock",
+"moTaVi": "Độ đậm của dải nền dock (%), thấp thì thấy ảnh nền xuyên qua. Mặc định 100. Trên tivi chọn được 100, 70, 50, 30 trong cài đặt Home sạch."
+},
+{
+"khoa": "wallpaper_captions",
+"kieu": "bool",
+"moTa": "With a rotating collection, the shown picture's name under the top-right buttons, from wallpapers/captions.txt (001.jpg<TAB>Dusk over the peaks, one per line); a picture without a line shows no name (false by default)",
+"canThan": false,
+"ten": "Tên ảnh nền",
+"moTaVi": "Với bộ ảnh nền tự đổi: hiện tên ảnh đang chiếu dưới các nút góc trên (mặc định tắt)."
+},
+{
+"khoa": "wallpaper_moods",
+"kieu": "chu",
+"moTa": "A rotating collection grouped by time of day: {\"morning\": [...], \"evening\": [...], \"night\": [...]} with file names from wallpapers/. Morning runs from sunrise to noon, evening until half an hour after sunset, night the rest, with the sun at config.xml's latitude and longitude (07:00 and 18:30 without them); a missing group rotates through every picture. Unset by default",
+"canThan": false,
+"ten": "Ảnh nền theo buổi",
+"moTaVi": "Bộ ảnh xoay vòng chia theo sáng / chiều / tối: {\"morning\": [...], \"evening\": [...], \"night\": [...]} với tên file trong wallpapers/. Giờ mặt trời mọc / lặn tính theo vị trí; buổi nào thiếu thì xoay hết các ảnh."
+},
+{
+"khoa": "tile_menu",
+"kieu": "bool",
+"moTa": "Hold OK or press the remote's Menu key on a tile to open a small menu: Move, Remove from Home (with app_library) and App info. false (the default) keeps holding OK as a shortcut to the app's App info page and leaves Menu unchanged",
+"canThan": false,
+"ten": "Giữ OK để mở menu app",
+"moTaVi": "Giữ OK trên một app: menu Di chuyển, Thêm vào dock / Thay app khác, Bỏ khỏi Home, Thông tin app. CleanTV bật sẵn; tắt thì giữ OK mở thẳng trang Thông tin app."
+},
+{
+"khoa": "festival",
+"kieu": "chu",
+"moTa": "Turns on a festive skin: the network pill becomes a diya whose flame follows the connection, Inputs a temple bell, Settings a marigold, and the first Home of the day gets a petal shower. dussehra and diwali have built-in greetings",
+"canThan": true,
+"ten": "Giao diện lễ hội",
+"moTaVi": "Bật giao diện lễ hội của Ấn Độ (đèn dầu, chuông, hoa cúc, mưa cánh hoa). dussehra và diwali có sẵn lời chúc."
+},
+{
+"khoa": "festival_until",
+"kieu": "chu",
+"moTa": "Last day the festive skin shows; it switches itself off after that. A malformed date turns it off",
+"canThan": true,
+"ten": "Ngày tắt giao diện lễ hội",
+"moTaVi": "Ngày cuối hiện giao diện lễ hội, qua ngày đó tự tắt. Ghi dạng 2026-11-01; ghi sai thì tắt luôn."
+},
+{
+"khoa": "greeting",
+"kieu": "chu",
+"moTa": "Replaces the time-of-day greeting while the festive skin is on",
+"canThan": true,
+"ten": "Lời chào ngày lễ",
+"moTaVi": "Lời chào thay cho \"Xin chào\" khi đang bật giao diện lễ hội."
+},
+{
+"khoa": "accent_color",
+"kieu": "chu",
+"moTa": "Colour of the focus glow while the festive skin is on; diya gold if not set",
+"canThan": true,
+"ten": "Màu viền sáng ngày lễ",
+"moTaVi": "Màu viền sáng quanh app đang chọn khi bật giao diện lễ hội; mặc định vàng đèn dầu."
+},
+{
+"khoa": "settings_key_keycodes",
+"kieu": "ds-so",
+"moTa": "Remote buttons that open Settings, for HomeKeyService (TCL Google TV gear: [83])",
+"canThan": true,
+"ten": "Nút remote mở Cài đặt",
+"moTaVi": "Mã nút trên remote dùng để mở Cài đặt (ví dụ nút bánh răng TCL Google TV: 83). Cần bật bắt phím Home."
+},
+{
+"khoa": "settings_key_panel",
+"kieu": "bool",
+"moTa": "Those buttons open a small quick settings panel (TV settings, Display, Network, Apps, Launcher settings) instead of the TV's Settings",
+"canThan": true,
+"ten": "Nút Cài đặt mở bảng nhanh",
+"moTaVi": "Các nút trên mở một bảng cài đặt nhanh (Cài đặt tivi, Màn hình, Mạng, Ứng dụng, cài đặt Home sạch) thay vì Cài đặt của tivi."
+},
+{
+"khoa": "restore_key_services",
+"kieu": "bool",
+"moTa": "After a force stop of the launcher, Home puts the remote's accessibility helpers (HomeKeyService, InputKeyService) back on the enabled list; needs RESTORE_KEY_SERVICES=1 at install. Off by default",
+"canThan": false,
+"ten": "Tự bật lại bắt phím remote",
+"moTaVi": "Khi hệ thống buộc dừng Home sạch, tự bật lại dịch vụ bắt phím remote (Home, Input) để nút trên remote không bị \"đơ\" (mặc định tắt)."
+},
+{
+"khoa": "input_key_keycodes",
+"kieu": "ds-so",
+"moTa": "More remote buttons that open the input switcher, for InputKeyService (KEYCODE_TV and KEYCODE_TV_INPUT always do)",
+"canThan": true,
+"ten": "Thêm nút remote mở Nguồn vào",
+"moTaVi": "Mã các nút remote khác cũng mở bảng chọn Nguồn vào (nút TV và TV_INPUT luôn mở)."
+},
+{
+"khoa": "app_keys",
+"kieu": "ds",
+"moTa": "Remote buttons that open an app, as \"190:com.google.android.youtube.tv\" or \"KEYCODE_BUTTON_3:com.google.android.youtube.tv\", or by scancode as \"scan:490:com.wbd.hbomax\" for remotes that share one keycode between app buttons (Sony BRAVIA), for InputKeyService or HomeKeyService. \"input:<input id>\" in place of the package switches to a TV input instead, e.g. \"scan:227:input:com.tcl.tvinput/.passthrou",
+"canThan": true,
+"ten": "Nút remote mở app",
+"moTaVi": "Gán nút remote để mở app, dạng 190:com.google.android.youtube.tv hoặc scan:490:com.wbd.hbomax (remote Sony dùng chung mã cho các nút app)."
+},
+{
+"khoa": "key_filter",
+"kieu": "bool",
+"moTa": "false makes the key helpers stop filtering keys while staying enabled. Use it on firmware where any key-filtering accessibility service breaks long-press repeat (TCL Google TV on Android 12): the remote buttons above stop working, and volume repeat comes back",
+"canThan": true,
+"ten": "Lọc phím remote",
+"moTaVi": "Tắt (false) để dịch vụ bắt phím ngừng lọc phím mà vẫn bật. Dùng cho tivi bị mất giữ phím âm lượng (TCL Google TV Android 12); khi đó các nút gán ở trên cũng thôi chạy."
+},
+{
+"khoa": "gamepad_passthrough",
+"kieu": "bool",
+"moTa": "true makes the key helpers stop filtering keys while a game controller is connected, so games see its buttons (Steam Link with an Xbox controller); the remote buttons above do nothing until it disconnects. Needs key_filter on. A voice remote that reports a joystick does not count. Off by default",
+"canThan": false,
+"ten": "Nhường phím cho tay cầm game",
+"moTaVi": "Bật thì khi có tay cầm game kết nối, dịch vụ bắt phím của Home sạch ngừng lọc phím để game nhận đủ nút (vd Steam Link với tay Xbox); các nút remote gán sẵn tạm không chạy tới khi rút tay cầm. Cần bật key_filter. Mặc định tắt."
+},
+{
+"khoa": "consume_volume_keys",
+"kieu": "bool",
+"moTa": "true makes the key helpers swallow Volume Up/Down and repeat a held one themselves (after 500 ms, every 60 ms). Use it on firmware that applies a volume key both before the helper and when the helper hands it back, so one tap moves two steps (TCL G03 / BeyondTV4, Android 11, #1100). Needs key_filter on. Off by default",
+"canThan": false,
+"ten": "Sửa nút âm lượng nhảy hai nấc",
+"moTaVi": "Dịch vụ phím tự giữ và lặp nút tăng/giảm âm lượng. Dùng khi bấm một lần mà âm lượng nhảy hai nấc (TCL BeyondTV4). Cần bật lọc phím (key_filter). Mặc định tắt."
+},
+{
+"khoa": "stock_home_redirect",
+"kieu": "chu",
+"moTa": "Stock launcher package; if the firmware turns it back on (XGIMI), its home screen is sent straight back here (HOME_KEY_SERVICE=1)",
+"canThan": true,
+"ten": "Chặn Home gốc tự bật lại",
+"moTaVi": "Tên gói Home gốc của hãng. Nếu phần mềm tivi tự bật lại Home gốc (như XGIMI), màn đó bị chuyển ngay về Home sạch."
+},
+{
+"khoa": "clock_wallpaper",
+"kieu": "bool",
+"moTa": "The clock screensaver over Home's wallpaper instead of black with a coloured glow; the clock still moves every minute (false by default)",
+"canThan": false,
+"ten": "Màn chờ đồng hồ trên hình nền",
+"moTaVi": "Màn chờ đồng hồ hiện trên hình nền của Home thay vì nền đen có ánh màu; đồng hồ vẫn dịch chỗ mỗi phút (mặc định tắt)."
+},
+{
+"khoa": "clock_wallpaper_dim",
+"kieu": "so",
+"min": 0,
+"max": 90,
+"moTa": "How dark that wallpaper is behind the clock, in percent (50 by default)",
+"canThan": false,
+"ten": "Độ tối hình nền sau đồng hồ",
+"moTaVi": "Hình nền sau đồng hồ tối bao nhiêu phần trăm (mặc định 50)."
+},
+{
+"khoa": "clock_glow",
+"kieu": "bool",
+"moTa": "The clock screensaver's coloured glow (true by default); false leaves the moving clock on plain black, e.g. for an OLED",
+"canThan": false,
+"ten": "Ánh màu của màn chờ đồng hồ",
+"moTaVi": "Ánh màu quanh đồng hồ ở màn chờ (mặc định bật); tắt để chỉ còn đồng hồ trên nền đen, hợp với tivi OLED."
+},
+{
+"khoa": "glow_style",
+"kieu": "chu",
+"moTa": "Shape of the glow behind the focused app, in its colour: radial (default) or horizon, the colour washing down from the top edge to black; the cinematic shelf keeps its own",
+"canThan": false,
+"ten": "Kiểu ánh sáng sau app",
+"moTaVi": "Kiểu ánh sáng theo màu app phía sau app đang chọn: radial (toả tròn, mặc định) hoặc horizon (màu loang từ mép trên xuống)."
+},
+{
+"khoa": "glass_style",
+"kieu": "chu",
+"moTa": "Look of the focus highlight: glass (default: a translucent slab with a bright top sheen, a crisp rim and a faint outer glow), rim (the crisp rim alone, no sheen, fill or glow, for a quiet focus over a wallpaper) or halo (the rim with a lighter outer glow)",
+"canThan": false,
+"ten": "Kiểu viền ô đang chọn",
+"moTaVi": "glass (mặc định: tấm kính mờ có vệt sáng), rim (chỉ viền sắc, dịu nhất) hoặc halo (viền kèm ánh sáng nhẹ bên ngoài)."
+},
+{
+"khoa": "cinematic_home",
+"kieu": "bool",
+"moTa": "Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its colour, with a larger name, \"Last opened\" (apps opened from Home), dock position dots, a focus glow in the app's colour and a translucent dock band; off by default",
+"canThan": false,
+"ten": "Home kiểu điện ảnh",
+"moTaVi": "Phần trên màn hình hiện ảnh lớn của app đang chọn, tên to hơn, \"Mở lần cuối\", chấm vị trí, viền sáng theo màu app và dock trong suốt (mặc định tắt)."
+},
+{
+"khoa": "cinematic_dots",
+"kieu": "bool",
+"moTa": "With cinematic_home, the dock position dots under the app's name (true by default); false leaves them out",
+"canThan": false,
+"ten": "Chấm vị trí dưới tên app (Home điện ảnh)",
+"moTaVi": "Khi bật Home điện ảnh, hiện các chấm vị trí dock dưới tên app (mặc định bật)."
+},
+{
+"khoa": "cinematic_white_focus",
+"kieu": "bool",
+"moTa": "With cinematic_home, the focus highlight stays white on the dock instead of taking the focused app's colour (false by default); app_glow still colours every tile",
+"canThan": false,
+"ten": "Viền chọn màu trắng (Home điện ảnh)",
+"moTaVi": "Khi bật Home điện ảnh, viền chọn trên dock giữ màu trắng thay vì lấy màu của app (mặc định tắt)."
+},
+{
+"khoa": "cinematic_scrim",
+"kieu": "so",
+"min": 0,
+"max": 100,
+"moTa": "With cinematic_home, the strength of the dark scrim behind the shelf's name (100 by default); lower lets a wallpaper show through",
+"canThan": false,
+"ten": "Độ tối nền sau tên app (Home điện ảnh)",
+"moTaVi": "0 đến 100, mặc định 100. Thấp hơn thì hình nền lộ ra nhiều hơn."
+},
+{
+"khoa": "cinematic_art",
+"kieu": "so",
+"min": 0,
+"max": 100,
+"moTa": "With cinematic_home, the opacity of the focused app's softened artwork (50 by default); 0 leaves the wallpaper uncovered",
+"canThan": false,
+"ten": "Độ đậm ảnh app (Home điện ảnh)",
+"moTaVi": "0 đến 100, mặc định 50: độ rõ của ảnh làm mờ từ app đang chọn. 0 là không che hình nền."
+},
+{
+"khoa": "dock_even_padding",
+"kieu": "bool",
+"moTa": "The dock band's padding equals the gap between its tiles on all four sides, as far as the grid's edges leave room (false by default)",
+"canThan": false,
+"ten": "Viền dải dock đều",
+"moTaVi": "Khoảng cách từ mép dải dock tới các ô bằng khoảng cách giữa các ô, đều cả bốn phía (mặc định tắt)."
+},
+{
+"khoa": "single_row",
+"kieu": "bool",
+"moTa": "Every app in the dock's row, the dock apps first, scrolling sideways; no grid below (false by default; needs dock_row)",
+"canThan": false,
+"ten": "Tất cả app một hàng",
+"moTaVi": "Mọi app nằm trên hàng dock, app dock đứng đầu, cuộn ngang; không còn lưới bên dưới (mặc định tắt; cần dock_row)."
+},
+{
+"khoa": "dock_band_all",
+"kieu": "bool",
+"moTa": "With single_row, the band runs behind every app in the row, not only the dock apps (false by default)",
+"canThan": false,
+"ten": "Dải nền chạy suốt hàng",
+"moTaVi": "Khi bật một hàng: dải nền sau dock chạy sau mọi app trong hàng, không chỉ app dock (mặc định tắt)."
+},
+{
+"khoa": "ambient_glow",
+"kieu": "bool",
+"moTa": "The glow behind the dock in the focused app's colour (true by default); false keeps only background_color or the wallpaper, e.g. for a calm photo background",
+"canThan": false,
+"ten": "Ánh sáng nền theo màu app",
+"moTaVi": "Ánh sáng phía sau dock theo màu app đang chọn (mặc định bật). Tắt để nền chỉ là màu nền hoặc ảnh nền, hợp với ảnh chụp tĩnh."
+},
+{
+"khoa": "fade_rows",
+"kieu": "bool",
+"moTa": "The rows fade out as they scroll up under the clock instead of being cut off at a hard line; the wallpaper or sky shows through. The grid then draws into a hardware layer (about 6 MB of graphics memory at 1080p) (false by default)",
+"canThan": false,
+"ten": "Hàng app mờ dần khi cuộn",
+"moTaVi": "Hàng app mờ dần khi cuộn lên dưới đồng hồ thay vì bị cắt thẳng. Tốn thêm khoảng 6 MB bộ nhớ đồ hoạ ở 1080p (mặc định tắt)."
+}
+]

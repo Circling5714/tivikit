@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ten_app">Hẹn giờ (TiviKit)</string>
+    <string name="mo_ta">Bật, tắt tivi và mở app theo lịch đặt trong TiviKit. Không đọc nội dung màn hình, không bắt phím remote.</string>
+    <string name="bao_tat">Tivi sẽ tắt sau %1$d giây</string>
+    <string name="hoan_30">Hoãn 30 phút</string>
+    <string name="tat_ngay">Tắt ngay</string>
+    <string name="da_danh_thuc">Hẹn giờ: tivi đã tự bật (lần thử).</string>
+</resources>

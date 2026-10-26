@@ -1,0 +1,102 @@
+# Phát hành TiviKit (26/10/2026): trên GitHub bấm Actions → Phát hành → Run workflow, hoặc
+#   gh workflow run phat-hanh.yml -f loai=va -f ghi_chu="…"
+# Tự tăng số bản (version.properties), chạy unit test, dựng app phụ + app và ký bằng khoá TiviKit (chặn nếu sai khoá),
+# viết nhật ký từ tiêu đề commit (scripts/phat_hanh.py), commit số bản + gắn tag, đăng GitHub Release kèm APK, .sha256 và
+# cap-nhat.json — app đọc cap-nhat.json để tự cập nhật (CapNhat.kt).
+# Khoá ký nằm trong secrets của môi trường "phat-hanh" (Settings → Environments), môi trường bắt chủ kho bấm duyệt.
+name: Phát hành
+
+on:
+  workflow_dispatch:
+    inputs:
+      loai:
+        description: "Loại bản: va (1.1.0 → 1.1.1), tinh-nang (→ 1.2.0), lon (→ 2.0.0)"
+        type: choice
+        options: [va, tinh-nang, lon]
+        default: va
+      ghi_chu:
+        description: "Ghi chú ở đầu nhật ký (không bắt buộc)"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phat-hanh
+  cancel-in-progress: false
+
+jobs:
+  phat-hanh:
+    runs-on: ubuntu-24.04
+    environment: phat-hanh
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Khoá ký
+        env:
+          KHOA: ${{ secrets.KHOA_KY_BASE64 }}
+          MAT_KHAU_KHO: ${{ secrets.MAT_KHAU_KHO }}
+          TEN_KHOA: ${{ secrets.TEN_KHOA }}
+          MAT_KHAU_KHOA: ${{ secrets.MAT_KHAU_KHOA }}
+        run: |
+          test -n "$KHOA" || { echo "Thiếu secret KHOA_KY_BASE64 của môi trường phat-hanh"; exit 1; }
+          echo "$KHOA" | base64 -d > "$RUNNER_TEMP/tivikit.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/tivikit.jks" "$MAT_KHAU_KHO" "$TEN_KHOA" "$MAT_KHAU_KHOA" > ky.properties
+
+      - name: Số bản mới
+        id: ban
+        env:
+          LOAI: ${{ inputs.loai }}
+        run: echo "ban=$(python3 scripts/phat_hanh.py ban-moi "$LOAI")" >> "$GITHUB_OUTPUT"
+
+      - name: Dựng app phụ (kèm unit test)
+        run: |
+          scripts/dung-khoa.sh
+          scripts/dung-kenh.sh
+          scripts/dung-hen-gio.sh
+          scripts/dung-go.sh
+
+      - name: Unit test và dựng app
+        run: ./gradlew --console=plain :app:testReleaseUnitTest :app:assembleRelease
+
+      - name: Kiểm tra chữ ký
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | tee "$RUNNER_TEMP/ky.txt"
+          grep -q "SHA-256 digest: ec4c282ecefa87e7e959d44de052ccb047a8164c383ff39341d910d85af6f653" "$RUNNER_TEMP/ky.txt" \
+            || { echo "APK không ký bằng khoá TiviKit: máy đã cài sẽ không cập nhật được, dừng."; exit 1; }
+
+      - name: Đóng gói
+        env:
+          BAN: ${{ steps.ban.outputs.ban }}
+          GHI_CHU: ${{ inputs.ghi_chu }}
+        run: python3 scripts/phat_hanh.py dong-goi "$BAN" app/build/outputs/apk/release/app-release.apk "$GHI_CHU"
+
+      - name: Gắn tag và đăng Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BAN: ${{ steps.ban.outputs.ban }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.properties
+          git diff --cached --quiet || git commit -m "Phát hành $BAN"
+          git tag "v$BAN"
+          git push origin "HEAD:$GITHUB_REF_NAME" "v$BAN"
+          gh release create "v$BAN" "dist/TiviKit-$BAN.apk" "dist/TiviKit-$BAN.apk.sha256" dist/cap-nhat.json \
+            --title "TiviKit $BAN" --notes-file dist/nhat-ky.md
+
+      - name: Xoá khoá
+        if: always()
+        run: rm -f "$RUNNER_TEMP/tivikit.jks" ky.properties

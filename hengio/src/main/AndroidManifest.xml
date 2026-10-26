@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Báo thức đúng giờ: Android 12 cần SCHEDULE_EXACT_ALARM, từ Android 13 app hẹn giờ dùng USE_EXACT_ALARM. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Android 14+: bật màn hình bằng khoá thức (ngoài màn DanhThuc) — TiviKit cấp qua ADB (appops). -->
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" tools:ignore="ProtectedPermissions" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- Android 11+: thấy được các app có màn mở để mở app đã hẹn. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <!-- Không có màn mở trong danh sách app: đặt lịch ở TiviKit trên điện thoại. -->
+    <application
+        android:label="@string/ten_app"
+        android:icon="@drawable/ic_hen_gio"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <service
+            android:name=".HenGioDichVu"
+            android:exported="true"
+            android:label="@string/ten_app"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/hen_gio_tro_nang" />
+        </service>
+        <receiver android:name=".BaoThuc" android:exported="false" />
+        <receiver android:name=".KhoiDongLai" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        <activity
+            android:name=".DanhThuc"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name=".BaoTat"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Lịch chỉ đặt được từ ADB (TiviKit). -->
+        <provider
+            android:name=".CauHinhProvider"
+            android:authorities="${applicationId}"
+            android:exported="true" />
+    </application>
+</manifest>

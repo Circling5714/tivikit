@@ -1,0 +1,26 @@
+# Kiểm tra (26/10/2026): mỗi lần đẩy lên main hoặc mở pull request, chạy unit test của app và 4 app phụ (không cần khoá ký).
+name: Kiểm tra
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Unit test
+        run: ./gradlew --console=plain :app:testReleaseUnitTest :khoa:testReleaseUnitTest :kenh:testO1ReleaseUnitTest :hengio:testReleaseUnitTest :go:testReleaseUnitTest

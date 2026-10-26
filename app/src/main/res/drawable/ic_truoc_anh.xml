@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hình trước của biểu tượng TiviKit: tivi trắng có tia sáng. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="1" android:scaleY="1" android:translateX="0" android:translateY="0">
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M36,33H72A7,7 0,0 1,79,40V62A7,7 0,0 1,72,69H36A7,7 0,0 1,29,62V40A7,7 0,0 1,36,33ZM38,38.5H70A3.5,3.5 0,0 1,73.5,42V60A3.5,3.5 0,0 1,70,63.5H38A3.5,3.5 0,0 1,34.5,60V42A3.5,3.5 0,0 1,38,38.5Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M51.01,68H56.99A0.01,0.01 0,0 1,57,68.01V73.99A0.01,0.01 0,0 1,56.99,74H51.01A0.01,0.01 0,0 1,51,73.99V68.01A0.01,0.01 0,0 1,51.01,68ZM45.25,73H62.75A2.25,2.25 0,0 1,65,75.25V75.25A2.25,2.25 0,0 1,62.75,77.5H45.25A2.25,2.25 0,0 1,43,75.25V75.25A2.25,2.25 0,0 1,45.25,73Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M54,42.5C54.94,48.53 56.47,50.06 62.5,51C56.47,51.94 54.94,53.47 54,59.5C53.06,53.47 51.53,51.94 45.5,51C51.53,50.06 53.06,48.53 54,42.5ZM66.5,40.4C66.79,42.25 67.25,42.71 69.1,43C67.25,43.29 66.79,43.75 66.5,45.6C66.21,43.75 65.75,43.29 63.9,43C65.75,42.71 66.21,42.25 66.5,40.4Z" />
+    </group>
+</vector>

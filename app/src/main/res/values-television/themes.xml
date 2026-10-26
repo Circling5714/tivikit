@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bản tối của Theme.TvSach: chạy ngay trên tivi (giao diện luôn tối như tvOS, kể cả khi tivi không báo chế độ tối). -->
+    <style name="Theme.TvSach" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

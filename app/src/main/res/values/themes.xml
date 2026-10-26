@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Giao diện kiểu Apple: nền xám nhạt của iOS (systemGroupedBackground) khi máy để sáng; values-night / values-television là bản tối. -->
+    <style name="Theme.TvSach" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F2F2F7</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

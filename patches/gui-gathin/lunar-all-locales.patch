@@ -1,0 +1,336 @@
+diff --git a/launcher/app/src/main/res/values-ar/strings.xml b/launcher/app/src/main/res/values-ar/strings.xml
+index 213961b..3ba5c13 100644
+--- a/launcher/app/src/main/res/values-ar/strings.xml
++++ b/launcher/app/src/main/res/values-ar/strings.xml
+@@ -87,4 +87,10 @@
+         <item quantity="other">%1$d تطبيق</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s، %2$s</string>
++    <string name="lunar_date_format">التقويم القمري %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (كبيس)</string>
++    <string name="lunar_year">سنة %2$s</string>
++    <string-array name="lunar_branches">
++        <item>الفأر</item><item>الثور</item><item>النمر</item><item>الأرنب</item><item>التنين</item><item>الأفعى</item><item>الحصان</item><item>الماعز</item><item>القرد</item><item>الديك</item><item>الكلب</item><item>الخنزير</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-b+sr+Latn/strings.xml b/launcher/app/src/main/res/values-b+sr+Latn/strings.xml
+index 09e8ebc..c9985cd 100644
+--- a/launcher/app/src/main/res/values-b+sr+Latn/strings.xml
++++ b/launcher/app/src/main/res/values-b+sr+Latn/strings.xml
+@@ -65,4 +65,10 @@
+         <item quantity="other">%1$d aplikacija</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s, %2$s</string>
++    <string name="lunar_date_format">Lunarni %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (prestupni)</string>
++    <string name="lunar_year">Godina %2$s</string>
++    <string-array name="lunar_branches">
++        <item>pacova</item><item>bika</item><item>tigra</item><item>zeca</item><item>zmaja</item><item>zmije</item><item>konja</item><item>koze</item><item>majmuna</item><item>petla</item><item>psa</item><item>svinje</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-bn/strings.xml b/launcher/app/src/main/res/values-bn/strings.xml
+index 3996dc1..3c5600e 100644
+--- a/launcher/app/src/main/res/values-bn/strings.xml
++++ b/launcher/app/src/main/res/values-bn/strings.xml
+@@ -88,4 +88,10 @@
+         <item quantity="other">%1$dটি অ্যাপ</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s, %2$s</string>
++    <string name="lunar_date_format">চান্দ্র %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (অধিমাস)</string>
++    <string name="lunar_year">%2$s বর্ষ</string>
++    <string-array name="lunar_branches">
++        <item>ইঁদুর</item><item>ষাঁড়</item><item>বাঘ</item><item>খরগোশ</item><item>ড্রাগন</item><item>সাপ</item><item>ঘোড়া</item><item>ছাগল</item><item>বানর</item><item>মোরগ</item><item>কুকুর</item><item>শূকর</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-ca/strings.xml b/launcher/app/src/main/res/values-ca/strings.xml
+index 2c7e5f2..6d1fca0 100644
+--- a/launcher/app/src/main/res/values-ca/strings.xml
++++ b/launcher/app/src/main/res/values-ca/strings.xml
+@@ -98,4 +98,10 @@
+     <string name="race_live">%1$s · en directe</string>
+     <string name="race_finished">Bandera de quadres</string>
+     <string name="last_opened">Obert per últim cop: %1$s</string>
++    <string name="lunar_date_format">Lunar %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (intercalar)</string>
++    <string name="lunar_year">Any %2$s</string>
++    <string-array name="lunar_branches">
++        <item>de la Rata</item><item>del Bou</item><item>del Tigre</item><item>del Conill</item><item>del Drac</item><item>de la Serp</item><item>del Cavall</item><item>de la Cabra</item><item>del Mico</item><item>del Gall</item><item>del Gos</item><item>del Porc</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-cs/strings.xml b/launcher/app/src/main/res/values-cs/strings.xml
+index 83325b4..1ca7de9 100644
+--- a/launcher/app/src/main/res/values-cs/strings.xml
++++ b/launcher/app/src/main/res/values-cs/strings.xml
+@@ -89,4 +89,10 @@
+         <item quantity="other">%1$d aplikací</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s, %2$s</string>
++    <string name="lunar_date_format">Lunární %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (přestupný)</string>
++    <string name="lunar_year">Rok %2$s</string>
++    <string-array name="lunar_branches">
++        <item>krysy</item><item>buvola</item><item>tygra</item><item>králíka</item><item>draka</item><item>hada</item><item>koně</item><item>kozy</item><item>opice</item><item>kohouta</item><item>psa</item><item>vepře</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-de/strings.xml b/launcher/app/src/main/res/values-de/strings.xml
+index f5d6053..3a23a7f 100644
+--- a/launcher/app/src/main/res/values-de/strings.xml
++++ b/launcher/app/src/main/res/values-de/strings.xml
+@@ -60,4 +60,10 @@
+         <item quantity="other">%1$d Apps</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s, %2$s</string>
++    <string name="lunar_date_format">Mondkalender %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (Schaltmonat)</string>
++    <string name="lunar_year">Jahr %2$s</string>
++    <string-array name="lunar_branches">
++        <item>der Ratte</item><item>des Büffels</item><item>des Tigers</item><item>des Hasen</item><item>des Drachen</item><item>der Schlange</item><item>des Pferdes</item><item>der Ziege</item><item>des Affen</item><item>des Hahns</item><item>des Hundes</item><item>des Schweins</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-es/strings.xml b/launcher/app/src/main/res/values-es/strings.xml
+index 5a05ef8..9a38d72 100644
+--- a/launcher/app/src/main/res/values-es/strings.xml
++++ b/launcher/app/src/main/res/values-es/strings.xml
+@@ -101,4 +101,10 @@
+     <string name="race_live">%1$s · en directo</string>
+     <string name="race_finished">Bandera a cuadros</string>
+     <string name="last_opened">Abierta por última vez %1$s</string>
++    <string name="lunar_date_format">Lunar %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (intercalar)</string>
++    <string name="lunar_year">Año %2$s</string>
++    <string-array name="lunar_branches">
++        <item>de la Rata</item><item>del Buey</item><item>del Tigre</item><item>del Conejo</item><item>del Dragón</item><item>de la Serpiente</item><item>del Caballo</item><item>de la Cabra</item><item>del Mono</item><item>del Gallo</item><item>del Perro</item><item>del Cerdo</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-fi/strings.xml b/launcher/app/src/main/res/values-fi/strings.xml
+index b9368b4..543c686 100644
+--- a/launcher/app/src/main/res/values-fi/strings.xml
++++ b/launcher/app/src/main/res/values-fi/strings.xml
+@@ -88,4 +88,10 @@
+     <string name="dock_edit">Muokkaa telakkaa</string>
+     <string name="dock_edit_hint">Valitse muutettava telakan paikka ja paina OK. Takaisin lopettaa.</string>
+     <string name="dock_edit_pick_app">Valitse nyt sinne tuleva sovellus ja paina OK. Takaisin valitsee toisen paikan.</string>
++    <string name="lunar_date_format">Kuukalenteri %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (karkauskuu)</string>
++    <string name="lunar_year">%2$s vuosi</string>
++    <string-array name="lunar_branches">
++        <item>Rotan</item><item>Härän</item><item>Tiikerin</item><item>Jäniksen</item><item>Lohikäärmeen</item><item>Käärmeen</item><item>Hevosen</item><item>Vuohen</item><item>Apinan</item><item>Kukon</item><item>Koiran</item><item>Sian</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-fr/strings.xml b/launcher/app/src/main/res/values-fr/strings.xml
+index 742d088..e1e37fd 100644
+--- a/launcher/app/src/main/res/values-fr/strings.xml
++++ b/launcher/app/src/main/res/values-fr/strings.xml
+@@ -83,4 +83,10 @@
+         <item quantity="other">%1$d applications</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s, %2$s</string>
++    <string name="lunar_date_format">Lunaire %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (intercalaire)</string>
++    <string name="lunar_year">Année %2$s</string>
++    <string-array name="lunar_branches">
++        <item>du Rat</item><item>du Buffle</item><item>du Tigre</item><item>du Lapin</item><item>du Dragon</item><item>du Serpent</item><item>du Cheval</item><item>de la Chèvre</item><item>du Singe</item><item>du Coq</item><item>du Chien</item><item>du Cochon</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-in/strings.xml b/launcher/app/src/main/res/values-in/strings.xml
+index 4298d93..cde0b54 100644
+--- a/launcher/app/src/main/res/values-in/strings.xml
++++ b/launcher/app/src/main/res/values-in/strings.xml
+@@ -99,4 +99,10 @@
+     <string name="race_live">%1$s · langsung</string>
+     <string name="race_finished">Bendera finis</string>
+     <string name="last_opened">Terakhir dibuka %1$s</string>
++    <string name="lunar_date_format">Imlek %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (kabisat)</string>
++    <string name="lunar_year">Tahun %2$s</string>
++    <string-array name="lunar_branches">
++        <item>Tikus</item><item>Kerbau</item><item>Macan</item><item>Kelinci</item><item>Naga</item><item>Ular</item><item>Kuda</item><item>Kambing</item><item>Monyet</item><item>Ayam</item><item>Anjing</item><item>Babi</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-it/strings.xml b/launcher/app/src/main/res/values-it/strings.xml
+index e3c7c50..c4cf91d 100644
+--- a/launcher/app/src/main/res/values-it/strings.xml
++++ b/launcher/app/src/main/res/values-it/strings.xml
+@@ -94,4 +94,10 @@
+     <string name="race_live">%1$s · in diretta</string>
+     <string name="race_finished">Bandiera a scacchi</string>
+     <string name="last_opened">Ultima apertura: %1$s</string>
++    <string name="lunar_date_format">Lunare %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (intercalare)</string>
++    <string name="lunar_year">Anno %2$s</string>
++    <string-array name="lunar_branches">
++        <item>del Topo</item><item>del Bue</item><item>della Tigre</item><item>del Coniglio</item><item>del Drago</item><item>del Serpente</item><item>del Cavallo</item><item>della Capra</item><item>della Scimmia</item><item>del Gallo</item><item>del Cane</item><item>del Maiale</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-iw/strings.xml b/launcher/app/src/main/res/values-iw/strings.xml
+index 7078896..64d6dc1 100644
+--- a/launcher/app/src/main/res/values-iw/strings.xml
++++ b/launcher/app/src/main/res/values-iw/strings.xml
+@@ -103,4 +103,10 @@
+     <string name="race_live">%1$s · בשידור חי</string>
+     <string name="race_finished">הדגל המשובץ</string>
+     <string name="last_opened">נפתח לאחרונה %1$s</string>
++    <string name="lunar_date_format">לוח ירחי %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (מעובר)</string>
++    <string name="lunar_year">שנת ה%2$s</string>
++    <string-array name="lunar_branches">
++        <item>חולדה</item><item>שור</item><item>נמר</item><item>ארנב</item><item>דרקון</item><item>נחש</item><item>סוס</item><item>עז</item><item>קוף</item><item>תרנגול</item><item>כלב</item><item>חזיר</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-nb/strings.xml b/launcher/app/src/main/res/values-nb/strings.xml
+index 78d784e..20dbcd9 100644
+--- a/launcher/app/src/main/res/values-nb/strings.xml
++++ b/launcher/app/src/main/res/values-nb/strings.xml
+@@ -100,4 +100,10 @@
+     <string name="race_live">%1$s · direkte</string>
+     <string name="race_finished">Målgang</string>
+     <string name="last_opened">Sist åpnet %1$s</string>
++    <string name="lunar_date_format">Månekalender %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (skuddmåned)</string>
++    <string name="lunar_year">%2$s år</string>
++    <string-array name="lunar_branches">
++        <item>Rottens</item><item>Oksens</item><item>Tigerens</item><item>Kaninens</item><item>Dragens</item><item>Slangens</item><item>Hestens</item><item>Geitens</item><item>Apens</item><item>Hanens</item><item>Hundens</item><item>Grisens</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-nl/strings.xml b/launcher/app/src/main/res/values-nl/strings.xml
+index 738cabc..afd4a0f 100644
+--- a/launcher/app/src/main/res/values-nl/strings.xml
++++ b/launcher/app/src/main/res/values-nl/strings.xml
+@@ -101,4 +101,10 @@
+     <string name="race_live">%1$s · live</string>
+     <string name="race_finished">Geblokte vlag</string>
+     <string name="last_opened">Laatst geopend %1$s</string>
++    <string name="lunar_date_format">Maankalender %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (schrikkelmaand)</string>
++    <string name="lunar_year">Jaar van %2$s</string>
++    <string-array name="lunar_branches">
++        <item>de Rat</item><item>de Os</item><item>de Tijger</item><item>het Konijn</item><item>de Draak</item><item>de Slang</item><item>het Paard</item><item>de Geit</item><item>de Aap</item><item>de Haan</item><item>de Hond</item><item>het Varken</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-pl/strings.xml b/launcher/app/src/main/res/values-pl/strings.xml
+index 2aa11d6..1a72dff 100644
+--- a/launcher/app/src/main/res/values-pl/strings.xml
++++ b/launcher/app/src/main/res/values-pl/strings.xml
+@@ -85,4 +85,10 @@
+         <item quantity="other">%1$d aplikacji</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s, %2$s</string>
++    <string name="lunar_date_format">Księżycowy %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (przestępny)</string>
++    <string name="lunar_year">Rok %2$s</string>
++    <string-array name="lunar_branches">
++        <item>Szczura</item><item>Bawołu</item><item>Tygrysa</item><item>Królika</item><item>Smoka</item><item>Węża</item><item>Konia</item><item>Kozy</item><item>Małpy</item><item>Koguta</item><item>Psa</item><item>Świni</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-pt/strings.xml b/launcher/app/src/main/res/values-pt/strings.xml
+index 8aa2ec1..7cdd142 100644
+--- a/launcher/app/src/main/res/values-pt/strings.xml
++++ b/launcher/app/src/main/res/values-pt/strings.xml
+@@ -103,4 +103,10 @@
+     <string name="race_live">%1$s · ao vivo</string>
+     <string name="race_finished">Bandeira quadriculada</string>
+     <string name="last_opened">Aberto %1$s</string>
++    <string name="lunar_date_format">Lunar %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (intercalar)</string>
++    <string name="lunar_year">Ano %2$s</string>
++    <string-array name="lunar_branches">
++        <item>do Rato</item><item>do Búfalo</item><item>do Tigre</item><item>do Coelho</item><item>do Dragão</item><item>da Serpente</item><item>do Cavalo</item><item>da Cabra</item><item>do Macaco</item><item>do Galo</item><item>do Cão</item><item>do Porco</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-ru/strings.xml b/launcher/app/src/main/res/values-ru/strings.xml
+index 3d25c1b..69937ef 100644
+--- a/launcher/app/src/main/res/values-ru/strings.xml
++++ b/launcher/app/src/main/res/values-ru/strings.xml
+@@ -140,4 +140,10 @@
+     <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
+          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
+     <string name="last_opened">Последний запуск: %1$s</string>
++    <string name="lunar_date_format">По лунному %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (високосный)</string>
++    <string name="lunar_year">Год %2$s</string>
++    <string-array name="lunar_branches">
++        <item>Крысы</item><item>Быка</item><item>Тигра</item><item>Кролика</item><item>Дракона</item><item>Змеи</item><item>Лошади</item><item>Козы</item><item>Обезьяны</item><item>Петуха</item><item>Собаки</item><item>Свиньи</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-th/strings.xml b/launcher/app/src/main/res/values-th/strings.xml
+index d4224f1..b3a3d82 100644
+--- a/launcher/app/src/main/res/values-th/strings.xml
++++ b/launcher/app/src/main/res/values-th/strings.xml
+@@ -57,4 +57,10 @@
+         <item quantity="other">%1$d แอป</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s %2$s</string>
++    <string name="lunar_date_format">จันทรคติ %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (อธิกมาส)</string>
++    <string name="lunar_year">ปี%2$s</string>
++    <string-array name="lunar_branches">
++        <item>ชวด</item><item>ฉลู</item><item>ขาล</item><item>เถาะ</item><item>มะโรง</item><item>มะเส็ง</item><item>มะเมีย</item><item>มะแม</item><item>วอก</item><item>ระกา</item><item>จอ</item><item>กุน</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-tr/strings.xml b/launcher/app/src/main/res/values-tr/strings.xml
+index 97d3375..8e0acd9 100644
+--- a/launcher/app/src/main/res/values-tr/strings.xml
++++ b/launcher/app/src/main/res/values-tr/strings.xml
+@@ -83,4 +83,10 @@
+         <item quantity="other">%1$d uygulama</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s, %2$s</string>
++    <string name="lunar_date_format">Ay takvimi %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (artık)</string>
++    <string name="lunar_year">%2$s Yılı</string>
++    <string-array name="lunar_branches">
++        <item>Fare</item><item>Öküz</item><item>Kaplan</item><item>Tavşan</item><item>Ejderha</item><item>Yılan</item><item>At</item><item>Keçi</item><item>Maymun</item><item>Horoz</item><item>Köpek</item><item>Domuz</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-uz/strings.xml b/launcher/app/src/main/res/values-uz/strings.xml
+index f5b03f1..c6101e2 100644
+--- a/launcher/app/src/main/res/values-uz/strings.xml
++++ b/launcher/app/src/main/res/values-uz/strings.xml
+@@ -100,4 +100,10 @@
+     <string name="race_live">%1$s · jonli</string>
+     <string name="race_finished">Marra</string>
+     <string name="last_opened">Oxirgi marta ochilgan: %1$s</string>
++    <string name="lunar_date_format">Oy taqvimi %1$d/%2$s · %3$s</string>
++    <string name="lunar_month_leap">%1$d (kabisa)</string>
++    <string name="lunar_year">%2$s yili</string>
++    <string-array name="lunar_branches">
++        <item>Sichqon</item><item>Sigir</item><item>Yo\'lbars</item><item>Quyon</item><item>Baliq</item><item>Ilon</item><item>Ot</item><item>Qo\'y</item><item>Maymun</item><item>Tovuq</item><item>It</item><item>To\'ngiz</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-zh-rCN/strings.xml b/launcher/app/src/main/res/values-zh-rCN/strings.xml
+index e94794c..7e7e395 100644
+--- a/launcher/app/src/main/res/values-zh-rCN/strings.xml
++++ b/launcher/app/src/main/res/values-zh-rCN/strings.xml
+@@ -58,4 +58,13 @@
+         <item quantity="other">%1$d 个应用</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s，%2$s</string>
++    <string name="lunar_date_format">农历%2$s月%1$d日 · %3$s</string>
++    <string name="lunar_month_leap">闰%1$d</string>
++    <string name="lunar_year">%1$s%2$s年</string>
++    <string-array name="lunar_stems">
++        <item>甲</item><item>乙</item><item>丙</item><item>丁</item><item>戊</item><item>己</item><item>庚</item><item>辛</item><item>壬</item><item>癸</item>
++    </string-array>
++    <string-array name="lunar_branches">
++        <item>子</item><item>丑</item><item>寅</item><item>卯</item><item>辰</item><item>巳</item><item>午</item><item>未</item><item>申</item><item>酉</item><item>戌</item><item>亥</item>
++    </string-array>
+ </resources>
+diff --git a/launcher/app/src/main/res/values-zh-rTW/strings.xml b/launcher/app/src/main/res/values-zh-rTW/strings.xml
+index 4fa7fa5..c3aacf2 100644
+--- a/launcher/app/src/main/res/values-zh-rTW/strings.xml
++++ b/launcher/app/src/main/res/values-zh-rTW/strings.xml
+@@ -82,4 +82,13 @@
+         <item quantity="other">%1$d 個應用程式</item>
+     </plurals>
+     <string name="greeting_with_name">%1$s，%2$s</string>
++    <string name="lunar_date_format">農曆%2$s月%1$d日 · %3$s</string>
++    <string name="lunar_month_leap">閏%1$d</string>
++    <string name="lunar_year">%1$s%2$s年</string>
++    <string-array name="lunar_stems">
++        <item>甲</item><item>乙</item><item>丙</item><item>丁</item><item>戊</item><item>己</item><item>庚</item><item>辛</item><item>壬</item><item>癸</item>
++    </string-array>
++    <string-array name="lunar_branches">
++        <item>子</item><item>丑</item><item>寅</item><item>卯</item><item>辰</item><item>巳</item><item>午</item><item>未</item><item>申</item><item>酉</item><item>戌</item><item>亥</item>
++    </string-array>
+ </resources>

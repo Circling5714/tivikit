@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- Tự cập nhật từ GitHub Releases của TiviKit (CapNhat): cài APK bản mới; cũng để cài app lên tivi qua hộp cài. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Android 12+: app tự cập nhật chính nó không cần người dùng bấm (PackageInstaller USER_ACTION_NOT_REQUIRED). -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+    <!-- Báo có bản mới / đã cập nhật khi app đang đóng (KiemTraBanMoi, ~12 giờ một lần). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Chạy được cả trên tivi (Android TV / Google TV): không bắt buộc màn cảm ứng. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <!-- Thấy TiviKit bản cũ (trước khi đổi tên gói) còn trên máy để nhắc gỡ (Android 11+ ẩn app khác nếu không khai). -->
+    <queries>
+        <package android:name="com.icm.cleantv" />
+    </queries>
+
+    <application
+        android:banner="@drawable/banner_tv"
+        android:label="TiviKit"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.TvSach"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+        <!-- Kết quả cài bản mới từ PackageInstaller (CapNhat.cai). -->
+        <receiver android:name=".KetQuaCai" android:exported="false" />
+    </application>
+</manifest>

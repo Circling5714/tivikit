@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ten_app">Timer (TiviKit)</string>
+    <string name="mo_ta">Turns the TV on and off and opens apps on the schedule set in TiviKit. Doesn\'t read the screen or catch remote keys.</string>
+    <string name="bao_tat">The TV turns off in %1$d seconds</string>
+    <string name="hoan_30">Snooze 30 min</string>
+    <string name="tat_ngay">Turn off now</string>
+    <string name="da_danh_thuc">Timer: the TV turned itself on (test).</string>
+</resources>

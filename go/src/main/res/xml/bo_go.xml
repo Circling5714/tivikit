@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bộ gõ không có ngôn ngữ / bàn phím riêng: chỉ đưa chữ TiviKit gửi vào ô nhập. -->
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:supportsSwitchingToNextInputMethod="false" />

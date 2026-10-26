@@ -1,0 +1,16 @@
+-keep class io.github.muntashirakon.adb.** { *; }
+-keep class org.conscrypt.** { *; }
+-keep class org.bouncycastle.** { *; }
+# JSch nạp thuật toán mã hoá theo tên lớp (Class.forName): giữ nguyên cả gói. Các thư viện tuỳ chọn của nó không dùng.
+-keep class com.jcraft.jsch.** { *; }
+-dontwarn com.jcraft.jsch.**
+-dontwarn org.apache.logging.log4j.**
+-dontwarn org.slf4j.**
+-dontwarn com.sun.jna.**
+-dontwarn org.newsclub.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn javax.naming.**
+-dontwarn com.android.org.conscrypt.**
+-dontwarn org.apache.harmony.xnet.provider.jsse.**
+-dontwarn sun.security.**
