@@ -100,7 +100,8 @@ object GoiY {
             "Viettel TV: VTV, HTV, local channels, films, sport (works with Quick channel).", Nhom.VIET, "com.viettel.tv360.tv"),
         play("fptplay", "FPT Play", "Truyền hình, phim, thể thao của FPT.", "FPT's TV channels, films and sport.", Nhom.VIET, "net.fptplay.ottbox"),
         play("vieon", "VieON", "Phim bộ, show, truyền hình của Vie Channel.", "Series, shows and TV from Vie Channel.", Nhom.VIET, "com.vieon.tv"),
-        play("vtvgo", "VTVgo", "Xem trực tiếp các kênh VTV miễn phí.", "Watch the VTV channels live for free.", Nhom.VIET, "vn.vtv.vtvgo"),
+        // Bản cho tivi (vn.vtv.vtvgotv, "VTVgo … cho TV"); vn.vtv.vtvgo là bản điện thoại. Ô kênh trên Home sạch mở bản này.
+        play("vtvgo", "VTVgo", "Xem trực tiếp các kênh VTV miễn phí (dùng với ô kênh trên Home sạch).", "Watch the VTV channels live for free (works with Home channel tiles).", Nhom.VIET, "vn.vtv.vtvgotv"),
         play("kplus", "K+", "Bóng đá, phim, thể thao của K+ (cần gói K+).", "K+ football, films and sport (needs a K+ plan).", Nhom.VIET, "com.irdeto.kplus"),
 
         // ---------- Anime, phim châu Á có bản quyền (CH Play) ----------

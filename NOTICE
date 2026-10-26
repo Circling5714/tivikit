@@ -1,12 +1,14 @@
 TiviKit includes or builds on the following third-party work.
 
 1. CleanTV 2.8.2 by VGS (Vietnam Gaming Setup) / AlexVGS: TiviKit is a modified version of
-   this app. https://github.com/vgscity/vgs-cleantv
+   this app, with later CleanTV fixes ported up to 3.0.0 (including its launcher patch,
+   patches/launcher-vgs.patch). https://github.com/vgscity/vgs-cleantv
    MIT License, full text in LICENSE. The names "CleanTV" and "VGS", the VGS and CleanTV logos
    and the VGS wallpaper are not covered by that licence (see the end of LICENSE).
 
-2. CleanYourTV — the clean Home launcher (built from upstream + patches/launcher-vgs.patch
-   into app/src/main/assets/tvhome.apk) and the TV debloat lists
+2. CleanYourTV — the clean Home launcher 3.0 (built from the upstream commit in
+   app/src/main/assets/upstream-commit.txt + patches/launcher-vgs.patch into
+   app/src/main/assets/tvhome.apk and tvhome-xiaomi.apk) and the TV debloat lists
    (app/src/main/assets/du-lieu.json). https://github.com/Gathin23/cleanyourtv
    MIT License
 
@@ -47,12 +49,15 @@ TiviKit includes or builds on the following third-party work.
 11. LG webOS protocol details from aiowebostv (Home Assistant, Apache License 2.0,
     https://github.com/home-assistant-libs/aiowebostv) and LGWebOSRemote (MIT,
     https://github.com/klattimer/LGWebOSRemote).
-12. Weather data by Open-Meteo.com — CC BY 4.0. https://open-meteo.com
+12. Weather data and place search by Open-Meteo.com — CC BY 4.0. https://open-meteo.com
 13. Optional ad-blocking DNS: AdGuard DNS (dns.adguard-dns.com) and NextDNS (dns.nextdns.io),
     public services; no code included.
 14. LG TV Vibehack (hoangvya19) — MIT License. Not bundled: the LG mode downloads its installer
     (pinned to v1.2.0) onto a rooted LG TV when the user installs it.
     https://github.com/hoangvya19/lg-tv-webos-vibehack
+15. TV channel tiles: the channel list and pictures are fetched at run time from VTVgo's public
+    API (api.vtvdigital.org). VTV, VTVgo and the channel logos belong to Vietnam Television;
+    no logo is bundled with TiviKit.
 
 The full licence texts shown inside the app are in app/src/main/assets/giay-phep.txt.
 

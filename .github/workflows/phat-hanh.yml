@@ -86,6 +86,11 @@ jobs:
           "$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | tee "$RUNNER_TEMP/ky.txt"
           grep -q "SHA-256 digest: ec4c282ecefa87e7e959d44de052ccb047a8164c383ff39341d910d85af6f653" "$RUNNER_TEMP/ky.txt" \
             || { echo "APK không ký bằng khoá TiviKit: máy đã cài sẽ không cập nhật được, dừng."; exit 1; }
+          # Home sạch đi kèm (scripts/dung-launcher.sh) cũng ký khoá TiviKit: khoá khác thì mỗi lần cập nhật tivi phải gỡ Home sạch.
+          for f in app/src/main/assets/tvhome.apk app/src/main/assets/tvhome-xiaomi.apk; do
+            "$APKSIGNER" verify --print-certs "$f" | grep -q "SHA-256 digest: ec4c282ecefa87e7e959d44de052ccb047a8164c383ff39341d910d85af6f653" \
+              || { echo "$f không ký bằng khoá TiviKit, dừng."; exit 1; }
+          done
 
       - name: Đóng gói
         env:

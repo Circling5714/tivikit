@@ -74,7 +74,7 @@
 {
 "khoa": "launch_actions",
 "kieu": "ds",
-"moTa": "Tiles that open a screen of the app instead of its start screen; an action that no longer resolves opens the app normally (MagentaTV's guide: com.telekom.onetv.tv.pl=com.telekom.onetv.tv.pl.action.PROGRAM_GUIDE)",
+"moTa": "Tiles and top_bar_apps buttons that open a screen of the app instead of its start screen; an action that no longer resolves opens the app normally (MagentaTV's guide: com.telekom.onetv.tv.pl=com.telekom.onetv.tv.pl.action.PROGRAM_GUIDE)",
 "canThan": true,
 "ten": "Mở thẳng một màn của app",
 "moTaVi": "Bấm ô app là mở thẳng một màn bên trong app thay vì màn đầu (ví dụ mở thẳng lịch phát sóng). Lệnh không còn chạy thì mở app như thường."
@@ -110,6 +110,14 @@
 "canThan": true,
 "ten": "Kiểu địa chỉ cổng HDMI/AV",
 "moTaVi": "Kiểu địa chỉ dùng khi mở cổng HDMI/AV thay cho content:// (YaOS: live-tv)."
+},
+{
+"khoa": "input_sources",
+"kieu": "ds",
+"moTa": "Vendor source numbers for the Inputs menu, HW<n>=<number> by the input id's last part; a mapped input opens by sending input_action with the number as the int extra input, and HW<n>=- leaves a port the set doesn't have out of the menu. Xiaomi/Redmi China firmware: [redmi-mitv-mftp0](../examples/redmi-mitv-mftp0/)",
+"canThan": false,
+"ten": "Bảng số nguồn HDMI/AV",
+"moTaVi": "Ghép mỗi cổng vào (ví dụ HW5=23) với số nguồn của hãng; HW8=- để ẩn cổng tivi không có. Chỉ dùng cho firmware cần (Xiaomi bản Trung Quốc)."
 },
 {
 "khoa": "columns",
@@ -230,6 +238,14 @@
 "moTaVi": "Khi dùng nút tròn chỉ có biểu tượng: vẫn hiện tên mạng Wi-Fi tới độ rộng này (dp), dài quá thì cắt. 0 là chỉ còn biểu tượng."
 },
 {
+"khoa": "show_library_pill",
+"kieu": "bool",
+"moTa": "The App library pill after the last Home row (true by default); false hides it while library_button is on, so the top-bar button stays the way in and Down from the last row stays put, as with app_library off",
+"canThan": false,
+"ten": "Viên Thư viện cuối hàng app",
+"moTaVi": "Viên \"Thư viện ứng dụng\" sau hàng app cuối (mặc định bật). Tắt thì chỉ còn nút thư viện trên thanh trên cùng (cần bật nút đó)."
+},
+{
 "khoa": "wallpaper_true_color",
 "kieu": "bool",
 "moTa": "Decode wallpapers in 32-bit colour (8 MB at 1080p) instead of RGB_565 (4 MB), which bands dark gradients such as a night sky; for TVs with 2 GB or more (false by default)",
@@ -252,6 +268,14 @@
 "canThan": false,
 "ten": "Chọn app Home trong Thư viện",
 "moTaVi": "Trong Thư viện app, bấm OK để tích / bỏ tích app hiện ở Home; app đã tích xếp trước. Cần bật Thư viện app."
+},
+{
+"khoa": "library_ok_opens",
+"kieu": "bool",
+"moTa": "OK opens every app in the library, not only the ones on Home, for a library that holds the apps hidden_apps keeps off Home; holding OK still offers Add to Home, and cards drop their \"Add to Home\" line. Requires app_library; app_library_selection wins when both are on; false by default",
+"canThan": false,
+"ten": "Bấm OK trong thư viện là mở app",
+"moTaVi": "Trong Thư viện ứng dụng, bấm OK là mở luôn app thay vì đánh dấu thêm / bớt khỏi Home (mặc định tắt)."
 },
 {
 "khoa": "library_apps",
@@ -278,6 +302,22 @@
 "canThan": false,
 "ten": "Múi giờ tính âm lịch",
 "moTaVi": "Số giờ lệch UTC dùng để tính âm lịch: 7 là lịch Việt Nam, 8 là lịch Trung Quốc; thỉnh thoảng lệch nhau một ngày. Để trống: 7 khi tivi tiếng Việt, 8 khi khác."
+},
+{
+"khoa": "date_below_clock",
+"kieu": "bool",
+"moTa": "The date (with the Shamsi and lunar lines) on its own line under the clock instead of beside it, for a top bar whose pills leave the date too little room (false by default)",
+"canThan": false,
+"ten": "Ngày nằm dưới đồng hồ",
+"moTaVi": "Ngày (kèm âm lịch) xuống dòng riêng dưới đồng hồ thay vì đứng bên cạnh, hợp khi thanh trên cùng có nhiều nút (mặc định tắt)."
+},
+{
+"khoa": "locale",
+"kieu": "chu",
+"moTa": "The language the launcher shows itself in, as a language tag (\"vi\", \"pt-BR\"), instead of the TV's: for firmware with no menu entry for a language the launcher speaks (a China-market Xiaomi offers Chinese and English only). Empty by default, which follows the TV",
+"canThan": false,
+"ten": "Ngôn ngữ của Home sạch",
+"moTaVi": "Mã ngôn ngữ (vi, en…) cho riêng Home sạch, dùng khi tivi không có ngôn ngữ đó trong cài đặt. Để trống là theo tivi."
 },
 {
 "khoa": "show_greeting",
@@ -334,6 +374,14 @@
 "canThan": true,
 "ten": "App VPN",
 "moTaVi": "App mà nút mạng mở khi tivi có cài VPN; hiện thêm nhãn đỏ \"VPN off\" khi VPN chưa bật."
+},
+{
+"khoa": "vpn_pill",
+"kieu": "bool",
+"moTa": "The VPN as its own pill after the network pill instead of a badge inside it: solid green while a VPN is up, solid red \"VPN off\" while none is and vpn_app is installed, hidden otherwise. Pressing it opens vpn_app (without it, the App library, or VPN settings with app_library off); it keeps its label with icon_only_buttons; the network pill then opens Wi-Fi settings. Ignored with top_menu. A VPN app",
+"canThan": false,
+"ten": "Nút VPN riêng",
+"moTaVi": "VPN thành một nút riêng cạnh nút mạng: xanh khi đang bật, đỏ \"VPN off\" khi tắt mà có app VPN. Bấm để mở app VPN."
 },
 {
 "khoa": "animations",
@@ -425,7 +473,7 @@
 "moTa": "Hold OK or press the remote's Menu key on a tile to open a small menu: Move, Remove from Home (with app_library) and App info. false (the default) keeps holding OK as a shortcut to the app's App info page and leaves Menu unchanged",
 "canThan": false,
 "ten": "Giữ OK để mở menu app",
-"moTaVi": "Giữ OK trên một app: menu Di chuyển, Thêm vào dock / Thay app khác, Bỏ khỏi Home, Thông tin app. CleanTV bật sẵn; tắt thì giữ OK mở thẳng trang Thông tin app."
+"moTaVi": "Giữ OK trên một app: menu Di chuyển, Thêm vào dock / Thay app khác, Bỏ khỏi Home, Thông tin app. TiviKit bật sẵn; tắt thì giữ OK mở thẳng trang Thông tin app."
 },
 {
 "khoa": "festival",
@@ -510,7 +558,7 @@
 {
 "khoa": "gamepad_passthrough",
 "kieu": "bool",
-"moTa": "true makes the key helpers stop filtering keys while a game controller is connected, so games see its buttons (Steam Link with an Xbox controller); the remote buttons above do nothing until it disconnects. Needs key_filter on. A voice remote that reports a joystick does not count. Off by default",
+"moTa": "true makes the key helpers stop filtering keys while a game controller is connected, so games see its buttons (Steam Link with an Xbox controller, Moonlight with two controllers); the remote buttons above do nothing until it disconnects. Needs key_filter on. A voice remote that reports a joystick does not count. Off by default",
 "canThan": false,
 "ten": "Nhường phím cho tay cầm game",
 "moTaVi": "Bật thì khi có tay cầm game kết nối, dịch vụ bắt phím của Home sạch ngừng lọc phím để game nhận đủ nút (vd Steam Link với tay Xbox); các nút remote gán sẵn tạm không chạy tới khi rút tay cầm. Cần bật key_filter. Mặc định tắt."
@@ -530,6 +578,30 @@
 "canThan": true,
 "ten": "Chặn Home gốc tự bật lại",
 "moTaVi": "Tên gói Home gốc của hãng. Nếu phần mềm tivi tự bật lại Home gốc (như XGIMI), màn đó bị chuyển ngay về Home sạch."
+},
+{
+"khoa": "power_on_home",
+"kieu": "bool",
+"moTa": "For firmware that opens the Live TV app (live_tv_package) by itself at every power-on (Changhong / Homwee): until the first key press after boot or screen-on, that Live TV window is sent back to Home (HOME_KEY_SERVICE=1). Ignored with boot_to_live_tv, or with Live TV as the Open on start app. Off by default",
+"canThan": false,
+"ten": "Về Home khi bật tivi",
+"moTaVi": "Tivi tự mở Live TV / kênh truyền hình mỗi khi bật nguồn thì Home sạch đưa về màn Home (mặc định tắt)."
+},
+{
+"khoa": "home_long_press_home",
+"kieu": "bool",
+"moTa": "Every Home press opens Home, a held one too. Android turns a Home press held past 400 ms into ALL_APPS for the system-image launcher, which nothing answers once the stock launcher is disabled, so a firm press on a slow remote did nothing (Philips TPM191E, Android 12, where long_press_timeout does not move that limit). Needs key_filter (HOME_KEY_SERVICE=1), so held keys such as Volume Up/Down stop ",
+"canThan": false,
+"ten": "Giữ nút Home vẫn về Home",
+"moTaVi": "Bấm giữ nút Home cũng về Home sạch (remote bấm chậm trên Philips không làm gì). Cần lọc phím, nên giữ nút âm lượng có thể chỉ nhảy một nấc."
+},
+{
+"khoa": "power_on_home_always",
+"kieu": "bool",
+"moTa": "Home at every power-on, whatever the TV put in front: the last HDMI input, Live TV or an app, for TVs that come back to the last source (Philips). Unlike power_on_home, it does not wait for a window to show: the Home screen comes up about a second after the screen turns on (HOME_KEY_SERVICE=1). A key pressed before that wins. Ignored with boot_to_live_tv, or with an Open on start app. Off by defau",
+"canThan": false,
+"ten": "Bật tivi luôn về Home",
+"moTaVi": "Mỗi lần bật tivi đều về Home sạch, dù tivi mở lại HDMI, truyền hình hay app cũ. Bấm phím trước đó thì thôi. Không chạy khi đã chọn app mở lúc bật."
 },
 {
 "khoa": "clock_wallpaper",
@@ -624,6 +696,14 @@
 "canThan": false,
 "ten": "Viền dải dock đều",
 "moTaVi": "Khoảng cách từ mép dải dock tới các ô bằng khoảng cách giữa các ô, đều cả bốn phía (mặc định tắt)."
+},
+{
+"khoa": "dock_band",
+"kieu": "bool",
+"moTa": "Draw the dock band and its edge (true by default); false leaves the tiles floating on the wallpaper with no band, border or dark slab",
+"canThan": false,
+"ten": "Dải nền sau dock",
+"moTaVi": "Vẽ dải nền và viền sau hàng dock (mặc định bật). Tắt thì ô app nằm thẳng trên hình nền."
 },
 {
 "khoa": "single_row",

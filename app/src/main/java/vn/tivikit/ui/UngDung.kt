@@ -2,6 +2,7 @@ package vn.tivikit.ui
 
 import vn.tivikit.dulieu.GoiApk
 import vn.tivikit.dulieu.KeHoach
+import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.XaPhuong
 import androidx.compose.foundation.layout.Row
 import vn.tivikit.AnhTivi
@@ -967,6 +968,29 @@ private fun TheHomeNoiDung(vm: PhienLamViec) {
             }
         }
     }
+    if (vm.moChonKenh) HopChonKenh(vm)
+    The(t("Kênh truyền hình trên màn chính", "TV channels on Home"), Icons.Rounded.LiveTv) {
+        if (vm.coVtvGo) {
+            Phu(t("Chọn kênh nào thì kênh đó thành một ô ở đầu dock. Bấm vào là xem luôn kênh đó trên VTVgo, ông bà khỏi phải tìm.",
+                "Pick channels: each becomes a tile at the start of the dock that opens the channel straight in VTVgo."))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KenhVtvGo.VTV.forEach { (ten, ma, _) -> ChonChip(ten, vm.coKenh(ma)) { vm.batTatKenh(ten, ma) } }
+            }
+            // Kênh khác (địa phương, VTVcab…) đã chọn từ hộp danh sách: hiện riêng để bỏ chọn được.
+            val khac = vm.kenhChon.filter { (_, ma) -> KenhVtvGo.VTV.none { it.second == ma } }
+            if (khac.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                khac.forEach { (ten, ma) -> ChonChip(ten, true) { vm.batTatKenh(ten, ma) } }
+            }
+            NutPhu(t("Thêm kênh khác trên VTVgo (địa phương, VTVcab…)", "More VTVgo channels (local, VTVcab…)"), Icons.Rounded.Search) { vm.moHopKenh() }
+            if (vm.kenhChon.size >= KenhVtvGo.TOI_DA) Phu(t("Tối đa ${KenhVtvGo.TOI_DA} kênh.", "Up to ${KenhVtvGo.TOI_DA} channels."))
+            Phu(t("Ảnh ô kênh tải từ VTVgo lúc Áp dụng; không tải được thì ô hiện tên kênh.", "Tile pictures come from VTVgo when you apply; without them the tile shows the channel name."))
+        } else {
+            Phu(t("Cần app VTVgo bản tivi: cài từ CH Play của tivi, mở một lần, rồi kết nối lại TiviKit.",
+                "Needs the VTVgo app for TV: install it from the TV's Play Store, open it once, then reconnect TiviKit."))
+            NutPhu(t("Mở VTVgo trên CH Play của tivi", "Open VTVgo in the TV's Play Store"), Icons.Rounded.Shop) { vm.moVtvGoChPlay() }
+            if (vm.baoVtvGo.isNotEmpty()) Phu(vm.baoVtvGo, Xanh)
+        }
+    }
     The(t("Thời tiết", "Weather"), Icons.Rounded.WbSunny) {
         OutlinedTextField(vm.timXa, { vm.doiTimXa(it) }, label = { Text(t("Tìm phường / xã hoặc thành phố", "Find your ward or city")) },
             placeholder = { Text(t("vd: Bến Thành, Cửa Lò, Bali, Osaka", "e.g. Ben Thanh, Bali, Osaka")) },
@@ -1025,6 +1049,12 @@ private fun TheTuyChinh(vm: PhienLamViec) {
             }
         }
         Hang(t("Mở một app khi bật tivi", "Open an app at power-on"), t("Bật, Áp dụng lên tivi, rồi bấm nút bên dưới để chọn app ngay trên tivi", "Turn on, apply to the TV, then use the button below to pick the app on the TV"), vm.moKhiBat) { vm.moKhiBat = it }
+        Hang(t("Luôn mở Home sạch khi bật tivi", "Always open the clean Home at power-on"),
+            t("Cho tivi tự mở lại Home gốc, HDMI hay app cũ mỗi lần bật: khoảng 1 giây sau Home sạch hiện lên", "For TVs that come back to the stock Home, HDMI or the last app: the clean Home comes up a second after power-on"),
+            vm.luonVeHome) { vm.luonVeHome = it }
+        if (vm.moKhiBat) Hang(t("Cả khi bật lại từ chế độ chờ", "Also when waking from standby"),
+            t("Bấm nút nguồn remote để bật là mở app luôn, không chỉ lúc khởi động lại tivi", "Turning the TV on with the remote opens the app too, not only after a restart"),
+            vm.moKhiThuc) { vm.moKhiThuc = it }
         if (vm.moKhiBat) NutPhu(t("Mở màn chọn app trên tivi", "Open the app picker on the TV"), Icons.Rounded.Tv) { vm.moChonAppKhiBat() }
         if (vm.moKhiBat && vm.baoChonApp.isNotEmpty()) Phu(vm.baoChonApp, Xanh)
         Hang(t("Nút Đang phát", "Now playing button"), t("Hiện khi có app đang phát nhạc / video: tạm dừng từng app hay dừng tất cả", "Shows while apps play: pause each or stop them all"), vm.nutDangPhat) { vm.nutDangPhat = it }
@@ -1508,6 +1538,47 @@ private fun TheMayChieu(vm: PhienLamViec) {
 }
 
 /** Hộp chọn tay một mẫu trong toàn bộ danh sách, có ô tìm (23/10/2026). */
+/** Chọn kênh VTVgo bất kỳ (CleanTV 3.0.0): danh sách từ API của VTVgo, nhóm theo gói, tìm theo tên không dấu. */
+@Composable
+private fun HopChonKenh(vm: PhienLamViec) {
+    var tim by remember { mutableStateOf("") }
+    val khoa = XaPhuong.boDau(tim.trim().lowercase())
+    val ds = remember(khoa, vm.dsKenhGo) {
+        if (khoa.isEmpty()) vm.dsKenhGo else vm.dsKenhGo.filter { k -> khoa.split(" ").all { it in XaPhuong.boDau(k.ten.lowercase()) } }
+    }
+    AlertDialog(
+        onDismissRequest = { vm.moChonKenh = false },
+        confirmButton = { TextButton(onClick = { vm.moChonKenh = false }) { Text(t("Xong", "Done")) } },
+        title = { Text(t("Kênh trên VTVgo", "Channels on VTVgo")) },
+        text = {
+            Column {
+                OutlinedTextField(tim, { tim = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(t("Tìm kênh (vd: vĩnh long, htv9, quảng ngãi)", "Search (e.g. hanoi, vtv5)")) })
+                if (vm.dsKenhGo.isEmpty()) Text(if (vm.dangTaiKenh) t("Đang tải danh sách kênh…", "Loading channels…")
+                    else t("Không tải được danh sách kênh. Kiểm tra mạng của điện thoại rồi mở lại.", "Could not load the channel list. Check the phone's internet and try again."),
+                    fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+                Text(t("Đã chọn ${vm.kenhChon.size}/${KenhVtvGo.TOI_DA} · kênh có ổ khoá cần đăng nhập VTVgo trên tivi", "${vm.kenhChon.size}/${KenhVtvGo.TOI_DA} picked · locked channels need a VTVgo login on the TV"),
+                    fontSize = 12.sp, color = ChuPhu, modifier = Modifier.padding(vertical = 6.dp))
+                LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    var nhomTruoc = ""
+                    ds.forEach { k ->
+                        if (k.nhom != nhomTruoc) { nhomTruoc = k.nhom; val n = k.nhom; item(key = "n:" + n + k.ma) { Text(n, fontSize = 12.sp, color = Nhan, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) } }
+                        item(key = k.nhom + k.ma) {
+                            val chon = vm.coKenh(k.ma)
+                            Row(Modifier.fillMaxWidth().clickable { vm.batTatKenh(k.tenO, k.ma) }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (chon) Icons.Rounded.CheckCircle else Icons.Rounded.AddCircleOutline, null, tint = if (chon) Xanh else ChuPhu, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Text(k.ten + if (k.canDangNhap) " 🔒" else "", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = The1,
+    )
+}
+
 @Composable
 private fun HopChonMau(vm: PhienLamViec) {
     var tim by remember { mutableStateOf("") }

@@ -1,5 +1,6 @@
 TiviKit — https://github.com/Circling5714/tivikit
-Dựa trên CleanTV 2.8.2 — AlexVGS / Vietnam Gaming Setup, 2026 (MIT, văn bản ở mục A / text in section A).
+Dựa trên CleanTV 2.8.2, kèm các bản sửa đưa về đến CleanTV 3.0.0 / Based on CleanTV 2.8.2 with fixes up to 3.0.0
+— AlexVGS / Vietnam Gaming Setup, 2026 (MIT, văn bản ở mục A / text in section A).
 https://github.com/vgscity/vgs-cleantv
 Phần mềm miễn phí, cung cấp nguyên trạng, không kèm bảo hành. / Free software, provided "as is", without warranty.
 
@@ -10,7 +11,8 @@ bản mới từ đó và kiểm tra mã SHA-256 trước khi cài; không gửi
 Tắt tự cài ở mục Cập nhật TiviKit. Ngoài ra app chỉ nói chuyện với tivi trong mạng nhà bạn (ADB qua Wi-Fi; tivi LG
 qua giao thức điều khiển của LG), trừ khi bạn tự bấm tải app từ đường link hoặc Gợi ý app: khi đó điện thoại tải file
 từ đúng địa chỉ đó (GitHub, videolan.org, kodi.tv…) như tải bằng trình duyệt. Ô tìm nơi xem thời tiết, khi gõ tên
-ít khớp phường/xã trong nước, hỏi thêm dịch vụ tìm địa danh của Open-Meteo (chỉ gửi chữ bạn gõ). Trên tivi, Home sạch
+ít khớp phường/xã trong nước, hỏi thêm dịch vụ tìm địa danh của Open-Meteo (chỉ gửi chữ bạn gõ). Chọn ô kênh truyền
+hình thì điện thoại tải danh sách kênh và ảnh kênh từ VTVgo (api.vtvdigital.org). Trên tivi, Home sạch
 tự lấy thời tiết từ Open-Meteo; chọn DNS chặn quảng cáo (AdGuard, NextDNS hay máy chủ bạn nhập) thì tivi gửi truy vấn
 tên miền tới nhà cung cấp đó.
 TiviKit sends nothing to any server: no anonymous stats, no package-list button. To update itself, the app asks
@@ -20,13 +22,15 @@ website). Turn auto-install off under TiviKit updates. Otherwise the app only ta
 (ADB over Wi-Fi; LG TVs over LG's remote-control protocol), except when you download an app from a link or the
 suggestions: the phone then fetches the file from that address (GitHub, videolan.org, kodi.tv…), like a browser
 would. The weather place search asks Open-Meteo's geocoding service when few Vietnamese wards match (only the text
-you typed is sent). On the TV, the clean Home gets its weather from Open-Meteo; with an ad-blocking DNS (AdGuard,
+you typed is sent). Picking TV channel tiles makes the phone fetch the channel list and pictures from VTVgo
+(api.vtvdigital.org). On the TV, the clean Home gets its weather from Open-Meteo; with an ad-blocking DNS (AdGuard,
 NextDNS or your own server) the TV sends its DNS lookups to that provider.
 
 TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the following open-source software.
 
-1. CleanYourTV — danh sách 316 mẫu tivi và màn Home sạch (launcher), có sửa thêm dòng thời tiết
-   và tuỳ chọn ẩn dải dock / TV lists and the clean Home launcher, modified (weather line, dock band option)
+1. CleanYourTV — danh sách 316 mẫu tivi và màn Home sạch (launcher 3.0), có sửa thêm theo bản vá của CleanTV
+   (dòng thời tiết, ô kênh truyền hình, mở app khi bật từ chế độ chờ…) / TV lists and the clean Home launcher 3.0,
+   modified with CleanTV's patches (weather line, TV channel tiles, open an app when waking from standby…)
    https://github.com/Gathin23/cleanyourtv — MIT License (văn bản ở mục A / text in section A)
 2. LibADB Android — Muntashir Al-Islam — https://github.com/MuntashirAkon/libadb-android
    Apache License 2.0 (mục B / section B)
@@ -52,6 +56,9 @@ TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the followi
 
 Tên các hãng tivi chỉ dùng để nói tivi nào chạy được; TiviKit không liên quan tới các hãng đó.
 TV brand names are only used to describe compatibility; TiviKit is not affiliated with them.
+VTV, VTVgo và logo các kênh thuộc Đài Truyền hình Việt Nam; TiviKit không đóng sẵn logo nào, ô kênh dùng ảnh của VTVgo
+tải lúc bạn chọn. / VTV, VTVgo and the channel logos belong to Vietnam Television; TiviKit bundles none of them, the
+channel tiles use VTVgo's own pictures fetched when you pick them.
 
 ======================================================================
 A. MIT License (CleanTV, CleanYourTV)

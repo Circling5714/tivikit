@@ -98,7 +98,7 @@ index 00000000..b1477aae
 +FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 +OTHER DEALINGS IN THE FONT SOFTWARE.
 diff --git a/launcher/app/src/main/AndroidManifest.xml b/launcher/app/src/main/AndroidManifest.xml
-index 5da0f46a..6872943c 100644
+index 701b5feb..05be9b5e 100644
 --- a/launcher/app/src/main/AndroidManifest.xml
 +++ b/launcher/app/src/main/AndroidManifest.xml
 @@ -8,6 +8,8 @@
@@ -141,10 +141,44 @@ index 5da0f46a..6872943c 100644
              android:name=".ClockDream"
              android:label="@string/dream_name"
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java b/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
-index e208aa82..3e1ab40d 100644
+index 3632d74b..960a3838 100644
 --- a/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/AppAdapter.java
-@@ -479,6 +479,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -64,7 +64,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+     }
+ 
+     static final class Entry {
+-        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3;
++        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3, LINK = 4;
+ 
+         final int kind;
+         final String label;
+@@ -78,6 +78,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+         int ambient;
+         /** uniform_tiles card fill, top and bottom colour; null until sampled from the icon. */
+         int[] backdrop;
++        /** CleanTV/VGS: for a LINK tile, the link and the app that opens it (LinkTiles). */
++        String uri, target;
+ 
+         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
+             this(APP, label, component, banner, icon, null, 0);
+@@ -306,6 +308,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+                 fresh.add(new Entry(label, component, banner, icon));
+             }
+         }
++        // CleanTV/VGS: link tiles (a TV channel straight in VTVgo…), placed by dock_apps like any app.
++        for (LinkTiles.Link l : LinkTiles.load(ctx)) {
++            if (hidden.contains(l.pkg) || removed.contains(l.pkg)) continue;
++            Entry link = new Entry(Entry.LINK, l.label, new ComponentName(l.pkg, "link"), l.picture != null ? l.picture : new LinkTiles.Face(l.label, l.color),
++                    null, null, l.color);
++            link.uri = l.uri;
++            link.target = l.target;
++            fresh.add(link);
++        }
+         Collections.sort(fresh, (a, b) -> {
+             // The owner's own order first; tiles it does not know (new installs) follow by the rule below.
+             int saved = Order.compare(savedRanks, a.component.flattenToShortString(), b.component.flattenToShortString());
+@@ -489,6 +500,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
              h.icon.setVisibility(View.VISIBLE);
              h.label.setText(e.label);
              h.label.setVisibility(uniformTiles ? View.GONE : View.VISIBLE);
@@ -158,7 +192,49 @@ index e208aa82..3e1ab40d 100644
          }
          h.card.setOnClickListener(v -> launch(e));
          h.card.setOnLongClickListener(v -> {
-@@ -799,6 +806,23 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+@@ -497,7 +515,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+                 if (pos != RecyclerView.NO_POSITION) listener.onTileLongPress(pos, v);
+                 return true;
+             }
+-            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
++            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + (e.target != null ? e.target : e.pkg)));
+             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+             try {
+                 ctx.startActivity(i);
+@@ -509,6 +527,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+ 
+     /** Opens the tile's activity by explicit component, with no extras: a card can name nothing else. */
+     private void launch(Entry e) {
++        if (e.kind == Entry.LINK) {
++            launchLink(e);
++            return;
++        }
+         if (e.kind == Entry.HOME_SETTINGS) {
+             ctx.startActivity(new Intent(ctx, HomeSettingsActivity.class)
+                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+@@ -538,6 +560,21 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+         }
+     }
+ 
++    /** CleanTV/VGS: open a link tile in its app; if the app no longer takes the link, open the app itself. */
++    private void launchLink(Entry e) {
++        Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse(e.uri)).setPackage(e.target)
++                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++        PackageManager pm = ctx.getPackageManager();
++        Intent open = pm.resolveActivity(view, 0) != null ? view : pm.getLeanbackLaunchIntentForPackage(e.target);
++        if (open == null) open = pm.getLaunchIntentForPackage(e.target);
++        try {
++            if (open == null) throw new ActivityNotFoundException();
++            ctx.startActivity(open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++        } catch (Exception ex) {
++            Toast.makeText(ctx, ctx.getString(R.string.cant_open, e.label), Toast.LENGTH_SHORT).show();
++        }
++    }
++
+     @Override
+     public int getItemCount() {
+         return items.size() + (showLibrary ? 1 : 0);
+@@ -809,6 +846,23 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
          return Math.max(0, Math.min(255, Math.round(v)));
      }
  
@@ -183,11 +259,21 @@ index e208aa82..3e1ab40d 100644
          if (live == null) return 0xFF444444;
          // Draw a private copy: changing the bounds of the drawable an ImageView shows would blank the tile.
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java b/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
-index f4f1e21c..3567d74b 100644
+index 233f9820..a4b35a06 100644
 --- a/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
-@@ -102,7 +102,11 @@ public class HomeKeyService extends AccessibilityService {
-         super.onDestroy();
+@@ -80,6 +80,9 @@ public class HomeKeyService extends AccessibilityService {
+     private Map<Integer, String> frontAppKeys = Collections.emptyMap();
+     private Map<Integer, String> frontAppScancodes = Collections.emptyMap();
+     private String frontPackage = "";
++    /** CleanTV/VGS: wake_open_app, the Open on start app also at every power-on; homeOnWake, power_on_home_always itself. */
++    private boolean wakeOpenApp, homeOnWake;
++
+     /** power_on_home_always: Home at every power-on, not only over Live TV. */
+     private boolean powerOnAlways;
+     /** power_on_home: re-arms after the screen turns on; null unless the key is on. */
+@@ -181,7 +184,11 @@ public class HomeKeyService extends AccessibilityService {
+         GuardKeep.stepOut(this);
      }
  
 +    /** CleanTV/VGS: config.json all_apps_home (true by default, the stock behaviour). */
@@ -198,7 +284,20 @@ index f4f1e21c..3567d74b 100644
          // Keycodes and the panel choice can also come from a theme; theme.sh restarts this service.
          Config config = Config.load(this);
          // restore_key_services: note that this helper runs, so Home can put it back after a force stop. Here, not
-@@ -170,7 +174,9 @@ public class HomeKeyService extends AccessibilityService {
+@@ -213,6 +220,12 @@ public class HomeKeyService extends AccessibilityService {
+         powerOnLiveTv = config.powerOnHome && !config.bootToLiveTv && !config.liveTvPackage.equals(openOnStart)
+                 ? config.liveTvPackage : "";
+         powerOnAlways = config.powerOnHomeAlways && !config.bootToLiveTv && openOnStart.isEmpty();
++        // CleanTV/VGS: wake_open_app — the Open on start app also opens when the TV wakes from standby, not only after a
++        // reboot (feedback dmenh568, quan1sd1998 25/10/2026: the remote's power key only turns the screen off).
++        // The app is read again at each wake (homeAtPowerOn): the owner picks it on the TV after this service is bound.
++        homeOnWake = powerOnAlways;
++        wakeOpenApp = config.openOnStartChoice && Weather.flag(this, "wake_open_app", false) && !config.bootToLiveTv;
++        if (wakeOpenApp) powerOnAlways = true;
+         if (!powerOnLiveTv.isEmpty() || powerOnAlways) {
+             armPowerOnHome();
+         } else if (screenOnReceiver != null) {
+@@ -286,7 +299,9 @@ public class HomeKeyService extends AccessibilityService {
              redirectHomeKey(event);
              return false;
          }
@@ -206,14 +305,192 @@ index f4f1e21c..3567d74b 100644
 +        // CleanTV/VGS: all_apps_home false leaves KEYCODE_ALL_APPS to the TV (a Sony remote's own Apps key opened this
 +        // launcher like a Back before the key's real action, 24/10/2026). Xiaomi sticks keep it: their Home sends it.
 +        if (event.getKeyCode() != KeyEvent.KEYCODE_ALL_APPS || !allAppsHome) return false;
-         if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
-             Intent home = new Intent(Intent.ACTION_MAIN)
-                     .addCategory(Intent.CATEGORY_HOME)
+         if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
+         return true;
+     }
+@@ -347,7 +362,18 @@ public class HomeKeyService extends AccessibilityService {
+ 
+     /** power_on_home_always: Home, unless a key was pressed since the screen came on (the user has the TV). */
+     private void homeAtPowerOn() {
+-        if (stillArmed(SystemClock.elapsedRealtime(), powerOnUntil)) openHome();
++        if (!stillArmed(SystemClock.elapsedRealtime(), powerOnUntil)) return;
++        String pick = wakeOpenApp ? getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getString(OpenOnStart.KEY, "") : "";
++        Intent app = pick.isEmpty() ? null : OpenOnStart.intent(getPackageManager(), pick);
++        if (app != null) {
++            try {
++                startActivity(app.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++                return;
++            } catch (ActivityNotFoundException | SecurityException gone) {
++                // the app went away: Home instead, as power_on_home_always would
++            }
++        }
++        if (homeOnWake || !pick.isEmpty()) openHome();
+     }
+ 
+     static boolean stillArmed(long now, long armedUntil) {
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java b/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java
+new file mode 100644
+index 00000000..9b2fd8e3
+--- /dev/null
++++ b/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java
+@@ -0,0 +1,152 @@
++package com.gathin.tvhome;
++
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Color;
++import android.graphics.ColorFilter;
++import android.graphics.LinearGradient;
++import android.graphics.Paint;
++import android.graphics.PixelFormat;
++import android.graphics.Rect;
++import android.graphics.Shader;
++import android.graphics.Typeface;
++import android.graphics.drawable.Drawable;
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.InputStream;
++import java.util.ArrayList;
++import java.util.List;
++import org.json.JSONArray;
++import org.json.JSONObject;
++
++/**
++ * CleanTV/VGS: tiles that open a link in another app instead of the app's start screen, e.g. a TV channel straight
++ * in VTVgo (feedback 23/10/2026: "lôi các kênh VTV1, VTV2, VTV3 ra màn chính" for parents). config.json
++ * link_tiles holds "Label|package|uri|#colour" entries. Each tile behaves as an app whose package is
++ * {@link #PREFIX} plus the label in lower case, so dock_apps, the saved order and Remove from Home all work on it. A
++ * kenh-<that suffix>.jpg beside config.json (the channel's logo card) replaces the drawn label.
++ */
++final class LinkTiles {
++    static final String PREFIX = "vgs.kenh.";
++    private static final int MAX = 12;
++
++    static final class Link {
++        final String label, target, uri, pkg;
++        final int color;
++        /** The tile's picture (kenh-<label>.jpg beside config.json, sent by CleanTV), or null to draw the label. */
++        Drawable picture;
++
++        Link(String label, String target, String uri, int color) {
++            this.label = label;
++            this.target = target;
++            this.uri = uri;
++            this.color = color;
++            this.pkg = PREFIX + label.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
++        }
++    }
++
++    private LinkTiles() {
++    }
++
++    /** The link_tiles entries whose target app is installed; bad entries are skipped. */
++    static List<Link> load(Context ctx) {
++        List<Link> out = new ArrayList<>();
++        File dir = Config.dir(ctx);
++        File f = dir != null ? new File(dir, Config.FILE_NAME) : null;
++        if (f == null || !f.isFile() || f.length() > 64 * 1024) return out;
++        try (InputStream in = new FileInputStream(f)) {
++            JSONArray a = new JSONObject(new String(Weather.readAll(in), "UTF-8")).optJSONArray("link_tiles");
++            if (a == null) return out;
++            for (int i = 0; i < a.length() && out.size() < MAX; i++) {
++                String[] p = a.optString(i, "").split("\\|", -1);
++                if (p.length < 3) continue;
++                String label = p[0].trim(), target = p[1].trim(), uri = p[2].trim();
++                if (label.isEmpty() || label.length() > 24 || target.isEmpty() || !uri.contains(":")) continue;
++                int color = 0xFF3A3A44;
++                if (p.length > 3) {
++                    try {
++                        color = Color.parseColor(p[3].trim());
++                    } catch (IllegalArgumentException ignored) {
++                    }
++                }
++                try {
++                    ctx.getPackageManager().getPackageInfo(target, 0);
++                } catch (Exception notInstalled) {
++                    continue;
++                }
++                Link l = new Link(label, target, uri, color | 0xFF000000);
++                File pic = new File(dir, "kenh-" + l.pkg.substring(PREFIX.length()) + ".jpg");
++                if (pic.isFile() && pic.length() < 512 * 1024) {
++                    android.graphics.Bitmap b = android.graphics.BitmapFactory.decodeFile(pic.getPath());
++                    if (b != null) l.picture = new android.graphics.drawable.BitmapDrawable(ctx.getResources(), b);
++                }
++                out.add(l);
++            }
++        } catch (Exception ignored) {
++        }
++        return out;
++    }
++
++    /** The tile face: the label in large bold type on a gradient of the link's colour, filling the whole card. */
++    static final class Face extends Drawable {
++        private final String text;
++        private final int color;
++        private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
++        private final Paint type = new Paint(Paint.ANTI_ALIAS_FLAG);
++
++        Face(String text, int color) {
++            this.text = text;
++            this.color = color;
++            type.setColor(Color.WHITE);
++            type.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
++            type.setTextAlign(Paint.Align.CENTER);
++        }
++
++        @Override
++        protected void onBoundsChange(Rect b) {
++            float[] hsv = new float[3];
++            Color.colorToHSV(color, hsv);
++            hsv[2] *= 0.62f;
++            fill.setShader(new LinearGradient(0, b.top, 0, b.bottom, color, Color.HSVToColor(hsv), Shader.TileMode.CLAMP));
++            float size = b.height() * 0.38f;
++            type.setTextSize(size);
++            // Long labels shrink to fit the card's width with a margin either side.
++            float w = type.measureText(text);
++            if (w > b.width() * 0.84f) type.setTextSize(size * b.width() * 0.84f / w);
++        }
++
++        @Override
++        public void draw(Canvas c) {
++            Rect b = getBounds();
++            c.drawRect(b, fill);
++            Paint.FontMetrics m = type.getFontMetrics();
++            c.drawText(text, b.exactCenterX(), b.exactCenterY() - (m.ascent + m.descent) / 2f, type);
++        }
++
++        @Override
++        public void setAlpha(int alpha) {
++            fill.setAlpha(alpha);
++            type.setAlpha(alpha);
++        }
++
++        @Override
++        public void setColorFilter(ColorFilter cf) {
++            fill.setColorFilter(cf);
++        }
++
++        @Override
++        public int getOpacity() {
++            return PixelFormat.OPAQUE;
++        }
++
++        @Override
++        public int getIntrinsicWidth() {
++            return 320;
++        }
++
++        @Override
++        public int getIntrinsicHeight() {
++            return 180;
++        }
++    }
++}
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java b/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
-index d992768a..c87f1906 100644
+index a5acd794..88ad38cb 100644
 --- a/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java
-@@ -178,6 +178,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -184,6 +184,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      private int wifiIcon;
      /** The pills have been filled in once; later resumes refresh them after the first frame. */
      private boolean pillsShown;
@@ -225,7 +502,7 @@ index d992768a..c87f1906 100644
      private TextView shamsiDate;
      /** lunar_date: the lunisolar date under the date line, and the time zone it is computed for. */
      private TextView lunarDate;
-@@ -189,6 +194,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -195,6 +200,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      private TextView raceKicker, raceHeadline, raceSessions;
      /** config.xml show_stats, overridable by a theme. Off: the line is gone and nothing is read. */
      private boolean showStats;
@@ -238,7 +515,7 @@ index d992768a..c87f1906 100644
      private boolean shamsi;
      /** greeting_name: said after the greeting, which is shown in capitals. */
      private String greetingName = "";
-@@ -363,6 +374,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -375,6 +386,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
              // The pill follows the network callbacks and each return to Home; only the diya's flame follows the
              // signal level, so only it needs this minute's binder calls (about 7 ms on the UI thread).
              if (festive) updateWifiLabel();
@@ -246,7 +523,7 @@ index d992768a..c87f1906 100644
              sky.update();
              wallpaperPlayer.update();
              handler.postDelayed(this, MINUTE_MS);
-@@ -479,6 +491,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -501,6 +513,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
          lunarOffset = Lunar.offsetFor(cfg.lunarUtcOffset, Locale.getDefault());
          if (lunar) lunarDate.setVisibility(View.VISIBLE);
          greetingName = cfg.greetingName;
@@ -259,10 +536,10 @@ index d992768a..c87f1906 100644
 +            date.setPadding(0, (int) (4 * density), 0, 0);
 +            lunarDate.setTextSize(11f);
 +        }
+         if (cfg.dateBelowClock) moveDateBelowClock();
          if (shamsi) {
              shamsiDate.setVisibility(View.VISIBLE);
-             TextView date = findViewById(R.id.date);
-@@ -486,6 +507,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -509,6 +530,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
              lunarDate.setTextSize(11f);
              date.setPadding(0, (int) (4 * density), 0, 0);
          }
@@ -274,19 +551,9 @@ index d992768a..c87f1906 100644
 +            phongChu(stats, coChu / 100f);
 +        }
          vpnApp = cfg.vpnApp;
-         moduleCards = cfg.moduleCards;
-         hiddenApps = new HashSet<>(cfg.hiddenApps);
-@@ -563,7 +591,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
-             public void onChildViewDetachedFromWindow(@NonNull View v) {
-             }
-         });
--        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding,
-+        // CleanTV/VGS: dock_band false keeps the dock row and its big title but drops the dark band behind it.
-+        if (dockRow && Weather.flag(this, "dock_band", true)) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding,
-                 singleRow, cfg.dockBandAll));
-         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
-         // Reduced motion: the tiles are simply there, with no entrance (reloadApps skips it there too).
-@@ -581,6 +610,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+         vpnPill = cfg.vpnPill && !cfg.topMenu;
+         btnVpn = findViewById(R.id.btnVpn);
+@@ -606,6 +634,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
          // tvOS layout: push the dock row towards the bottom of the screen, leaving room for
          // rows_below_dock grid rows under it; the rest of the grid stays below until you press Down.
          int rowsBelowDock = cfg.rowsBelowDock;
@@ -298,7 +565,7 @@ index d992768a..c87f1906 100644
          grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
              int h = b - t;
              // Item height follows the tile size, which follows the columns and the rows that must fit (AppAdapter.tileWidthPx).
-@@ -601,6 +635,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -626,6 +659,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
              // A single row never shows the names under its tiles (the title above the row names the app), so the
              // 7dp gap and 22dp label item_app.xml keeps for them would only lift the row: sit it that much lower.
              if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
@@ -310,7 +577,7 @@ index d992768a..c87f1906 100644
              if (grid.getPaddingTop() != want) {
                  grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
                  // A vertical grid parks the dock on the new padding line by scrolling (onTileFocused); a sideways
-@@ -767,7 +806,34 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -793,8 +831,35 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
              return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
          };
          btnInputs.setOnKeyListener(pillKeys);
@@ -326,6 +593,7 @@ index d992768a..c87f1906 100644
 +            });
 +        }
          btnWifi.setOnKeyListener(pillKeys);
+         btnVpn.setOnKeyListener(pillKeys);
 +        // CleanTV/VGS: screensaver button and the compact icon-only cluster.
 +        View btnDream = findViewById(R.id.btnDream);
 +        if (Weather.flag(this, "dream_button", true)) {
@@ -345,7 +613,7 @@ index d992768a..c87f1906 100644
          btnSettings.setOnKeyListener(pillKeys);
          btnReorder.setOnKeyListener(pillKeys);
          btnLibraryTop.setOnKeyListener(pillKeys);
-@@ -908,6 +974,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -940,6 +1005,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      @Override
      protected void onResume() {
          super.onResume();
@@ -353,7 +621,7 @@ index d992768a..c87f1906 100644
          // A festival that started or ended while Home was in the background: rebuild with or without it.
          if (festive != festival.active(LocalDate.now())) {
              recreate();
-@@ -951,6 +1018,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -983,6 +1049,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
              pillsShown = true;
          }
          if (showStats) startStats();
@@ -361,7 +629,7 @@ index d992768a..c87f1906 100644
          sky.update();
          wallpaperPlayer.start();
          handler.postDelayed(minuteTick, MINUTE_MS);
-@@ -1119,6 +1187,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -1151,6 +1218,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      @Override
      protected void onPause() {
          super.onPause();
@@ -369,7 +637,7 @@ index d992768a..c87f1906 100644
          root.removeCallbacks(showIdleClock);
          endReorder();   // Home or another app while reordering keeps the order so far
          wallpaperPlayer.stop();
-@@ -2002,6 +2071,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -2044,6 +2112,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
          else glass.setAlpha(0f);
      }
  
@@ -400,7 +668,46 @@ index d992768a..c87f1906 100644
      // ---- optional system stats (config.xml show_stats) --------------------------------------------
  
      /** Background reader. Started only while Home is resumed and show_stats is on. */
-@@ -2591,7 +2684,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+@@ -2108,13 +2200,24 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+         // showing a dash that never fills in.
+         StringBuilder line = new StringBuilder();
+         if (cpu >= 0) line.append(getString(R.string.stats_cpu, cpu));
++        // CleanTV/VGS: "RAM 0,8/1,4 GB · ROM 2,6/8 GB", used of total for both (feedback 25/10/2026).
+         long[] mem = memUsedOfTotalMb();
+-        if (mem != null) appendStat(line, getString(R.string.stats_memory, mem[0], mem[1]));
+-        String free = formatGb(getResources(), Environment.getDataDirectory().getFreeSpace());
+-        if (!free.isEmpty()) appendStat(line, getString(R.string.stats_storage, free));
++        if (mem != null) appendStat(line, "RAM " + soGb(mem[0] * 1024L * 1024L) + "/" + soGb(mem[1] * 1024L * 1024L) + " GB");
++        File data = Environment.getDataDirectory();
++        long rom = data.getTotalSpace();
++        if (rom > 0) appendStat(line, "ROM " + soGb(rom - data.getFreeSpace()) + "/" + soGb(rom) + " GB");
+         return StatsText.forLocale(line.toString(), getResources().getConfiguration().getLocales().get(0));
+     }
+ 
++    /** CleanTV/VGS: bytes as GB with one decimal in the TV's language (0,8 in Vietnamese), whole numbers from 10 GB. */
++    private String soGb(long bytes) {
++        double gb = bytes / 1073741824.0;
++        java.text.NumberFormat f = java.text.NumberFormat.getNumberInstance(getResources().getConfiguration().getLocales().get(0));
++        f.setMaximumFractionDigits(gb >= 10 ? 0 : 1);
++        f.setMinimumFractionDigits(0);
++        return f.format(gb);
++    }
++
+     // -1: need another sample. -2: this source cannot be read (Android 9 hides /proc/stat from apps).
+     private static final int CPU_UNREADABLE = -2;
+     private long cpuTotalPrev = -1, cpuIdlePrev = -1;
+@@ -2309,6 +2412,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+             ((LinearLayout.LayoutParams) clockRow.getLayoutParams()).gravity = Gravity.RIGHT;
+         }
+         clockColumn.addView(column, clockColumn.indexOfChild(clockRow) + 1, lp);
++        // CleanTV/VGS: the weather line is match_parent with an ellipsis; in this wrap_content column it was cut to the
++        // date's width and the ward name vanished (feedback 25/10/2026). Let it size to its own text.
++        View weather = findViewById(R.id.weather);
++        if (weather != null) weather.getLayoutParams().width = ViewGroup.LayoutParams.WRAP_CONTENT;
+     }
+ 
+     /** The first top-bar button after Inputs that is shown, in bar order (top_bar_apps, the network pill, ...); Settings is always there. */
+@@ -2670,7 +2777,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
              text = stub || icon == R.drawable.ic_ethernet ? "" : name;
              SpannableString label = new SpannableString(text + " " + badge);
              label.setSpan(span, text.length() + 1, label.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -413,11 +720,14 @@ index d992768a..c87f1906 100644
          } else if (!TextUtils.equals(btnWifi.getText(), text)) {
              btnWifi.setText(text);
          }
-@@ -2806,6 +2903,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
-             if (v.equals("-")) return -1;
-             try { return Integer.parseInt(v); } catch (NumberFormatException e) { return null; }
-         }
-+        return xiaomiSource(inputId);
+@@ -2925,7 +3036,32 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+      *  source number; "HW8=-" leaves that input out of the Inputs menu (a port the board reports but the set
+      *  does not have). Returns the number, -1 for a left-out input, or null when the input is not listed. */
+     private Integer mappedSource(String inputId) {
+-        return InputSources.mapped(inputSources, inputId);
++        Integer mapped = InputSources.mapped(inputSources, inputId);
++        // CleanTV/VGS: Xiaomi China firmware with no input_sources map, see xiaomiSource.
++        return mapped != null || inputId == null ? mapped : xiaomiSource(inputId);
 +    }
 +
 +    /** CleanTV/VGS: Xiaomi China firmware with input_action = tvplayer's EXTSRC_PLAY and no input_sources map
@@ -440,10 +750,11 @@ index d992768a..c87f1906 100644
 +        } catch (RuntimeException e) {
 +            // no label: the standard way
 +        }
-         return null;
++        return null;
      }
  
-@@ -3208,10 +3328,143 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
+     /** Switches to a passthrough input (HDMI, AV). An input mapped in `input_sources` is opened by sending
+@@ -3329,10 +3465,143 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
              panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(220)
                      .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
          }
@@ -700,9 +1011,36 @@ index 00000000..37668a0f
 + */
 +public class NowPlayingListener extends NotificationListenerService {
 +}
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/SystemSettings.java b/launcher/app/src/main/java/com/gathin/tvhome/SystemSettings.java
+index 20eb8e01..0d63d82f 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/SystemSettings.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/SystemSettings.java
+@@ -46,6 +46,7 @@ final class SystemSettings {
+ 
+     /** The TV's App info page for pkg, or null where the firmware has none (CVTE's settings app, #1202). */
+     static Intent appInfo(Context context, String pkg) {
++        if (pkg.startsWith(LinkTiles.PREFIX)) return null;   // CleanTV/VGS: a link tile is not an installed app
+         Intent info = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg));
+         return context.getPackageManager().resolveActivity(info, PackageManager.MATCH_DEFAULT_ONLY) != null ? info : null;
+     }
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/ThemeFiles.java b/launcher/app/src/main/java/com/gathin/tvhome/ThemeFiles.java
+index 18fded94..f6798ffb 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/ThemeFiles.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/ThemeFiles.java
+@@ -17,8 +17,9 @@ final class ThemeFiles {
+         if (segments == null) return null;
+         if (segments.size() == 1) {
+             String name = segments.get(0);
++            // CleanTV/VGS: kenh-<channel>.jpg, the picture of a link tile (LinkTiles).
+             return Config.FILE_NAME.equals(name) || "wallpaper.jpg".equals(name) || "theme_revision".equals(name)
+-                    ? name : null;
++                    || name.matches("kenh-[a-z0-9]{1,24}\\.jpg") ? name : null;
+         }
+         if (segments.size() == 2 && WALLPAPERS.equals(segments.get(0))
+                 && (collectionImage(segments.get(1)) || WallpaperCaptions.FILE_NAME.equals(segments.get(1)))) {
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/Weather.java b/launcher/app/src/main/java/com/gathin/tvhome/Weather.java
 new file mode 100644
-index 00000000..632e128c
+index 00000000..30a276fe
 --- /dev/null
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/Weather.java
 @@ -0,0 +1,157 @@
@@ -855,7 +1193,7 @@ index 00000000..632e128c
 +        return "";
 +    }
 +
-+    private static byte[] readAll(InputStream in) throws java.io.IOException {
++    static byte[] readAll(InputStream in) throws java.io.IOException {
 +        ByteArrayOutputStream out = new ByteArrayOutputStream();
 +        byte[] buf = new byte[8192];
 +        int n;
@@ -5398,7 +5736,7 @@ index 1550b02e..c7b78eaf 100644
          tools:targetApi="28" />
  </font-family>
 diff --git a/launcher/app/src/main/res/layout-iw/activity_main.xml b/launcher/app/src/main/res/layout-iw/activity_main.xml
-index 6b61aa40..70c21fde 100644
+index 8bf804f5..73cdfa41 100644
 --- a/launcher/app/src/main/res/layout-iw/activity_main.xml
 +++ b/launcher/app/src/main/res/layout-iw/activity_main.xml
 @@ -216,7 +216,7 @@
@@ -5411,7 +5749,7 @@ index 6b61aa40..70c21fde 100644
                              android:id="@+id/lunarDate"
                              android:gravity="right"
 diff --git a/launcher/app/src/main/res/layout/activity_main.xml b/launcher/app/src/main/res/layout/activity_main.xml
-index 39805803..a9bbbce8 100644
+index c037d247..4032d586 100644
 --- a/launcher/app/src/main/res/layout/activity_main.xml
 +++ b/launcher/app/src/main/res/layout/activity_main.xml
 @@ -272,7 +272,7 @@
@@ -5462,7 +5800,7 @@ index 39805803..a9bbbce8 100644
                  <TextView
                      android:id="@+id/btnWifi"
                      style="@style/TopButton"
-@@ -346,6 +371,24 @@
+@@ -354,6 +379,24 @@
                      android:drawableStart="@drawable/ic_swap_vert"
                      android:nextFocusDown="@+id/grid" />
  
@@ -5503,10 +5841,10 @@ index 9e58a7d8..00000000
 -    <string name="font_medium" translatable="false">sans-serif-medium</string>
 -</resources>
 diff --git a/launcher/app/src/main/res/values-vi/strings.xml b/launcher/app/src/main/res/values-vi/strings.xml
-index 48609291..77e3e027 100644
+index 4d103378..f1c16d99 100644
 --- a/launcher/app/src/main/res/values-vi/strings.xml
 +++ b/launcher/app/src/main/res/values-vi/strings.xml
-@@ -119,4 +119,14 @@
+@@ -120,4 +120,14 @@
      <string name="race_countdown_days">%1$d ngày %2$d giờ</string>
      <string name="last_opened">Mở lần cuối %1$s</string>
      <string name="tile_move">Di chuyển</string>
@@ -5537,10 +5875,10 @@ index adbb30db..91098f5c 100644
      <string name="font_light" translatable="false">@font/outfit_light</string>
      <string name="font_extralight" translatable="false">@font/outfit_extralight</string>
 diff --git a/launcher/app/src/main/res/values/strings.xml b/launcher/app/src/main/res/values/strings.xml
-index ad90112f..8cee5352 100644
+index 635bced9..964c6db2 100644
 --- a/launcher/app/src/main/res/values/strings.xml
 +++ b/launcher/app/src/main/res/values/strings.xml
-@@ -148,4 +148,11 @@
+@@ -151,4 +151,11 @@
      <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
           last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
      <string name="last_opened">Last opened %1$s</string>

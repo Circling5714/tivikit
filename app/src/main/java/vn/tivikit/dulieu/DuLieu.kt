@@ -191,6 +191,7 @@ val TEN_APP = mapOf(
     "com.fptplay.galaxyplay" to "Galaxy Play",
     "com.vtvcab.on" to "VTVcab ON",
     "vn.vtv.vtvgo" to "VTVgo",
+    "vn.vtv.vtvgotv" to "VTVgo",
     "com.kplus.tv" to "K+",
     "com.clip.tv" to "Clip TV",
     "org.xbmc.kodi" to "Kodi",

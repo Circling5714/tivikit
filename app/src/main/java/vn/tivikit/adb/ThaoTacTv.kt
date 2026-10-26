@@ -34,7 +34,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }.also { pkgHomeDaDo = it }
 
     /** Gọi khi kết nối tivi mới: quên những gì đã dò của tivi trước. */
-    fun quenTivi() { pkgHomeDaDo = null; cvteDaDo = null }
+    fun quenTivi() { pkgHomeDaDo = null; cvteDaDo = null; cauHinhTruocGo = null; anhKenh = emptyList() }
     val cmpHome get() = "$pkgHome/$NS_HOME.MainActivity"
     /** File APK trong assets cho pkgHome. */
     val apkHome get() = if (pkgHome == PKG_HOME_XIAOMI) "tvhome-xiaomi.apk" else "tvhome.apk"
@@ -471,6 +471,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         bao(t("Home sạch cũ ký khoá khác, gỡ rồi cài lại…", "The old clean Home has another signature, reinstalling…"))
         val troNang = sh("settings get secure enabled_accessibility_services").trim()
         val laHome = homeHienTai().startsWith("$pkgHome/")
+        // Gỡ là mất config.json: giữ lại để dayCauHinh lấy các khoá app không tự biết (chuyển đè Home cũ, nút gán riêng,
+        // tên ô Kênh nhanh). 26/10/2026: Home sạch đổi sang khoá TiviKit, mọi tivi đã cài đi qua đây một lần.
+        cauHinhTruocGo = docCauHinhTv()
         sh("pm uninstall $pkgHome")
         val lai = runCatching { adb.caiApk(apk) }.getOrElse { "Failure ${it.message}" }
         if (lai.contains("Success")) {
@@ -557,6 +560,12 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (b64.length < 100) null else java.util.Base64.getDecoder().decode(b64)
     }.getOrNull()
 
+    /** config.json đọc ngay trước khi gỡ Home sạch khác khoá (caiApkHome); dayCauHinh dùng thay khi tivi chưa có cấu hình. */
+    private var cauHinhTruocGo: org.json.JSONObject? = null
+
+    /** Ảnh ô kênh (kenh-<slug>.jpg) cho link_tiles của bản vá launcher; PhienLamViec đặt trước khi đẩy cấu hình. */
+    var anhKenh: List<Pair<String, ByteArray>> = emptyList()
+
     fun dayCauHinh(json: String, anhNen: ByteArray? = null, boAnh: List<Pair<String, ByteArray>>? = null) {
         giaHanGac()
         val dir = "/sdcard/Android/data/$pkgHome/files"
@@ -571,7 +580,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         // remote, vgs_phim_rieng) và tên ô Kênh nhanh (app_labels) — app chưa đọc cấu hình tivi thì không biết: đổi giao
         // diện không được làm mất.
         val ghi = moi?.let { m ->
-            val cu = docCauHinhTv() ?: return@let null
+            val cu = docCauHinhTv() ?: cauHinhTruocGo ?: return@let null
             if (!m.has("stock_home_redirect")) cu.optString("stock_home_redirect").takeIf { it.isNotBlank() }?.let { m.put("stock_home_redirect", it) }
             if (!m.has(PhimRieng.KHOA)) PhimRieng.docTu(cu).takeIf { it.isNotEmpty() }?.let { PhimRieng.apVao(m, it) }
             // Ô kênh nào cấu hình mới chưa có tên thì lấy tên đang có trên tivi.
@@ -579,12 +588,14 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             KenhNhanh.tenTrong(cu).filterKeys { it !in coTen }.forEach { (goi, ten) -> KenhNhanh.datTen(m, goi, ten) }
             m.toString()
         } ?: json
+        cauHinhTruocGo = null
         ghiFileTheme("config.json", ghi.toByteArray())
         if (anhNen != null) ghiFileTheme("wallpaper.jpg", anhNen)
         else sh("rm -f $dir/wallpaper.jpg 2>/dev/null; content delete --uri $uri/wallpaper.jpg 2>/dev/null; true")
         // Bộ ảnh xoay vòng (wallpapers/): xoá bộ cũ trước, theme không có bộ ảnh thì chỉ xoá.
         sh("rm -rf $dir/wallpapers 2>/dev/null; content delete --uri $uri/wallpapers 2>/dev/null; true")
         boAnh?.forEach { (ten, du) -> ghiFileTheme("wallpapers/$ten", du) }
+        anhKenh.forEach { (ten, du) -> ghiFileTheme("kenh-$ten", du) }
         ghiFileTheme("theme_revision", java.util.UUID.randomUUID().toString().replace("-", "").toByteArray())
         sh(KHOI_DONG_LAI_HOME)
     }

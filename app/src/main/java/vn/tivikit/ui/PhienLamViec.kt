@@ -198,6 +198,53 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     var moKhiBat by mutableStateOf(false)
     /** Chữ giờ / ngày trắng sáng hẳn (header_white của launcher; CleanTV 2.10.12). */
     var chuTrang by mutableStateOf(false)
+    /** Mở app đã chọn cả khi bật tivi từ chế độ chờ, không chỉ sau khởi động lại (wake_open_app của bản vá launcher, cần
+     *  HomeKeyService; CleanTV 2.10.12). */
+    var moKhiThuc by mutableStateOf(false)
+    /** Bật tivi luôn về Home sạch (power_on_home_always của launcher 3.0, cần HomeKeyService; CleanTV 3.0.0). */
+    var luonVeHome by mutableStateOf(false)
+    /** HomeKeyService cần bật: phím Home lạ, phím app remote, nút gán riêng, mở app khi bật từ chế độ chờ, luôn về Home. */
+    val canDichVuPhim get() = nutHome || dungPhimRemote || phimRieng.isNotEmpty() || (moKhiBat && moKhiThuc) || luonVeHome
+
+    /** Ô kênh VTVgo ở đầu dock, theo thứ tự chọn: (tên trên ô, mã kênh). Xem KenhVtvGo. */
+    val kenhChon = mutableStateListOf<Pair<String, String>>()
+    /** Danh sách kênh của VTVgo (tải khi mở hộp chọn kênh); rỗng = chưa tải. */
+    var dsKenhGo by mutableStateOf<List<vn.tivikit.dulieu.KenhVtvGo.Kenh>>(emptyList())
+    var moChonKenh by mutableStateOf(false)
+    var dangTaiKenh by mutableStateOf(false)
+    val coVtvGo get() = trangThai?.caiDat?.contains(vn.tivikit.dulieu.KenhVtvGo.GOI) == true
+    fun coKenh(ma: String) = kenhChon.any { it.second == ma }
+
+    /** Chọn / bỏ ô kênh; hai kênh trùng tên gói giả (vgs.kenh.<slug>) thì không thêm, tối đa KenhVtvGo.TOI_DA ô. */
+    fun batTatKenh(ten: String, ma: String) {
+        val i = kenhChon.indexOfFirst { it.second == ma }
+        if (i >= 0) { kenhChon.removeAt(i); return }
+        val s = vn.tivikit.dulieu.KenhVtvGo.slug(ten)
+        if (s.isEmpty() || kenhChon.any { vn.tivikit.dulieu.KenhVtvGo.slug(it.first) == s } || kenhChon.size >= vn.tivikit.dulieu.KenhVtvGo.TOI_DA) return
+        kenhChon.add(ten to ma)
+    }
+
+    /** Tivi chưa có VTVgo bản tivi: mở trang của nó trên CH Play của tivi, người dùng bấm Cài đặt bằng remote. */
+    var baoVtvGo by mutableStateOf("")
+    fun moVtvGoChPlay() = chay(t("Đang mở VTVgo trên CH Play của tivi…", "Opening VTVgo in the TV's Play Store…")) {
+        damBaoKetNoi()
+        val out = io { tv.moCHPlay(vn.tivikit.dulieu.KenhVtvGo.GOI) }
+        if (out.contains("Error")) error(t("Tivi không mở được CH Play: ${out.trim().lines().lastOrNull()}", "The TV couldn't open the Play Store: ${out.trim().lines().lastOrNull()}"))
+        baoVtvGo = t("Đã mở VTVgo trên CH Play của tivi: bấm Cài đặt bằng remote, mở VTVgo một lần, rồi kết nối lại TiviKit.",
+            "VTVgo is open in the TV's Play Store: press Install with the remote, open VTVgo once, then reconnect TiviKit.")
+    }
+
+    fun moHopKenh() {
+        moChonKenh = true
+        if (dsKenhGo.isNotEmpty() || dangTaiKenh) return
+        dsKenhGo = vn.tivikit.dulieu.KenhVtvGo.docNho(ctx)
+        dangTaiKenh = true
+        viewModelScope.launch {
+            val moi = io { vn.tivikit.dulieu.KenhVtvGo.tai(ctx) }
+            if (moi.isNotEmpty()) dsKenhGo = moi
+            dangTaiKenh = false
+        }
+    }
     /**
      * Nút app / Cài đặt trên remote (24/10/2026, góp ý TCL G09): tắt Home gốc của TCL là nút YouTube, Netflix… chết vì
      * hãng chỉ gửi chúng cho launcherx. null = tự chọn: bật khi mẫu có bảng phím, trừ mẫu trong PHIM_TAT_SAN.
@@ -1302,6 +1349,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Công tắc hiện đúng trạng thái thật, kể cả khi giao diện bật, và tắt được đè lên giao diện (CleanTV 3.0.0).
         oDeuNhau = j.optBoolean("uniform_tiles", false)
         moKhiBat = j.optBoolean("open_on_start_choice", false)
+        moKhiThuc = j.optBoolean("wake_open_app", false)
+        luonVeHome = j.optBoolean("power_on_home_always", false)
         chuTrang = !cuaTheme("header_white") && j.optBoolean("header_white", false)
         // Chỉ nạp số cột do người dùng chọn ở đây (vgs_so_cot), không lấy columns của theme.
         soCot = if (j.optBoolean("vgs_so_cot", false)) j.optInt("columns", 0) else 0
@@ -1326,7 +1375,12 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         }
         nutManCho = j.optBoolean("dream_button", nutManCho)
         gonNut = j.optBoolean("top_compact", gonNut)
-        j.optJSONArray("dock_apps")?.let { a -> val ds = (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }; if (ds.isNotEmpty()) { dock.clear(); dock.addAll(ds.take(DOCK_TOI_DA)) } }
+        j.optJSONArray("dock_apps")?.let { a ->
+            val ds = (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() && !it.startsWith(vn.tivikit.dulieu.KenhVtvGo.TIEN_TO) }
+            if (ds.isNotEmpty()) { dock.clear(); dock.addAll(ds.take(DOCK_TOI_DA)) }
+        }
+        kenhChon.clear()
+        j.optJSONArray("link_tiles")?.let { a -> (0 until a.length()).mapNotNull { vn.tivikit.dulieu.KenhVtvGo.tuLink(a.optString(it)) }.forEach { kenhChon.add(it) } }
         j.optString("greeting_name").takeIf { it.isNotBlank() }?.let { tenChao = it }
         j.optString("weather_place").takeIf { it.isNotBlank() }?.let { ten ->
             thanhPho = THANH_PHO.firstOrNull { it.ten == ten }
@@ -1359,8 +1413,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         val cauHinh = cauHinhHome()
         val anh = anhNenTheme()
         val bo = boAnhTheme()
+        napAnhKenh()
         val loiCai = io {
-            tv.caiLauncher(apk, sl, cauHinh, anh, bo, nutInput, nutHome || dungPhimRemote || phimRieng.isNotEmpty(),
+            tv.caiLauncher(apk, sl, cauHinh, anh, bo, nutInput, canDichVuPhim,
                 { vn.tivikit.CapNhat.moAsset(ctx, "tvhome-xiaomi.apk").readBytes() }) { s -> ghiTuIo(s) }
         }
         // caiLauncher báo lỗi là đã tự trả Home gốc: huỷ canh gác trên tivi.
@@ -1423,7 +1478,10 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     }
 
     private fun cauHinhHome(): String = JSONObject().apply {
-        put("dock_apps", JSONArray(dock.toList()))
+        // Ô kênh VTVgo đứng đầu dock, rồi tới app người dùng chọn.
+        val kenh = if (coVtvGo) kenhChon.toList() else emptyList()
+        if (kenh.isNotEmpty()) put("link_tiles", JSONArray(kenh.map { (ten, ma) -> vn.tivikit.dulieu.KenhVtvGo.oLink(ten, ma) }))
+        put("dock_apps", JSONArray(kenh.map { vn.tivikit.dulieu.KenhVtvGo.TIEN_TO + vn.tivikit.dulieu.KenhVtvGo.slug(it.first) } + dock.toList()))
         if (tenChao.isNotBlank()) put("greeting_name", tenChao.trim())
         themeChon.ghiVao(this)
         if (anhNenRieng != null) { put("wallpaper", true); put("vgs_anh_rieng", true) }
@@ -1460,7 +1518,11 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         if (anLoiChao) put("show_greeting", false)
         put("uniform_tiles", oDeuNhau)
         if (moKhiBat) put("open_on_start_choice", true)
+        if (moKhiBat && moKhiThuc) put("wake_open_app", true)
+        if (luonVeHome) put("power_on_home_always", true)
         if (chuTrang) put("header_white", true)
+        // Một hàng + thư viện app: viên Thư viện chen vào hàng app, đã có nút trên thanh trên cùng (CleanTV 2.10.4).
+        if (motHang && thuVienApp) put("show_library_pill", false)
         if (soCot > 0) { put("columns", soCot); put("vgs_so_cot", true) }
         // Phím APPS (KEYCODE_ALL_APPS) chỉ là nút Home với que / tivi Xiaomi hoặc khi bật "Remote gửi phím Home lạ";
         // tivi khác (Sony VH2: nút Apps mở Home sạch như Back, abc999roses 24/10/2026) để phím cho tivi.
@@ -1471,6 +1533,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Ảnh riêng hiện đúng như ảnh (CleanTV 2.10.9: ảnh bị phủ mờ, loang màu): bỏ lớp phủ bầu trời theo giờ của giao
         // diện, giải mã màu 32-bit thay vì RGB_565. Nâng cao ghi sau nên vẫn đổi lại được.
         if (anhNenRieng != null) { put("sky_intensity", 0); put("wallpaper_true_color", true) }
+        // Tivi Xiaomi bản Trung Quốc không có tiếng Việt: Home sạch hiện chữ Trung (CleanTV 2.10.9). Tivi đang để tiếng Trung
+        // mà app dùng tiếng Việt thì ép Home sạch sang tiếng Việt (locale của launcher 3.0).
+        if (vn.tivikit.NgonNgu.tiengViet && Regex("""\[(persist\.sys\.locale|ro\.product\.locale)\]: \[zh""").containsMatchIn(getprop)) put("locale", "vi")
         // Phím remote của mẫu (app_keys, settings_key_keycodes…), HomeKeyService đọc. LUÔN ghi app_keys, kể cả khi bật
         // nút Input: 2.6.5 bỏ app_keys lúc đó (InputKeyService cũng đọc, sợ mở app hai lần — upstream tcl-55c725) mà nút
         // Input tự bật trên mọi Google TV, nên TCL Google TV mất hẳn nút YouTube (góp ý heavensky95, TCL G10, 24/10/2026).
@@ -1548,7 +1613,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
             add("pm disable-user --user 0 $goc")
         }
         add("cmd package set-home-activity --user 0 ${tv.cmpHome}")
-        if (nutHome || dungPhimRemote || phimRieng.isNotEmpty()) add("settings put secure enabled_accessibility_services $pk/com.gathin.tvhome.HomeKeyService")
+        if (canDichVuPhim) add("settings put secure enabled_accessibility_services $pk/com.gathin.tvhome.HomeKeyService")
         if (nutInput) add("settings put secure enabled_accessibility_services $pk/com.gathin.tvhome.InputKeyService")
         if (dnsChanQc) add("settings put global private_dns_specifier dns.adguard-dns.com")
         add(t("# Thử nút Home thật", "# Test the real Home button"))
@@ -1575,6 +1640,15 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         datAnhCoSan(j.optString("vgs_anh_nen").takeIf { it.isNotBlank() }?.let { runCatching { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) }.getOrNull() })
         cauHinhBao = t("Đã mở file cấu hình", "Settings file loaded") + (j.optString("vgs_tivi").takeIf { it.isNotBlank() }?.let { t(" (của $it)", " (from $it)") } ?: "") +
             t(". Bấm \"Áp dụng lên tivi\" để đưa lên tivi.", ". Press \"Apply to the TV\" to send it.")
+    }
+
+    /** Ảnh các ô kênh VTVgo đang chọn (thumbnail của VTVgo, tải một lần rồi cất); launcher không có mạng nên gửi kèm. */
+    private suspend fun napAnhKenh() {
+        if (!coVtvGo || kenhChon.isEmpty()) { tv.anhKenh = emptyList(); return }
+        val ds = dsKenhGo.ifEmpty { io { vn.tivikit.dulieu.KenhVtvGo.docNho(ctx).ifEmpty { vn.tivikit.dulieu.KenhVtvGo.tai(ctx) } } }
+        tv.anhKenh = kenhChon.toList().mapNotNull { (ten, ma) ->
+            io { vn.tivikit.dulieu.KenhVtvGo.anhO(ctx, ma, ds.firstOrNull { it.ma == ma }?.anh) }?.let { vn.tivikit.dulieu.KenhVtvGo.slug(ten) + ".jpg" to it }
+        }
     }
 
     private suspend fun anhNenTheme(): ByteArray? {
@@ -1677,8 +1751,10 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         if (anh != null) thongBao = t("Đang gửi ảnh nền (${anh.size / 1024} KB)…", "Sending the wallpaper (${anh.size / 1024} KB)…")
         val bo = boAnhTheme()
         if (bo != null) thongBao = t("Đang gửi ${bo.size} ảnh phong cảnh…", "Sending ${bo.size} landscape pictures…")
+        if (coVtvGo && kenhChon.isNotEmpty()) thongBao = t("Đang lấy ảnh ${kenhChon.size} ô kênh…", "Fetching ${kenhChon.size} channel tile pictures…")
+        napAnhKenh()
         io { tv.dayCauHinh(json, anh, bo) }
-        if (dungPhimRemote || phimRieng.isNotEmpty()) io { tv.batBatPhimHome() }
+        if (dungPhimRemote || phimRieng.isNotEmpty() || (moKhiBat && moKhiThuc) || luonVeHome) io { tv.batBatPhimHome() }
         // Đổi giao diện cũng bật / tắt DNS AdGuard theo công tắc (trước 2.7.3 chỉ lúc cài Home sạch mới đặt).
         val dangChan = io { tv.dnsDangChan() }
         if (dnsChanQc && !dangChan) saoLuu?.let { sl -> batDnsAdGuardAnToan(sl) }
