@@ -9,7 +9,11 @@ TiviKit includes or builds on the following third-party work.
 2. CleanYourTV — the clean Home launcher 3.0 (built from the upstream commit in
    app/src/main/assets/upstream-commit.txt + patches/launcher-vgs.patch into
    app/src/main/assets/tvhome.apk and tvhome-xiaomi.apk) and the TV debloat lists
-   (app/src/main/assets/du-lieu.json). https://github.com/Gathin23/cleanyourtv
+   (app/src/main/assets/du-lieu.json). TiviKit Launcher (launcher/, bundled as
+   app/src/main/assets/tivikit-launcher.apk) ports the clean Home's lunar calendar
+   (Lunar.java, Hồ Ngọc Đức's algorithm) to launcher/.../AmLich.kt and uses the Scenes
+   picture 08-tea-hills as its default wallpaper; it carries these notices in
+   launcher/src/main/assets/giay-phep.txt. https://github.com/Gathin23/cleanyourtv
    MIT License
 
    Copyright (c) 2026 Gathin
@@ -44,7 +48,7 @@ TiviKit includes or builds on the following third-party work.
 6. AndroidX, Jetpack Compose, Kotlin — Apache License 2.0.
 7. OkHttp (Square) — Apache License 2.0. https://github.com/square/okhttp
 8. JSch, mwiede fork (SSH to rooted LG TVs) — BSD 3-Clause License. https://github.com/mwiede/jsch
-9. Inter font (app UI, subset to Latin + Vietnamese) — SIL Open Font License 1.1. https://github.com/rsms/inter
+9. Inter font (app UI and TiviKit Launcher, subset to Latin + Vietnamese) — SIL Open Font License 1.1. https://github.com/rsms/inter
 10. Lexend font — SIL Open Font License 1.1 (upstream/launcher FONT-LICENSE-LEXEND-OFL.txt in the patch).
 11. LG webOS protocol details from aiowebostv (Home Assistant, Apache License 2.0,
     https://github.com/home-assistant-libs/aiowebostv) and LGWebOSRemote (MIT,

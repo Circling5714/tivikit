@@ -109,6 +109,18 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
                 }
             }
         },
+        // 27/10/2026: màn Home kính mờ riêng của TiviKit (app phụ vn.tivikit.launcher): cài, mở thử, đặt làm Home ở thẻ đầu
+        // màn Quản lý launcher.
+        MucChucNang(Icons.Rounded.AutoAwesome, MauO.xanh, "TiviKit Launcher",
+            t("Màn Home kính mờ: giờ lớn, âm lịch, dock app", "A frosted-glass Home: big clock, lunar date, app dock"), bat = !vm.khongCaiHome) {
+            vm.moChucNang {
+                when {
+                    vm.laFireTv -> vm.loi = t("Fire TV không cho app nào thay màn Home (Amazon khoá).", "Fire TV doesn't let any app replace Home (Amazon locks it).")
+                    vm.khongCaiHome -> vm.loi = t("Máy này cần Android 8 trở lên mới cài được TiviKit Launcher.", "This device needs Android 8 or later for TiviKit Launcher.")
+                    else -> vm.qlLauncher.mo()
+                }
+            }
+        },
         // 27/10/2026: chọn launcher cho nút Home (Home sạch, Projectivy, Home gốc…), bật / tắt, gỡ.
         MucChucNang(Icons.Rounded.Dashboard, MauO.tim, t("Quản lý launcher", "Launchers"),
             t("Chọn launcher cho nút Home: Home sạch, Projectivy, Home gốc", "Pick what Home opens: clean Home, Projectivy, stock Home"), bat = !vm.laFireTv) {

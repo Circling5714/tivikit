@@ -23,4 +23,4 @@ jobs:
           cache: gradle
 
       - name: Unit test
-        run: ./gradlew --console=plain :app:testReleaseUnitTest :khoa:testReleaseUnitTest :kenh:testO1ReleaseUnitTest :hengio:testReleaseUnitTest :go:testReleaseUnitTest
+        run: ./gradlew --console=plain :app:testReleaseUnitTest :khoa:testReleaseUnitTest :kenh:testO1ReleaseUnitTest :hengio:testReleaseUnitTest :go:testReleaseUnitTest :launcher:testReleaseUnitTest

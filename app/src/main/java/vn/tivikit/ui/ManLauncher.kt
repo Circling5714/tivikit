@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vn.tivikit.dulieu.Launcher
 import vn.tivikit.dulieu.Launcher.Loai
+import vn.tivikit.dulieu.TiviKitLauncher
 import vn.tivikit.dulieu.tenDep
 import vn.tivikit.t
 
@@ -41,14 +42,17 @@ internal fun ManLauncher(vm: PhienLamViec) {
         }
         val tt = ql.tt
         if (tt != null) {
+            TheTiviKitLauncher(vm, ql)
             TheNutHome(vm, ql, tt)
+            // TiviKit Launcher có thẻ riêng ở trên.
+            val ds = tt.ds.filter { it.goi != TiviKitLauncher.GOI }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(t("${tt.ds.size} launcher", "${tt.ds.size} launchers"), fontSize = 13.sp, color = ChuPhu, modifier = Modifier.weight(1f))
+                Text(t("${ds.size} launcher", "${ds.size} launchers"), fontSize = 13.sp, color = ChuPhu, modifier = Modifier.weight(1f))
                 TextButton(onClick = { ql.docLai() }, enabled = !vm.dangBan) {
                     Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(t("Đọc lại", "Read again"))
                 }
             }
-            tt.ds.forEach { m -> HangLauncher(vm, ql, tt, m) }
+            ds.forEach { m -> HangLauncher(vm, ql, tt, m) }
         }
         // Launcher gợi ý (giai đoạn 3): trang CH Play chính thức, cài bằng tài khoản Google của tivi.
         The(t("Launcher gợi ý", "Suggested launchers"), Icons.Rounded.Recommend) {
@@ -62,6 +66,37 @@ internal fun ManLauncher(vm: PhienLamViec) {
             "Android usually favours the maker's launcher over ones you install (the priority is shown on each row): for an installed launcher to be Home, the maker's must be disabled; a Google TV with setupwraith can't, so the clean Home opens over it instead. Every change goes into the backup: restoring the TV puts Home back as it was before TiviKit."))
     }
     ql.hoi?.let { HopHoiLauncher(vm, ql, it) }
+}
+
+/**
+ * Thẻ TiviKit Launcher (27/10/2026): màn Home kính mờ của TiviKit, APK đi kèm app, cài lên tivi từ điện thoại; mở thử, đặt
+ * làm Home (qua đúng đường Đặt làm Home của các launcher khác), cập nhật, gỡ.
+ */
+@Composable
+private fun TheTiviKitLauncher(vm: PhienLamViec, ql: QuanLyLauncher) {
+    val k = ql.tkl
+    val laHome = ql.tklLaHome()
+    The("TiviKit Launcher", Icons.Rounded.AutoAwesome) {
+        Phu(t("Màn Home kính mờ của TiviKit: đồng hồ lớn, âm lịch, lời chào theo tên, RAM / bộ nhớ trống, nút Dọn RAM, Wi-Fi, dock app như máy Mac. Cài từ điện thoại, không cần cài TiviKit lên tivi.",
+            "TiviKit's frosted-glass Home: big clock, lunar date, greeting by name, free RAM / storage, a Free RAM button, Wi-Fi, a Mac-style app dock. Installed from the phone; TiviKit itself isn't needed on the TV."))
+        if (k?.daCai == true) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(t("Bản ${k.ban} trên tivi", "Version ${k.ban} on the TV"), fontWeight = FontWeight.SemiBold)
+            if (laHome) Chip(t("Nút Home mở", "Home opens it"), Xanh)
+            if (k.canCapNhat) Chip(t("Có bản mới", "Update available"), Cam)
+        } else Text(t("Chưa cài trên tivi", "Not on the TV yet"), fontWeight = FontWeight.SemiBold)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            fun lam(viec: () -> Unit) { if (!vm.dangBan) viec() }
+            if (k?.daCai != true) ChonChip(t("Cài lên tivi", "Install on the TV"), true) { lam { ql.caiTkl() } }
+            else {
+                if (k.canCapNhat) ChonChip(t("Cập nhật", "Update"), true) { lam { ql.caiTkl() } }
+                if (!laHome) ChonChip(t("Đặt làm Home", "Make it Home"), !k.canCapNhat) { lam { ql.datHomeTkl() } }
+                ChonChip(t("Mở thử", "Open"), false) { lam { ql.moThuTkl() } }
+                if (!laHome) ChonChip(t("Gỡ", "Uninstall"), false) { lam { ql.hoi = QuanLyLauncher.Hoi.GoTkl } }
+            }
+        }
+        if (k?.daCai == true) Phu(t("Trên tivi: OK để mở app, giữ OK để ghim vào dock, dời chỗ, gỡ; ô lưới cuối dock là Tất cả ứng dụng.",
+            "On the TV: OK opens an app; hold OK to pin it to the dock, move or uninstall it; the grid at the end of the dock shows all apps."))
+    }
 }
 
 /** Thẻ Nút Home: nút Home đang mở gì, vì sao, kết quả lần thử gần nhất; Thử nút Home, Về Home gốc. */
@@ -214,6 +249,8 @@ private fun HopHoiLauncher(vm: PhienLamViec, ql: QuanLyLauncher, hoi: QuanLyLaun
         }
         is QuanLyLauncher.Hoi.Go -> Triple(t("Gỡ ${tenDep(hoi.m.goi)}?", "Uninstall ${tenDep(hoi.m.goi)}?"),
             t("Launcher và dữ liệu của nó (bố cục, cài đặt) bị xoá khỏi tivi.", "The launcher and its data (layout, settings) are removed from the TV."), t("Gỡ", "Uninstall"))
+        QuanLyLauncher.Hoi.GoTkl -> Triple(t("Gỡ TiviKit Launcher?", "Uninstall TiviKit Launcher?"),
+            t("Dock đã sắp xếp trên tivi bị xoá; cài lại từ đây lúc nào cũng được.", "The dock you arranged on the TV is removed; you can install it again from here any time."), t("Gỡ", "Uninstall"))
         QuanLyLauncher.Hoi.ThuNut -> Triple(t("Bấm thử nút Home?", "Test the Home button?"),
             t("Tivi sẽ mở Cài đặt rồi bấm Home, như khi bạn bấm Home trên remote: app đang mở trên tivi sẽ bị đóng.", "The TV will open Settings and press Home, like the remote's Home button: whatever is open on the TV gets closed."),
             t("Bấm thử", "Test"))
@@ -250,6 +287,7 @@ private fun HopHoiLauncher(vm: PhienLamViec, ql: QuanLyLauncher, hoi: QuanLyLaun
                     is QuanLyLauncher.Hoi.Go -> ql.go(hoi.m)
                     QuanLyLauncher.Hoi.ThuNut -> ql.thuNut()
                     is QuanLyLauncher.Hoi.BatTroNang -> ql.batTroNang(hoi.m, hoi.dv, lamMoi = false)
+                    QuanLyLauncher.Hoi.GoTkl -> ql.goTkl()
                 }
             }, enabled = !vm.dangBan) { Text(nut, fontWeight = FontWeight.SemiBold) }
         },

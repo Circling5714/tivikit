@@ -172,6 +172,7 @@ val TEN_APP = mapOf(
     "vn.tivikit.hengio" to "Hẹn giờ (TiviKit)",
     "vn.tivikit.khoa" to "Khoá trẻ em (TiviKit)",
     "vn.tivikit.go" to "Gõ tiếng Việt (TiviKit)",
+    "vn.tivikit.launcher" to "TiviKit Launcher",
     // App phụ trước khi đổi tên gói (25/10/2026), còn trên tivi tới khi được chuyển.
     "com.icm.cleantv.kenh" to "Kênh nhanh (TiviKit cũ)",
     "com.icm.cleantv.hengio" to "Hẹn giờ (TiviKit cũ)",
@@ -245,6 +246,7 @@ private val TEN_APP_EN = mapOf(
     "vn.tivikit.hengio" to "Timer (TiviKit)",
     "vn.tivikit.khoa" to "Kids lock (TiviKit)",
     "vn.tivikit.go" to "Vietnamese typing (TiviKit)",
+    "vn.tivikit.launcher" to "TiviKit Launcher",
     "com.icm.cleantv.kenh" to "Quick channel (old TiviKit)",
     "com.icm.cleantv.hengio" to "Timer (old TiviKit)",
     "com.icm.cleantv.khoa" to "Kids lock (old TiviKit)",

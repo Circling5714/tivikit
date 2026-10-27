@@ -46,9 +46,10 @@ object KichBanKhoiPhuc {
             else "adb shell settings put global private_dns_specifier ${sl.dnsHostTruoc}"
         }
         // App phụ cả tên gói mới lẫn tên trước khi đổi sang vn.tivikit (GoiCu): kịch bản không biết tivi đang có cái nào.
-        chu(t("Gỡ app phụ của TiviKit nếu có cài: Khoá trẻ em, Hẹn giờ, Kênh nhanh, bộ gõ tiếng Việt (chưa cài thì báo lỗi, không sao)",
-            "Remove TiviKit's helper apps if installed: Kids lock, Timer, Quick channel, Vietnamese typing (errors here are fine)"))
-        (listOf(PKG_KHOA, HenGio.GOI, GoChu.GOI) + (1..KenhNhanh.SO_O).map { KenhNhanh.goiCua(it) } + GoiCu.APP_PHU).forEach { dong += "adb uninstall $it" }
+        chu(t("Gỡ app phụ của TiviKit nếu có cài: Khoá trẻ em, Hẹn giờ, Kênh nhanh, bộ gõ tiếng Việt, TiviKit Launcher (chưa cài thì báo lỗi, không sao)",
+            "Remove TiviKit's helper apps if installed: Kids lock, Timer, Quick channel, Vietnamese typing, TiviKit Launcher (errors here are fine)"))
+        (listOf(PKG_KHOA, HenGio.GOI, GoChu.GOI, TiviKitLauncher.GOI) + (1..KenhNhanh.SO_O).map { KenhNhanh.goiCua(it) } + GoiCu.APP_PHU)
+            .forEach { dong += "adb uninstall $it" }
         dong += "adb shell input keyevent KEYCODE_HOME"
         chu(t("Xong. Nên tắt Gỡ lỗi USB trên tivi.", "Done. Turn USB debugging off on the TV."))
         return dong.joinToString("\r\n", postfix = "\r\n")

@@ -14,6 +14,7 @@ import vn.tivikit.dulieu.Launcher
 import vn.tivikit.dulieu.PhanApk
 import vn.tivikit.dulieu.PhimRieng
 import vn.tivikit.dulieu.ThongTinTv
+import vn.tivikit.dulieu.TiviKitLauncher
 import vn.tivikit.dulieu.TrangThaiGoi
 import vn.tivikit.dulieu.tenDep
 
@@ -1395,6 +1396,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         oKenhDaCai().takeIf { it.isNotEmpty() }?.let { ds -> bao(t("Gỡ Kênh nhanh…", "Removing Quick channel…")); ds.forEach { runCatching { goKenh(it) } } }
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
+        // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
+        if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { sh("pm uninstall ${TiviKitLauncher.GOI}") } }
         goAppPhuCu(bao)
         if (goLauncher) HOME_SACH.forEach { p ->
             if (sh("pm path $p").isNotBlank()) { bao(t("Gỡ Home sạch ($p)…", "Removing the clean Home ($p)…")); sh("pm uninstall $p") }
@@ -1464,6 +1467,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         oKenhDaCai().takeIf { it.isNotEmpty() }?.let { ds -> bao(t("Gỡ Kênh nhanh…", "Removing Quick channel…")); ds.forEach { runCatching { goKenh(it) } } }
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
+        // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
+        if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { sh("pm uninstall ${TiviKitLauncher.GOI}") } }
         goAppPhuCu(bao)
         return loi
     }
@@ -1710,6 +1715,60 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
 
     /** Gỡ bộ gõ (Khôi phục tivi); đang là bàn phím của tivi thì Android tự chọn bàn phím khác. */
     fun goBoGo() { if (boGoDaCai()) sh("pm uninstall ${GoChu.GOI}") }
+
+    // ---------- TiviKit Launcher (app vn.tivikit.launcher, 27/10/2026) ----------
+
+    fun tklDaCai(): Boolean = coGoi(TiviKitLauncher.GOI)
+
+    /** TiviKit Launcher trên tivi: bản, bí danh Home đã bật chưa, có khác bản đi kèm [apk] không. */
+    fun docTkl(apk: ByteArray): TiviKitLauncher.TrangThai {
+        if (!tklDaCai()) return TiviKitLauncher.TrangThai(null)
+        val j = TiviKitLauncher.docKetQua(sh(TiviKitLauncher.LENH_DOC))
+        val coSan = runCatching {
+            sh("sha256sum \$(pm path ${TiviKitLauncher.GOI} | head -n 1 | sed 's/^package://') 2>/dev/null").trim().substringBefore(' ')
+        }.getOrDefault("")
+        return TiviKitLauncher.TrangThai(j?.optString("ban")?.takeIf { it.isNotBlank() } ?: "?", j?.optBoolean("homeBat") == true,
+            coSan != vn.tivikit.dulieu.sha256(apk))
+    }
+
+    /**
+     * Cài / cập nhật TiviKit Launcher (chỉ khi khác bản đi kèm), cấp quyền vị trí (Android chỉ cho app có quyền đó đọc tên
+     * Wi-Fi), biên dịch sẵn sau mỗi lần cài (mở Home nguội 1,55 → 1,1 giây trên TX3 Mini), rồi gửi [cauHinh]
+     * (TiviKitLauncher.cauHinh: tên lời chào, ngôn ngữ).
+     */
+    fun caiTkl(apk: ByteArray, cauHinh: String, bao: (String) -> Unit) {
+        var vuaCai = false
+        caiAppPhu(TiviKitLauncher.GOI, apk) { vuaCai = true; bao(t("Cài TiviKit Launcher lên tivi…", "Installing TiviKit Launcher on the TV…")) }
+        sh("pm grant ${TiviKitLauncher.GOI} android.permission.ACCESS_FINE_LOCATION 2>/dev/null; true")
+        if (vuaCai) {
+            bao(t("Tối ưu cho tivi yếu…", "Optimising for slow TVs…"))
+            runCatching { sh("cmd package compile -m speed -f ${TiviKitLauncher.GOI}") }
+        }
+        sh(TiviKitLauncher.lenhDat(cauHinh))
+    }
+
+    /**
+     * Bật bí danh Home của TiviKit Launcher (launcher tự bật, xem TiviKitLauncher.HOME) để Đặt làm Home được, rồi chọn lại
+     * ngay Home mặc định [giu] ("gói/lớp"): thêm một màn HOME cùng mức ưu tiên làm Android bỏ Home đã chọn và hỏi chọn ở lần
+     * bấm Home sau, nếu người dùng thôi giữa chừng. false nếu launcher không trả lời.
+     */
+    fun batHomeTkl(giu: String): Boolean {
+        val ok = sh(TiviKitLauncher.LENH_BAT_HOME).contains("ok=1")
+        datLaiHome(giu)
+        return ok
+    }
+
+    /** Gỡ TiviKit Launcher (không phải Home đang dùng), rồi chọn lại Home mặc định [giu]: bớt một màn HOME cũng làm Android bỏ Home đã chọn. */
+    fun goTkl(giu: String): String {
+        val out = sh("pm uninstall ${TiviKitLauncher.GOI}")
+        if (!giu.startsWith("${TiviKitLauncher.GOI}/")) datLaiHome(giu)
+        return out
+    }
+
+    private fun datLaiHome(giu: String) {
+        if (giu.contains('/') && !giu.startsWith("android/") && TEN_GOI.matches(giu.substringBefore('/')) && !giu.contains('\''))
+            sh("cmd package set-home-activity --user 0 '$giu'")
+    }
 
     // ---------- App phụ bản cũ (trước khi đổi tên gói sang vn.tivikit, 25/10/2026) ----------
 

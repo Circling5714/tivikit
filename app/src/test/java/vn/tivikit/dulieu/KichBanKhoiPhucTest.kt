@@ -38,6 +38,7 @@ class KichBanKhoiPhucTest {
         assertTrue(s.contains("adb uninstall vn.tivikit.khoa"))
         assertTrue(s.contains("adb uninstall vn.tivikit.kenh3"))
         assertTrue(s.contains("adb uninstall vn.tivikit.hengio"))
+        assertTrue(s.contains("adb uninstall vn.tivikit.launcher"))
         assertTrue(s.contains("adb uninstall vn.tivikit.go"))
         assertTrue(s.contains("adb uninstall com.icm.cleantv.khoa"))
         assertTrue(s.contains("adb uninstall com.icm.cleantv.kenh"))

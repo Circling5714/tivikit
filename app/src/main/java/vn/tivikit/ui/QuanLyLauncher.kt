@@ -12,7 +12,9 @@ import vn.tivikit.dulieu.KeHoach
 import vn.tivikit.dulieu.Launcher
 import vn.tivikit.dulieu.Launcher.Loai
 import vn.tivikit.dulieu.Launcher.LyDoGiu
+import vn.tivikit.dulieu.TiviKitLauncher
 import vn.tivikit.dulieu.tenDep
+import vn.tivikit.NgonNgu
 import vn.tivikit.t
 
 /**
@@ -38,6 +40,9 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         private set
     /** Hộp hỏi lại đang mở. */
     var hoi by mutableStateOf<Hoi?>(null)
+    /** TiviKit Launcher trên tivi (app phụ đi kèm TiviKit); null = chưa đọc được. */
+    var tkl by mutableStateOf<TiviKitLauncher.TrangThai?>(null)
+        private set
 
     sealed interface Hoi {
         /**
@@ -52,6 +57,7 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         data object ThuNut : Hoi
         /** Bật dịch vụ trợ năng [dv] của launcher [m]. */
         data class BatTroNang(val m: Launcher.Muc, val dv: String) : Hoi
+        data object GoTkl : Hoi
     }
 
     fun mo() = vm.chay(t("Đang đọc các launcher trên tivi…", "Reading the TV's launchers…")) {
@@ -71,12 +77,64 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         tt = moi
         ban = runCatching { vm.io { vm.tv.banCua(moi.ds.map { it.goi }) } }.getOrDefault(emptyMap())
         homeSachMoi = coHomeSach() && runCatching { vm.io { vm.tv.homeLaBanDiKem(apkHome()) } }.getOrDefault(false)
+        tkl = runCatching { vm.io { vm.tv.docTkl(apkTkl()) } }.getOrNull()
     }
 
     private fun apkHome(): ByteArray = vn.tivikit.CapNhat.moAsset(vm.ctx, vm.tv.apkHome).use { it.readBytes() }
 
+    private fun apkTkl(): ByteArray = vn.tivikit.CapNhat.moAsset(vm.ctx, TiviKitLauncher.APK).use { it.readBytes() }
+
     /** Kết nối tivi khác. */
-    fun quen() { tt = null; ban = emptyMap(); homeSachMoi = false; dangMo = null; bao = ""; daThu = null; hoi = null }
+    fun quen() { tt = null; ban = emptyMap(); homeSachMoi = false; dangMo = null; bao = ""; daThu = null; hoi = null; tkl = null }
+
+    // ---------- TiviKit Launcher (27/10/2026) ----------
+
+    /** Nút Home đang mở TiviKit Launcher (Home mặc định, hay Home sạch mở nó đè lên Home của hãng). */
+    fun tklLaHome(): Boolean = tt?.homeMo == TiviKitLauncher.GOI
+
+    /** Cài / cập nhật TiviKit Launcher lên tivi, gửi kèm tên lời chào (như Home sạch) và ngôn ngữ của app. */
+    fun caiTkl() = vm.chay(t("Đang cài TiviKit Launcher…", "Installing TiviKit Launcher…")) {
+        hoi = null
+        vm.damBaoKetNoi()
+        val capNhat = tkl?.daCai == true
+        vm.io { vm.tv.caiTkl(apkTkl(), TiviKitLauncher.cauHinh(vm.tenChao, NgonNgu.tiengViet)) { s -> baoViec(s) } }
+        doc()
+        bao = if (capNhat) t("Đã cập nhật TiviKit Launcher.", "TiviKit Launcher updated.")
+        else t("Đã cài TiviKit Launcher. Bấm Mở thử để xem trên tivi, Đặt làm Home để nút Home mở nó.",
+            "TiviKit Launcher installed. Tap Open to see it on the TV, Make it Home for the Home button to open it.")
+    }
+
+    /**
+     * "Đặt làm Home" của TiviKit Launcher: nhờ launcher bật bí danh Home của nó (giữ nguyên Home đang chọn), đọc lại rồi hỏi
+     * như mọi launcher khác (chonDatHome): tắt Home của hãng, hay để Home sạch mở nó đè lên khi Home của hãng không nhường.
+     */
+    fun datHomeTkl() = vm.chay(t("Đang chuẩn bị TiviKit Launcher…", "Preparing TiviKit Launcher…")) {
+        hoi = null
+        vm.damBaoKetNoi()
+        if (tkl?.homeBat != true && !vm.io { vm.tv.batHomeTkl(tt?.macDinh.orEmpty()) })
+            error(t("TiviKit Launcher không trả lời. Bấm Cập nhật rồi thử lại.", "TiviKit Launcher didn't answer. Tap Update and try again."))
+        doc()
+        val m = tt?.ds?.firstOrNull { it.goi == TiviKitLauncher.GOI && !it.dangTat }
+            ?: error(t("Tivi chưa nhận TiviKit Launcher là màn Home. Bấm Đọc lại rồi thử lần nữa.", "The TV doesn't list TiviKit Launcher as a Home yet. Tap Read again and try once more."))
+        chonDatHome(m)
+    }
+
+    fun moThuTkl() = vm.chay(t("Đang mở TiviKit Launcher trên tivi…", "Opening TiviKit Launcher on the TV…")) {
+        vm.damBaoKetNoi()
+        vm.io { vm.tv.moThu(TiviKitLauncher.MAN) }?.let { error(t("Tivi không mở được: $it", "The TV couldn't open it: $it")) }
+        bao = t("Đã mở TiviKit Launcher trên tivi; bấm Home trên remote là về Home đang dùng.",
+            "TiviKit Launcher is open on the TV; the remote's Home button goes back to the current Home.")
+    }
+
+    fun goTkl() = vm.chay(t("Đang gỡ TiviKit Launcher…", "Uninstalling TiviKit Launcher…")) {
+        hoi = null
+        vm.damBaoKetNoi()
+        if (tklLaHome()) error(t("TiviKit Launcher đang là Home: đặt launcher khác làm Home trước.", "TiviKit Launcher is the Home: make another launcher the Home first."))
+        val out = vm.io { vm.tv.goTkl(tt?.macDinh.orEmpty()) }
+        if (!out.contains("Success")) error(t("Gỡ không được: ${out.trim()}", "Uninstall failed: ${out.trim()}"))
+        bao = t("Đã gỡ TiviKit Launcher.", "TiviKit Launcher uninstalled.")
+        sauKhiDoi()
+    }
 
     /** Home sạch có trên tivi và đang bật (để mở đè launcher khác lên Home của hãng). */
     private fun coHomeSach(): Boolean = tt?.ds?.any { it.loai == Loai.HOME_SACH && !it.dangTat } == true

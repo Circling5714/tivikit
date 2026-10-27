@@ -31,6 +31,8 @@ TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the followi
 1. CleanYourTV — danh sách 316 mẫu tivi và màn Home sạch (launcher 3.0), có sửa thêm theo bản vá của CleanTV
    (dòng thời tiết, ô kênh truyền hình, mở app khi bật từ chế độ chờ…) / TV lists and the clean Home launcher 3.0,
    modified with CleanTV's patches (weather line, TV channel tiles, open an app when waking from standby…)
+   TiviKit Launcher: âm lịch chuyển từ Home sạch, ảnh nền đồi chè (Scenes) / lunar calendar ported from the clean
+   Home, tea-hill wallpaper (Scenes)
    https://github.com/Gathin23/cleanyourtv — MIT License (văn bản ở mục A / text in section A)
 2. LibADB Android — Muntashir Al-Islam — https://github.com/MuntashirAkon/libadb-android
    Apache License 2.0 (mục B / section B)
@@ -43,7 +45,8 @@ TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the followi
    Toạ độ phường/xã / Ward locations: © OpenStreetMap contributors — https://www.openstreetmap.org/copyright — ODbL 1.0
 8. DNS chặn quảng cáo (tuỳ chọn, dịch vụ công cộng, không kèm mã) / Optional ad-blocking DNS (public services, no code
    included): AdGuard DNS — https://adguard-dns.io; NextDNS — https://nextdns.io
-9. Phông chữ Inter (giao diện app, cắt gọn còn chữ Latin + tiếng Việt) / Inter font (app UI, subset to Latin + Vietnamese)
+9. Phông chữ Inter (giao diện app và TiviKit Launcher, cắt gọn còn chữ Latin + tiếng Việt) / Inter font (app UI and
+   TiviKit Launcher, subset to Latin + Vietnamese)
    The Inter Project Authors — https://github.com/rsms/inter — SIL Open Font License 1.1 (mục C / section C)
 10. OkHttp — Square, Inc. — https://github.com/square/okhttp — Apache License 2.0 (mục B / section B)
 11. Cách nói chuyện với tivi LG webOS (dạng tin nhắn, quyền xin khi ghép đôi) theo / LG webOS protocol details from:
