@@ -39,8 +39,8 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
     val k = vm.kenhNhanh
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(t("Kênh nhanh", "Quick channel"), style = KieuTieuDeLon)
-        Phu(t("Mỗi ô kênh là một ô trên Home sạch mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360 hoặc VTVgo, mang logo kênh nếu VTVgo có kênh đó, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
-            "Each channel tile is a clean Home tile that opens one channel (VTV1, VTV3, HTV7…) in TV360 or VTVgo, with the channel's logo when VTVgo has that channel, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
+        Phu(t("Mỗi ô kênh là một ô trên Home sạch và TiviKit Launcher, mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360 hoặc VTVgo, mang logo kênh nếu VTVgo có kênh đó, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
+            "Each channel tile is a tile on the clean Home and TiviKit Launcher that opens one channel (VTV1, VTV3, HTV7…) in TV360 or VTVgo, with the channel's logo when VTVgo has that channel, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
     }
     if (vm.daCoHomeSach && k.homeCu) CanhBaoKenh(vm,
         t("Home sạch trên tivi là bản cũ nên ô chưa hiện logo kênh. Mở Home sạch, bấm Áp dụng lên tivi một lần (app tự cập nhật, giữ giao diện).",

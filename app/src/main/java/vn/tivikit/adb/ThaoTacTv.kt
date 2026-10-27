@@ -1777,6 +1777,26 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }
 
     /**
+     * Tên kênh và logo các ô Kênh nhanh trên TiviKit Launcher, như app_labels / app_banners của Home sạch: [o] gói → (tên
+     * kênh, logo JPEG; logo null = ô không logo), tên null = bỏ ô (xoá tên và logo riêng). null = chưa cài launcher; false =
+     * launcher bản cũ chưa biết ảnh / tên riêng (Cập nhật ở Quản lý launcher); true = đã gửi.
+     */
+    fun datOKenhTkl(o: Map<String, Pair<String?, ByteArray?>>): Boolean? {
+        if (o.isEmpty() || !tklDaCai()) return null
+        val lenh = StringBuilder()
+        for ((goi, v) in o) {
+            val uri = TiviKitLauncher.uriAnhApp(goi)
+            val anh = v.second?.takeIf { v.first != null }
+            if (anh == null) { lenh.append("content delete --uri $uri 2>/dev/null; "); continue }
+            val tam = "/data/local/tmp/tivikit-launcher-$goi.jpg"
+            adb.ghiFile(tam, anh)
+            lenh.append("content write --uri $uri < $tam 2>/dev/null; rm -f $tam; ")
+        }
+        sh(lenh.append(TiviKitLauncher.lenhDat(TiviKitLauncher.tenApp(o.mapValues { it.value.first }))).toString())
+        return TiviKitLauncher.nhanAnhApp(TiviKitLauncher.docKetQua(sh(TiviKitLauncher.LENH_DOC)))
+    }
+
+    /**
      * Cài / cập nhật TiviKit Launcher (chỉ khi khác bản đi kèm), cấp quyền (TiviKitLauncher.LENH_CAP_QUYEN: tên Wi-Fi, thẻ
      * Đang phát, app mở gần đây), biên dịch sẵn phần mã hay dùng sau mỗi lần cài (TiviKitLauncher.LENH_TOI_UU), rồi gửi
      * [cauHinh] (TiviKitLauncher.cauHinh: tên lời chào, nơi xem thời tiết, ngôn ngữ, dock khi mới cài).

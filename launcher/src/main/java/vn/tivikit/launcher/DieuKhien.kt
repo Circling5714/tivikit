@@ -40,6 +40,9 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     /** App mở gần đây theo thống kê sử dụng (rỗng = chưa có quyền) và các gói launcher (không đưa vào app gần đây). */
     private var suDung: List<String> = emptyList()
     private var goiHome: Set<String> = emptySet()
+    /** App đọc từ hệ thống (tên của app), và tên riêng TiviKit đặt (ten_app: tên kênh của các ô Kênh nhanh). */
+    private var dsGoc: List<AppTv> = emptyList()
+    private var tenRieng: Map<String, String> = emptyMap()
     private val dangTai = HashSet<String>()
     /** Cỡ giải mã banner / biểu tượng theo màn hình: box 720p không cần ảnh cỡ 1080p (ít RAM hơn). */
     private var rongBanner = 256
@@ -63,6 +66,13 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         scope.launch { CauHinh.lanDoi.collect { apCauHinh() } }
         // Lần đầu, và mỗi lần TiviKit gửi / bỏ ảnh nền riêng: dựng lại ảnh nền và bản mờ cho kính.
         scope.launch { CauHinh.lanNen.collect { tt.nen = withContext(Dispatchers.Default) { runCatching { taiNen() }.getOrNull() } ?: tt.nen } }
+        // TiviKit gửi / bỏ ảnh riêng của app (logo kênh): đọc lại ảnh các app đó đang hiện (ảnh cũ giữ tới khi có ảnh mới).
+        scope.launch {
+            CauHinh.lanAnh.collect {
+                val doi = CauHinh.anhDoi.iterator()
+                while (doi.hasNext()) { val g = doi.next(); doi.remove(); if (g in tt.anh) taiAnh(g, lai = true) }
+            }
+        }
     }
 
     fun hien() {
@@ -104,6 +114,8 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             else -> Locale.getDefault().language == "vi"
         }
         tt.ten = j.optString("ten")
+        val ten = CauHinh.tenApp(j)
+        if (ten != tenRieng) { tenRieng = ten; datApps() }
         dockLuu = if (j.has("dock")) CauHinh.dsGoi(j.optJSONArray("dock")) else null
         lichSu = CauHinh.dsGoi(j.optJSONArray("gan_day"))
         val n = CauHinh.noi(j)
@@ -122,14 +134,20 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             val ds = withContext(Dispatchers.IO) { runCatching { DanhSachApp.doc(pm, setOf(ctx.packageName)) }.getOrNull() } ?: return@launch
             suDung = withContext(Dispatchers.IO) { HeThong.dungGanDay(ctx) }
             goiHome = withContext(Dispatchers.IO) { HeThong.goiHome(pm) }
-            if (ds != tt.apps) {
-                // App vừa cập nhật: vẽ lại ảnh (banner có thể đã đổi).
-                val cu = tt.apps.associateBy(AppTv::goi)
-                ds.forEach { a -> cu[a.goi]?.let { if (it.capNhat != a.capNhat) tt.anh.remove(a.goi) } }
-                tt.apps = ds
-            }
+            dsGoc = ds
+            datApps()
             capNhatDock()
         }
+    }
+
+    /** Danh sách app hiện ra: tên riêng TiviKit đặt thay tên app. */
+    private fun datApps() {
+        val ds = DanhSachApp.doiTen(dsGoc, tenRieng)
+        if (ds == tt.apps) return
+        // App vừa cập nhật: vẽ lại ảnh (banner có thể đã đổi).
+        val cu = tt.apps.associateBy(AppTv::goi)
+        ds.forEach { a -> cu[a.goi]?.let { if (it.capNhat != a.capNhat) tt.anh.remove(a.goi) } }
+        tt.apps = ds
     }
 
     private fun capNhatDock() {
@@ -283,11 +301,17 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         ch.sua { it.put("gan_day", JSONArray(lichSu)) }
     }
 
-    override fun canAnh(goi: String) {
-        if (goi in tt.anh || !dangTai.add(goi)) return
+    override fun canAnh(goi: String) = taiAnh(goi, lai = false)
+
+    /** Đọc ảnh của [goi]; [lai] = đọc lại cả khi đã có. TiviKit gửi ảnh riêng mới giữa lúc đọc thì đọc lại lần nữa. */
+    private fun taiAnh(goi: String, lai: Boolean) {
+        if ((!lai && goi in tt.anh) || !dangTai.add(goi)) return
+        val lan = CauHinh.lanAnh.value
         scope.launch {
-            val a = withContext(Dispatchers.IO) { runCatching { DanhSachApp.anh(pm, goi, rongBanner, coBieuTuong) }.getOrNull() }
+            val rieng = CauHinhProvider.anhApp(ctx.filesDir, goi)
+            val a = withContext(Dispatchers.IO) { runCatching { DanhSachApp.anh(pm, goi, rongBanner, coBieuTuong, rieng) }.getOrNull() }
             dangTai.remove(goi)
+            if (CauHinh.lanAnh.value != lan) return@launch taiAnh(goi, lai = true)
             if (a != null) tt.anh[goi] = a
         }
     }

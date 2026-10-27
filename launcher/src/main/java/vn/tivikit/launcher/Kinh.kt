@@ -104,7 +104,8 @@ object AnhNen {
         return mo().use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = mau }) }
     }
 
-    private fun phuKin(src: Bitmap, w: Int, h: Int): Bitmap {
+    /** Phủ kín [w]×[h]: phóng / thu giữ tỉ lệ rồi cắt phần thừa ở giữa (trả chính [src] nếu đã đúng cỡ). */
+    fun phuKin(src: Bitmap, w: Int, h: Int): Bitmap {
         if (src.width == w && src.height == h) return src
         val tiLe = max(w.toFloat() / src.width, h.toFloat() / src.height)
         val sw = (src.width * tiLe).roundToInt().coerceAtLeast(w)

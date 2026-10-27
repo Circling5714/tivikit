@@ -63,4 +63,24 @@ class DockTest {
         CauHinh.tron(cu, JSONObject().put("ten", "x".repeat(60)))
         assertEquals(CauHinh.TEN_TOI_DA, cu.getString("ten").length)
     }
+
+    @Test
+    fun tenRiengCuaAppTuTiviKit() {
+        val cu = JSONObject()
+        val moi = JSONObject().put("ten_app", JSONObject().put("vn.tivikit.kenh", " VTV1 ").put("vn.tivikit.kenh2", "VTV2")
+            .put("sai tên", "X").put("vn.tivikit.kenh3", 5))
+        assertEquals(listOf("ten_app"), CauHinh.tron(cu, moi))
+        assertEquals(mapOf("vn.tivikit.kenh" to "VTV1", "vn.tivikit.kenh2" to "VTV2"), CauHinh.tenApp(cu))
+        // Gộp vào tên đã có; "" bỏ tên của gói đó, hết tên thì bỏ cả khoá.
+        CauHinh.tron(cu, JSONObject().put("ten_app", JSONObject().put("vn.tivikit.kenh2", "").put("vn.tivikit.kenh4", "x".repeat(60))))
+        assertEquals(mapOf("vn.tivikit.kenh" to "VTV1", "vn.tivikit.kenh4" to "x".repeat(CauHinh.TEN_TOI_DA)), CauHinh.tenApp(cu))
+        CauHinh.tron(cu, JSONObject().put("ten_app", JSONObject().put("vn.tivikit.kenh", "").put("vn.tivikit.kenh4", "")))
+        assertFalse(cu.has("ten_app"))
+        assertEquals(emptyMap<String, String>(), CauHinh.tenApp(cu))
+
+        // Màn Home: tên riêng thay tên app rồi xếp lại theo tên.
+        val ds = listOf(AppTv("com.viettel.tv360.tv", "TV360"), AppTv("org.smarttube.stable", "SmartTube"), AppTv("vn.tivikit.kenh", "Kênh nhanh 1"))
+        assertEquals(listOf("SmartTube", "TV360", "VTV1"), DanhSachApp.doiTen(ds, mapOf("vn.tivikit.kenh" to "VTV1")).map { it.ten })
+        assertEquals(ds, DanhSachApp.doiTen(ds, mapOf("vn.khac" to "Khác")))
+    }
 }

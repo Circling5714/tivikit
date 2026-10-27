@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import java.io.File
 import java.text.Collator
 import java.util.Locale
 
@@ -31,19 +32,36 @@ object DanhSachApp {
                 ds[goi] = AppTv(goi, ten, (ai.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0, capNhat)
             }
         }
+        return xepTen(ds.values)
+    }
+
+    /** Đổi tên các app TiviKit đặt tên riêng ([ten]: gói → tên, như tên kênh của ô Kênh nhanh) rồi xếp lại theo tên. */
+    fun doiTen(ds: List<AppTv>, ten: Map<String, String>): List<AppTv> =
+        if (ds.none { it.goi in ten }) ds else xepTen(ds.map { a -> ten[a.goi]?.let { a.copy(ten = it) } ?: a })
+
+    private fun xepTen(ds: Collection<AppTv>): List<AppTv> {
         val xep = Collator.getInstance(Locale("vi"))
-        return ds.values.sortedWith { a, b -> xep.compare(a.ten, b.ten) }
+        return ds.sortedWith { a, b -> xep.compare(a.ten, b.ten) }
     }
 
     fun ieMo(pm: PackageManager, goi: String): Intent? = pm.getLeanbackLaunchIntentForPackage(goi) ?: pm.getLaunchIntentForPackage(goi)
 
-    /** Banner [rong]×(rong·9/16) điểm ảnh nếu app có, biểu tượng [co]×[co] và màu nền cho ô không có banner. */
-    fun anh(pm: PackageManager, goi: String, rong: Int = 256, co: Int = 96): AnhApp {
-        val banner = runCatching {
+    /**
+     * Banner [rong]×(rong·9/16) điểm ảnh — ảnh riêng TiviKit gửi ([rieng]: logo kênh của ô Kênh nhanh) hoặc banner của app
+     * nếu có —, biểu tượng [co]×[co] và màu nền cho ô không có banner.
+     */
+    fun anh(pm: PackageManager, goi: String, rong: Int = 256, co: Int = 96, rieng: File? = null): AnhApp {
+        val banner = runCatching { rieng?.takeIf { it.isFile }?.let { anhRieng(it, rong, rong * 9 / 16) } }.getOrNull() ?: runCatching {
             pm.getLeanbackLaunchIntentForPackage(goi)?.component?.let { pm.getActivityBanner(it) } ?: pm.getApplicationBanner(goi)
         }.getOrNull()?.let { runCatching { it.toBitmap(rong, rong * 9 / 16) }.getOrNull() }
         val bieuTuong = runCatching { pm.getApplicationIcon(goi).toBitmap(co, co) }.getOrNull()
         return AnhApp(banner?.asImageBitmap(), bieuTuong?.asImageBitmap(), bieuTuong?.let { Color(mauNen(it)) } ?: Color(0xFF3A4060))
+    }
+
+    /** Ảnh riêng phủ kín [w]×[h] (cắt phần thừa ở giữa, như ảnh nền); null nếu không giải mã được. */
+    private fun anhRieng(f: File, w: Int, h: Int): Bitmap? {
+        val goc = AnhNen.giaiMa({ f.inputStream() }, w, h) ?: return null
+        return AnhNen.phuKin(goc, w, h).also { if (it !== goc) goc.recycle() }
     }
 
     /** Màu trung bình phần không trong suốt của biểu tượng, chỉnh về độ sáng vừa để chữ trắng đọc rõ. */

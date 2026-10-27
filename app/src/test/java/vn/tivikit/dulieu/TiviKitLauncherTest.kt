@@ -102,4 +102,29 @@ class TiviKitLauncherTest {
         assertFalse(TiviKitLauncher.TrangThai(null).daCai)
         assertTrue(TiviKitLauncher.TrangThai("1.0").daCai)
     }
+
+    @Test
+    fun tenVaLogoOKenh() {
+        // Tên kênh của ô (như app_labels của Home sạch): chỉ ASCII, không nháy đơn, null = bỏ tên riêng.
+        val j = TiviKitLauncher.tenApp(mapOf("vn.tivikit.kenh" to "VTV1", "vn.tivikit.kenh2" to "Hà Nội 1", "vn.tivikit.kenh3" to null, "sai tên" to "X"))
+        assertTrue(j.all { it.code < 0x80 })
+        assertTrue(TiviKitLauncher.lenhDat(j).startsWith("content call --uri content://vn.tivikit.launcher --method dat --arg '"))
+        val o = JSONObject(j).getJSONObject("ten_app")
+        assertEquals("VTV1", o.getString("vn.tivikit.kenh"))
+        assertEquals("Hà Nội 1", o.getString("vn.tivikit.kenh2"))
+        assertEquals("", o.getString("vn.tivikit.kenh3"))
+        assertFalse(o.has("sai tên"))
+        assertFalse(TiviKitLauncher.tenApp(mapOf("vn.tivikit.kenh" to "O'Brien")).contains('\''))
+        // Logo của ô (như app_banners của Home sạch).
+        assertEquals("content://vn.tivikit.launcher/anh-app/vn.tivikit.kenh4.jpg", TiviKitLauncher.uriAnhApp("vn.tivikit.kenh4"))
+        // Bản 1.0 không có anhApp trong kết quả doc: cần Cập nhật mới hiện được tên và logo của ô.
+        assertFalse(TiviKitLauncher.nhanAnhApp(JSONObject("""{"ban":"1.0","ma":1}""")))
+        assertTrue(TiviKitLauncher.nhanAnhApp(JSONObject("""{"ban":"1.1","ma":2,"anhApp":{"vn.tivikit.kenh":8358}}""")))
+        assertFalse(TiviKitLauncher.nhanAnhApp(null))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun uriAnhAppTuChoiTenGoiSai() {
+        TiviKitLauncher.uriAnhApp("a.b; rm -rf /")
+    }
 }

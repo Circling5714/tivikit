@@ -5,10 +5,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Cấu hình màn Home trong cau-hinh.json (thư mục riêng của app). TiviKit ghi qua CauHinhProvider (ten, dock, ngon_ngu);
- * màn Home ghi dock khi người dùng sửa ngay trên tivi và lịch sử app vừa mở (gan_day).
+ * Cấu hình màn Home trong cau-hinh.json (thư mục riêng của app). TiviKit ghi qua CauHinhProvider (ten, dock, ngon_ngu,
+ * noi, ten_app); màn Home ghi dock khi người dùng sửa ngay trên tivi và lịch sử app vừa mở (gan_day).
  */
 class CauHinh(ctx: Context) {
     private val file = File(ctx.filesDir, "cau-hinh.json")
@@ -36,6 +37,13 @@ class CauHinh(ctx: Context) {
         /** Tăng mỗi lần TiviKit gửi / bỏ ảnh nền riêng (CauHinhProvider) để màn Home dựng lại ảnh nền và kính. */
         val lanNen = MutableStateFlow(0)
 
+        /**
+         * Tăng mỗi lần TiviKit gửi / bỏ ảnh riêng của một app (logo kênh của ô Kênh nhanh, CauHinhProvider); các gói đó nằm
+         * trong [anhDoi] tới khi màn Home đọc lại ảnh của chúng.
+         */
+        val lanAnh = MutableStateFlow(0)
+        val anhDoi: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
         const val TEN_TOI_DA = 40
 
         /** Nơi xem thời tiết đã lưu ("noi": {ten, lat, lon}); null nếu chưa có / sai. */
@@ -49,8 +57,8 @@ class CauHinh(ctx: Context) {
 
         /**
          * Ghép cấu hình TiviKit gửi ([moi]) vào [cu]: chỉ nhận "ten" (chữ, tối đa 40 ký tự, "" = bỏ tên), "dock" (mảng tên
-         * gói hợp lệ), "ngon_ngu" ("vi" / "en" / "" = theo tivi) và "noi" (nơi xem thời tiết {ten, lat, lon}; sai / rỗng =
-         * bỏ). Trả các khoá đã nhận.
+         * gói hợp lệ), "ngon_ngu" ("vi" / "en" / "" = theo tivi), "noi" (nơi xem thời tiết {ten, lat, lon}; sai / rỗng =
+         * bỏ) và "ten_app" (tên riêng {gói: tên}, gộp vào tên đã có; "" = bỏ tên riêng của gói đó). Trả các khoá đã nhận.
          */
         fun tron(cu: JSONObject, moi: JSONObject): List<String> {
             val nhan = mutableListOf<String>()
@@ -73,7 +81,23 @@ class CauHinh(ctx: Context) {
                 if (n == null) cu.remove("noi") else cu.put("noi", JSONObject().put("ten", n.ten).put("lat", n.lat).put("lon", n.lon))
                 nhan += "noi"
             }
+            moi.optJSONObject("ten_app")?.let { o ->
+                val ten = cu.optJSONObject("ten_app") ?: JSONObject()
+                for (goi in o.keys()) {
+                    if (!Dock.hopLe(goi)) continue
+                    val t = (o.opt(goi) as? String).orEmpty().trim().take(TEN_TOI_DA)
+                    if (t.isEmpty()) ten.remove(goi) else ten.put(goi, t)
+                }
+                if (ten.length() == 0) cu.remove("ten_app") else cu.put("ten_app", ten)
+                nhan += "ten_app"
+            }
             return nhan
+        }
+
+        /** Tên riêng TiviKit đặt cho app ("ten_app", như tên kênh của các ô Kênh nhanh): gói → tên. */
+        fun tenApp(j: JSONObject): Map<String, String> {
+            val o = j.optJSONObject("ten_app") ?: return emptyMap()
+            return o.keys().asSequence().mapNotNull { g -> (o.opt(g) as? String)?.trim()?.takeIf { it.isNotEmpty() && Dock.hopLe(g) }?.let { g to it } }.toMap()
         }
 
         fun dsGoi(a: JSONArray?): List<String> = if (a == null) emptyList() else (0 until a.length()).mapNotNull { a.optString(it).takeIf(String::isNotBlank) }

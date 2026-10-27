@@ -104,7 +104,8 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
 
     /**
      * Cài / cập nhật TiviKit Launcher lên tivi, gửi kèm tên lời chào và nơi xem thời tiết (đang chỉnh ở màn Home sạch, không
-     * thì của Home sạch trên tivi), ngôn ngữ của app; mới cài thì lấy luôn dock của Home sạch.
+     * thì của Home sạch trên tivi), ngôn ngữ của app; mới cài thì lấy luôn dock của Home sạch. Rồi gửi tên kênh và logo của
+     * các ô Kênh nhanh có sẵn.
      */
     fun caiTkl() = vm.chay(t("Đang cài TiviKit Launcher…", "Installing TiviKit Launcher…")) {
         hoi = null
@@ -113,6 +114,7 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         val hs = TiviKitLauncher.tuHomeSach(runCatching { vm.io { vm.tv.docCauHinhTv() } }.getOrNull())
         val cauHinh = TiviKitLauncher.cauHinh(vm.tenChao.ifBlank { hs.ten }, NgonNgu.tiengViet, vm.thanhPho ?: hs.noi, if (capNhat) null else hs.dock)
         vm.io { vm.tv.caiTkl(apkTkl(), cauHinh) { s -> baoViec(s) } }
+        runCatching { vm.kenhNhanh.guiTkl() }
         doc()
         bao = if (capNhat) t("Đã cập nhật TiviKit Launcher.", "TiviKit Launcher updated.")
         else t("Đã cài TiviKit Launcher. Bấm Mở thử để xem trên tivi, Đặt làm Home để nút Home mở nó.",

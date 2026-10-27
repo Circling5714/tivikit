@@ -26,6 +26,25 @@ object TiviKitLauncher {
     /** Ảnh nền riêng của launcher: content write để gửi, content delete để về ảnh mặc định. */
     const val URI_NEN = "content://$GOI/anh-nen.jpg"
 
+    /**
+     * Ảnh thay banner của app [goi] trên launcher (bản 1.1 trở đi; logo kênh của ô Kênh nhanh, như app_banners của Home
+     * sạch): content write để gửi, content delete để về banner của app.
+     */
+    fun uriAnhApp(goi: String): String {
+        require(TEN_GOI.matches(goi)) { "goi" }
+        return "content://$GOI/anh-app/$goi.jpg"
+    }
+
+    /**
+     * Cấu hình đặt tên riêng của app trên launcher (bản 1.1 trở đi; tên kênh của ô Kênh nhanh, như app_labels của Home
+     * sạch): [ten] gói → tên, null / rỗng = bỏ tên riêng (về tên của app). Gửi bằng [lenhDat].
+     */
+    fun tenApp(ten: Map<String, String?>): String {
+        val o = JSONObject()
+        ten.forEach { (goi, t) -> if (TEN_GOI.matches(goi)) o.put(goi, boNhay(t.orEmpty()).trim().take(40)) }
+        return chiAscii(JSONObject().put("ten_app", o).toString())
+    }
+
     /** Ảnh nền có sẵn trong TiviKit để chọn cho launcher. */
     data class AnhCoSan(val asset: String, val tenVi: String, val tenEn: String)
 
@@ -110,6 +129,9 @@ object TiviKitLauncher {
         require(!json.contains('\'') && json.all { it.code < 0x80 }) { "json" }
         return "content call --uri content://$GOI --method dat --arg '$json'"
     }
+
+    /** Launcher bản 1.0 không có "anhApp" trong kết quả doc: chưa nhận ảnh / tên riêng của app ([j] null = không đọc được). */
+    fun nhanAnhApp(j: JSONObject?): Boolean = j?.has("anhApp") == true
 
     /**
      * Trạng thái trên tivi: [ban] = versionName (null = chưa cài), [homeBat] = bí danh Home đã bật, [canCapNhat] = khác bản

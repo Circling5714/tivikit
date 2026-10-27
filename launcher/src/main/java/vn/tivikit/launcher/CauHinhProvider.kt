@@ -22,6 +22,8 @@ import java.io.FileNotFoundException
  *   content call --uri content://vn.tivikit.launcher --method doc
  *   content call --uri content://vn.tivikit.launcher --method bat-home   (hoặc tat-home)
  *   content write --uri content://vn.tivikit.launcher/anh-nen.jpg < ảnh.jpg   (ảnh nền riêng; content delete để về ảnh mặc định)
+ *   content write --uri content://vn.tivikit.launcher/anh-app/vn.tivikit.kenh.jpg < logo.jpg   (ảnh thay banner của một app:
+ *     logo kênh của ô Kênh nhanh, như app_banners của Home sạch; content delete để về banner của app)
  * bat-home / tat-home bật / tắt bí danh .Home (bộ lọc HOME): ADB không đổi được trạng thái từng thành phần của app thường
  * ("Shell cannot change component state", chỉ đổi được cả gói), còn app thì tự đổi được thành phần của mình.
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được.
@@ -63,8 +65,11 @@ class CauHinhProvider : ContentProvider() {
                 } catch (_: Exception) {
                     JSONObject.NULL
                 }
+                // Ảnh riêng của từng app đang giữ: gói → cỡ file (TiviKit biết launcher nhận ảnh riêng, bản 1.1 trở đi).
+                val anhApp = JSONObject()
+                File(ctx.filesDir, ANH_APP).listFiles()?.filter { it.name.endsWith(".jpg") }?.forEach { anhApp.put(it.name.removeSuffix(".jpg"), it.length()) }
                 val o = JSONObject().put("ban", pi.versionName).put("ma", ma).put("homeBat", homeBat).put("cauHinh", ch.doc())
-                    .put("nen", File(ctx.filesDir, ANH_NEN).length()).put("dangPhat", dangPhat)
+                    .put("nen", File(ctx.filesDir, ANH_NEN).length()).put("anhApp", anhApp).put("dangPhat", dangPhat)
                 kq.putString("json", o.toString())
             }
             "bat-home", "tat-home" -> {
@@ -79,39 +84,66 @@ class CauHinhProvider : ContentProvider() {
     }
 
     /**
-     * Ảnh nền riêng: ghi vào file tạm, đóng xong mới kiểm (giải mã được, không quá 12 MB) rồi thay ảnh cũ và báo màn Home
-     * vẽ lại; ảnh hỏng thì bỏ, ảnh cũ giữ nguyên. Đọc ("r") trả ảnh đang dùng.
+     * Ảnh nền riêng, hoặc ảnh riêng của một app (anh-app/<gói>.jpg): ghi vào file tạm, đóng xong mới kiểm (giải mã được,
+     * không quá 12 MB / 2 MB) rồi thay ảnh cũ và báo màn Home vẽ lại; ảnh hỏng thì bỏ, ảnh cũ giữ nguyên. Đọc ("r") trả
+     * ảnh đang dùng.
      */
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         chiAdb()
-        if (uri.lastPathSegment != ANH_NEN) throw FileNotFoundException(uri.toString())
-        val ctx = context!!
-        val dich = File(ctx.filesDir, ANH_NEN)
+        val goi = goiAnhApp(uri)
+        val dich = fileCua(uri, goi) ?: throw FileNotFoundException(uri.toString())
         if (!mode.contains('w')) return ParcelFileDescriptor.open(dich, ParcelFileDescriptor.MODE_READ_ONLY)
-        val tam = File(ctx.filesDir, "$ANH_NEN.tmp")
+        dich.parentFile?.mkdirs()
+        val tam = File(dich.path + ".tmp")
+        val toiDa = if (goi != null) 2L * 1024 * 1024 else 12L * 1024 * 1024
         val ghi = ParcelFileDescriptor.MODE_WRITE_ONLY or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE
         return ParcelFileDescriptor.open(tam, ghi, Handler(Looper.getMainLooper())) { loi ->
-            if (loi == null && tam.length() in 1..12L * 1024 * 1024 && AnhNen.hopLe(tam) && tam.renameTo(dich)) CauHinh.lanNen.value++
+            if (loi == null && tam.length() in 1..toiDa && AnhNen.hopLe(tam) && tam.renameTo(dich)) daDoi(goi)
             else tam.delete()
         }
+    }
+
+    /** Gói trong Uri anh-app/<gói>.jpg; null nếu Uri không phải ảnh riêng của app. */
+    private fun goiAnhApp(u: Uri): String? {
+        val p = u.pathSegments
+        if (p.size != 2 || p[0] != ANH_APP || !p[1].endsWith(".jpg")) return null
+        return p[1].removeSuffix(".jpg").takeIf(Dock::hopLe)
+    }
+
+    /** File của ảnh nền riêng, hoặc của ảnh riêng app [goi]; null nếu [u] không phải hai loại đó. */
+    private fun fileCua(u: Uri, goi: String?): File? {
+        val dir = context!!.filesDir
+        return if (goi != null) anhApp(dir, goi) else if (u.pathSegments == listOf(ANH_NEN)) File(dir, ANH_NEN) else null
+    }
+
+    /** Báo màn Home: ảnh nền ([goi] null) hoặc ảnh riêng của app [goi] vừa đổi. */
+    private fun daDoi(goi: String?) {
+        if (goi == null) { CauHinh.lanNen.value++; return }
+        CauHinh.anhDoi += goi
+        CauHinh.lanAnh.value++
     }
 
     companion object {
         /** Bí danh có bộ lọc HOME (AndroidManifest.xml). */
         const val HOME = "vn.tivikit.launcher.Home"
         const val ANH_NEN = "anh-nen.jpg"
+        /** Thư mục ảnh riêng của từng app (logo kênh của ô Kênh nhanh) TiviKit gửi. */
+        const val ANH_APP = "anh-app"
+
+        fun anhApp(dir: File, goi: String) = File(File(dir, ANH_APP), "$goi.jpg")
     }
 
     override fun query(u: Uri, p: Array<out String>?, s: String?, a: Array<out String>?, o: String?) = null
     override fun getType(u: Uri): String? = null
     override fun insert(u: Uri, v: ContentValues?): Uri? = null
 
-    /** Bỏ ảnh nền riêng, về ảnh mặc định. */
+    /** Bỏ ảnh nền riêng (về ảnh mặc định), hoặc ảnh riêng của một app (về banner của app). */
     override fun delete(u: Uri, s: String?, a: Array<out String>?): Int {
         chiAdb()
-        if (u.lastPathSegment != ANH_NEN) return 0
-        val xoa = File(context!!.filesDir, ANH_NEN).delete()
-        CauHinh.lanNen.value++
+        val goi = goiAnhApp(u)
+        val f = fileCua(u, goi) ?: return 0
+        val xoa = f.delete()
+        daDoi(goi)
         return if (xoa) 1 else 0
     }
     override fun update(u: Uri, v: ContentValues?, s: String?, a: Array<out String>?) = 0
