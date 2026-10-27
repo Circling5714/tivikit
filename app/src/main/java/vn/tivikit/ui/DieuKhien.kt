@@ -82,7 +82,8 @@ class DieuKhien(private val vm: PhienLamViec) {
 
     /**
      * Gửi chữ trong ô lên tivi, [enter] = bấm Enter sau khi gõ. Chữ không dấu gõ bằng `input text` (nhanh); chữ có dấu
-     * (25/10/2026) đi qua bộ gõ tiếng Việt của TiviKit trên tivi (GoChu), ô nhập không nhận thì gõ không dấu như trước.
+     * (25/10/2026) đi qua bộ gõ tiếng Việt của TiviKit trên tivi (GoChu); bộ gõ hỏng thì dán qua clipboard (27/10/2026), ô
+     * nhập không nhận thì gõ không dấu như trước.
      */
     fun guiChu(enter: Boolean) {
         val s = GoChu.chuan(chu)
@@ -93,7 +94,10 @@ class DieuKhien(private val vm: PhienLamViec) {
                 var xong = t("Đã gửi.", "Sent.") to LoaiBao.XONG
                 if (s.isNotEmpty()) {
                     val kq = if (GoChu.canBoGo(s)) goCoDau(s) ?: return@launch else "khong-dau"
-                    if (kq != "ok") {
+                    if (kq != "ok" && GoChu.nenDan(kq) && danQuaClipboard(s)) {
+                        xong = t("Đã dán \"$s\" vào ô đang chọn trên tivi (bộ gõ tiếng Việt chưa chạy được trên tivi này: $kq).",
+                            "Pasted \"$s\" into the selected box on the TV (the Vietnamese typing helper doesn't work on this TV: $kq).") to LoaiBao.XONG
+                    } else if (kq != "ok") {
                         for (lenh in PhimTv.lenhChu(s)) if (!gui(lenh)) return@launch
                         val bd = PhimTv.boDau(s)
                         if (kq == "khong-o-nhap") xong = t("Đã gửi \"$bd\" không dấu: ô đang chọn trên tivi không nhận chữ có dấu (hoặc chưa chọn ô nhập).",
@@ -107,6 +111,16 @@ class DieuKhien(private val vm: PhienLamViec) {
                 if (s.isEmpty()) bao("", LoaiBao.XONG) else bao(xong.first, xong.second)
             } finally { dangGui = false }
         }
+    }
+
+    /**
+     * Bộ gõ không chạy được (GoChu.nenDan): dán [s] qua clipboard của tivi bằng máy chủ scrcpy (27/10/2026; chỉ Android 7+
+     * mới bấm dán được). false = không dán được, gõ không dấu như trước.
+     */
+    private suspend fun danQuaClipboard(s: String): Boolean {
+        if ((vm.thongTin?.sdk ?: 0) < 24) return false
+        bao(t("Bộ gõ không chạy được, đang dán chữ qua bộ nhớ tạm của tivi…", "The typing helper failed; pasting through the TV's clipboard…"), LoaiBao.DANG)
+        return runCatching { vm.kenhDieuKhien.dan(s) }.getOrDefault(false)
     }
 
     /**

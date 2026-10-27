@@ -32,6 +32,15 @@ object GiaoThucScrcpy {
             " tunnel_forward=true audio=false control=$dieuKhien video_codec=h264 max_size=$canhLon video_bit_rate=$bitRate" +
             " max_fps=$fps power_on=false cleanup=false clipboard_autosync=false"
 
+    /**
+     * Lệnh chạy máy chủ chỉ có kênh điều khiển (27/10/2026): không hình, không tiếng, không gửi tên máy — luồng nối vào nhận
+     * byte giả 0 là dùng được ngay. Để dán chữ có dấu khi không xem màn hình tivi.
+     */
+    fun lenhChayDieuKhien(scid: Int): String =
+        "CLASSPATH=$DUONG_DAN app_process / com.genymobile.scrcpy.Server $BAN scid=%08x log_level=info".format(scid) +
+            " tunnel_forward=true video=false audio=false control=true send_device_meta=false power_on=false cleanup=false" +
+            " clipboard_autosync=false"
+
     /** Đầu 12 byte trước mỗi gói của luồng video. */
     sealed class Dau {
         /** Phiên quay mới (lúc bắt đầu, khi màn hình đổi cỡ / xoay): khung video [rong]×[cao]. */
@@ -73,4 +82,18 @@ object GiaoThucScrcpy {
 
     /** Gói yêu cầu quay lại từ đầu (TYPE_RESET_VIDEO = 17): máy chủ gửi lại SPS/PPS và một khung khoá. */
     fun goiQuayLai(): ByteArray = byteArrayOf(17)
+
+    /**
+     * Gói đặt clipboard của tivi (TYPE_SET_CLIPBOARD = 9): [soThuTu] khác 0 thì máy chủ trả ACK_CLIPBOARD cùng số khi đặt
+     * xong; [dan] = bấm luôn KEYCODE_PASTE vào ô đang chọn (máy chủ chỉ bấm từ Android 7). Chữ UTF-8, độ dài u32 đứng trước.
+     */
+    fun goiClipboard(soThuTu: Long, dan: Boolean, chu: String): ByteArray {
+        val b = chu.toByteArray(Charsets.UTF_8)
+        return ByteBuffer.allocate(14 + b.size).put(9.toByte()).putLong(soThuTu).put((if (dan) 1 else 0).toByte()).putInt(b.size).put(b).array()
+    }
+
+    /** Tin máy chủ gửi về trên luồng điều khiển (DeviceMessage): clipboard của tivi, ACK đặt clipboard, dữ liệu UHID. */
+    const val TIN_CLIPBOARD = 0
+    const val TIN_ACK_CLIPBOARD = 1
+    const val TIN_UHID = 2
 }

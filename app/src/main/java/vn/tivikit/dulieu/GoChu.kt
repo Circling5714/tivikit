@@ -37,6 +37,13 @@ object GoChu {
             "content call --uri content://$GOI --method chu --arg '$goi'; " + tra + "ime disable $BO_GO >/dev/null 2>&1; true"
     }
 
+    /**
+     * Bộ gõ hỏng chứ không phải tivi thiếu ô nhập (27/10/2026): tivi không cho bật bộ gõ ("chua-bat"), ô từ chối chữ, bộ gõ
+     * không trả lời, cài không được… thì dán qua clipboard trước khi bỏ dấu. "khong-o-nhap" (chưa chọn ô nhập, hoặc ô do app
+     * tự vẽ bàn phím) thì dán cũng không vào: giữ cách báo cũ.
+     */
+    fun nenDan(kq: String): Boolean = kq != "ok" && kq != "khong-o-nhap" && kq != "khong-dau"
+
     /** Kết quả lệnh: "ok", mã lỗi của bộ gõ ("khong-o-nhap"…), hoặc "khong-tra-loi". */
     fun ketQua(out: String): String {
         if (out.contains("ok=1")) return "ok"

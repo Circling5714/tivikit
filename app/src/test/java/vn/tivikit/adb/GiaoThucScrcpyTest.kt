@@ -22,6 +22,29 @@ class GiaoThucScrcpyTest {
             "max_fps=30", "power_on=false", "cleanup=false", "clipboard_autosync=false").forEach { assertTrue(it, l.contains(" $it")) }
     }
 
+    /** Thử trên TX3 Mini: không hình, không tiếng, không tên máy thì luồng điều khiển nhận byte giả 0 rồi dùng được ngay. */
+    @Test fun lenhChayDieuKhien_khongHinhKhongTieng() {
+        val l = GiaoThucScrcpy.lenhChayDieuKhien(0x1a2b3c4d)
+        assertTrue(l.startsWith("CLASSPATH=${GiaoThucScrcpy.DUONG_DAN} app_process / com.genymobile.scrcpy.Server ${GiaoThucScrcpy.BAN} scid=1a2b3c4d "))
+        listOf("tunnel_forward=true", "video=false", "audio=false", "control=true", "send_device_meta=false", "power_on=false",
+            "cleanup=false", "clipboard_autosync=false").forEach { assertTrue(it, l.contains(" $it")) }
+        // Lệnh qua libadb phải toàn ASCII (chữ có dấu làm hỏng lệnh, xem TiviKitLauncher.chiAscii).
+        assertTrue(l.all { it.code < 0x80 })
+    }
+
+    @Test fun goiClipboard_soThuTuDanVaChuUtf8() {
+        val chu = "Sơn Tùng – Chúng ta"
+        val raw = chu.toByteArray(Charsets.UTF_8)
+        val b = ByteBuffer.wrap(GiaoThucScrcpy.goiClipboard(42, dan = true, chu = chu))
+        assertEquals(14 + raw.size, b.capacity())
+        assertEquals(9, b.get(0).toInt())
+        assertEquals(42L, b.getLong(1))
+        assertEquals(1, b.get(9).toInt())
+        assertEquals(raw.size, b.getInt(10))
+        assertArrayEquals(raw, b.array().copyOfRange(14, b.capacity()))
+        assertEquals(0, GiaoThucScrcpy.goiClipboard(7, dan = false, chu = "a")[9].toInt())
+    }
+
     @Test fun dauGoi_phien() {
         val b = ByteBuffer.allocate(12).put(0x80.toByte()).put(ByteArray(3)).putInt(1280).putInt(720).array()
         assertEquals(GiaoThucScrcpy.Dau.Phien(1280, 720), GiaoThucScrcpy.docDau(b))

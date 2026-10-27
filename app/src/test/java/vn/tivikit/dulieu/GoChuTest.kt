@@ -43,6 +43,12 @@ class GoChuTest {
         assertTrue(GoChu.laBoGoCu(LEANBACK)); assertFalse(GoChu.laBoGoCu("vn.tivikit.go/.BoGo"))
     }
 
+    /** Bộ gõ hỏng thì dán qua clipboard; chưa chọn ô nhập (hay ô tự vẽ bàn phím) thì dán cũng không vào. */
+    @Test fun nenDan_chiKhiBoGoHong() {
+        for (kq in listOf("chua-bat", "khong-go-duoc", "khong-tra-loi", "loi", "khong-co-bo-go", "lenh-sai")) assertTrue(kq, GoChu.nenDan(kq))
+        for (kq in listOf("ok", "khong-o-nhap", "khong-dau")) assertFalse(kq, GoChu.nenDan(kq))
+    }
+
     @Test fun ketQua() {
         assertEquals("ok", GoChu.ketQua("Result: Bundle[{ok=1}]"))
         assertEquals("khong-o-nhap", GoChu.ketQua("Result: Bundle[{loi=khong-o-nhap}]"))
