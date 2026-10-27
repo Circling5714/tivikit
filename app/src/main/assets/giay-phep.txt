@@ -59,6 +59,9 @@ TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the followi
 14. scrcpy (máy chủ quay màn hình, bản 5.0.1, không sửa) — đẩy lên tivi qua ADB cho Xem màn hình tivi /
     scrcpy screen server (v5.0.1, unmodified), pushed to the TV over ADB for the live TV screen
     Genymobile — https://github.com/Genymobile/scrcpy — Apache License 2.0 (mục B / section B)
+15. QR Code generator (bản Java 1.8.0) — vẽ mã QR lúc cài mã OTP cho Khoá trẻ em / draws the QR code when setting up
+    the Kids lock OTP code
+    Project Nayuki — https://www.nayuki.io/page/qr-code-generator-library — MIT License (văn bản ở mục A / text in section A)
 
 Tên các hãng tivi chỉ dùng để nói tivi nào chạy được; TiviKit không liên quan tới các hãng đó.
 TV brand names are only used to describe compatibility; TiviKit is not affiliated with them.
@@ -67,12 +70,13 @@ tải lúc bạn chọn. / VTV, VTVgo and the channel logos belong to Vietnam Te
 channel tiles use VTVgo's own pictures fetched when you pick them.
 
 ======================================================================
-A. MIT License (CleanTV, CleanYourTV)
+A. MIT License (CleanTV, CleanYourTV, QR Code generator)
 ======================================================================
 MIT License
 
 Copyright (c) 2026 VGS (Vietnam Gaming Setup) / AlexVGS (CleanTV)
 Copyright (c) 2026 Gathin (CleanYourTV)
+Copyright (c) Project Nayuki (QR Code generator library)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -143,6 +143,7 @@ fun UngDung(vm: PhienLamViec = viewModel()) {
             }
             }
             if (vm.moLienHe) HopLienHe(vm)
+            if (vm.khoaTre.hoiMa != null) HopNhapMa(vm)
             if (vm.moUngHo) HopUngHo(vm)
             if (vm.gopNguoc.hien) HopGopNguoc(vm)
             vm.banMoi?.takeIf { vm.hoiCapNhat }?.let { b ->
@@ -1589,99 +1590,6 @@ private fun TheGuiDanhSach(vm: PhienLamViec) {
             label = { Text(t("Email / Zalo để VGS hỏi lại (không bắt buộc)", "Email to reach you (optional)")) })
         NutPhu(t("Gửi danh sách gói cho VGS", "Send the package list to VGS"), Icons.Rounded.Share) { if (!vm.dangBan) vm.guiDanhSach() }
     }
-}
-
-// ---------------- Khoá trẻ em ----------------
-
-internal val TEN_THU = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
-internal val TEN_THU_EN = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ManKhoaTre(vm: PhienLamViec) = Cuon {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(t("Khoá trẻ em", "Kids lock"), style = KieuTieuDeLon)
-        Phu(t("Tới giờ khoá, hay xem hết giờ trong ngày, tivi hiện màn khoá che mọi thứ (cả HDMI, YouTube) và chặn phím remote. Nhập đúng mã PIN trên tivi thì mở ${vm.KHOA_MO_TAM} phút. Tắt tivi bật lại vẫn khoá.",
-            "During the lock periods, or once the day's time is used up, the TV shows a lock screen over everything (HDMI and YouTube too) and blocks the remote. The right PIN unlocks it for ${vm.KHOA_MO_TAM} minutes. It stays locked after a restart."))
-        Phu(t("Khoá bật thì giờ tivi luôn tự động theo mạng: ai tắt giờ tự động để chỉnh giờ né khoá, app bật lại ngay.",
-            "While the lock is on, the TV keeps its clock automatic: turning automatic time off to dodge the lock gets switched back at once."))
-    }
-    vm.khoaTrenTv?.let { j ->
-        The(t("Trên tivi", "On the TV"), Icons.Rounded.Lock) {
-            val bat = j.optBoolean("bat"); val chay = j.optBoolean("dichVuChay"); val dangKhoa = j.optBoolean("dangKhoa")
-            val moDen = j.optLong("moTamDen")
-            Phu(if (!bat) t("Khoá đang tắt.", "The lock is off.")
-                else if (!chay) t("Khoá đang bật nhưng dịch vụ chưa chạy (tắt tivi bật lại).", "On, but the service isn't running (restart the TV).")
-                else if (dangKhoa && j.optString("lyDo") == "het-gio") t("Tivi đang khoá: đã xem hết giờ hôm nay.", "The TV is locked: today's time is used up.")
-                else if (dangKhoa) t("Tivi đang khoá.", "The TV is locked now.")
-                else if (moDen > System.currentTimeMillis()) t("Đang mở tạm tới ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(moDen))}.", "Unlocked until ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(moDen))}.")
-                else t("Khoá đang bật, ngoài giờ khoá.", "On, outside the lock periods."), if (bat && chay) Xanh else ChuPhu)
-            if (bat) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ChonChip(t("Mở tạm ${vm.KHOA_MO_TAM} phút", "Unlock ${vm.KHOA_MO_TAM} min"), false) { vm.moTamKhoaTre(vm.KHOA_MO_TAM) }
-                ChonChip(t("Khoá lại ngay", "Lock now"), false) { vm.moTamKhoaTre(0) }
-            }
-            // App khoá cài từ trước khi đổi tên gói (com.icm.cleantv.khoa): tivi không cho đọc PIN của nó.
-            if (j.optBoolean("banCu")) Phu(t("Đây là Khoá trẻ em của TiviKit bản cũ, vẫn đang khoá bình thường. Đặt PIN mới bên dưới rồi bấm Lưu: app cài bản mới với giờ khoá này và gỡ bản cũ.",
-                "This is the Kids lock from the old TiviKit and it still works. Set a new PIN below and tap Save: the app installs the new version with these periods and removes the old one."), Cam)
-            // App khoá bản trước 25/10/2026: chưa đếm giờ xem, Lưu lại là cài bản mới (giữ giờ khoá và PIN).
-            else if (!j.has("giayHomNay")) Phu(t("App khoá trên tivi là bản cũ, chưa có giới hạn mỗi ngày và báo cáo thời gian xem. Bấm Lưu & áp dụng để cập nhật (giữ giờ khoá và PIN).",
-                "The lock app on the TV is an older version without daily limits or screen time. Tap Save & apply to update it (the schedule and PIN are kept)."), Cam)
-        }
-        vm.khoaThoiGian?.let { TheThoiGianXem(it) }
-    }
-    The {
-        Hang(t("Bật Khoá trẻ em", "Kids lock on"), t("Tắt thì tivi dùng bình thường, giữ nguyên giờ khoá, giới hạn và PIN", "Off: the TV works normally; periods, limits and PIN are kept"), vm.khoaBat) { vm.khoaBat = it }
-    }
-    The(t("Giờ khoá", "Lock periods"), Icons.Rounded.Schedule) {
-        if (vm.khoaKhung.isEmpty()) Phu(t("Chưa có khung giờ khoá.", "No lock periods."))
-        vm.khoaKhung.forEachIndexed { i, k ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(The2).padding(start = 14.dp, top = 6.dp, bottom = 6.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("${k.tu} – ${k.den}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(if (k.ngay.size == 7) t("Mọi ngày", "Every day") else k.ngay.sorted().joinToString(" ") { t(TEN_THU[it - 1], TEN_THU_EN[it - 1]) }, fontSize = 12.sp, color = ChuPhu)
-                }
-                IconButton(onClick = { vm.khoaKhung.removeAt(i) }) { Icon(Icons.Rounded.Close, t("Xoá", "Remove")) }
-            }
-        }
-        Phu(t("Thêm nhanh:", "Quick add:"))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChonChip(t("Tối 21:00–06:00", "Night 21:00–06:00"), false) { vm.khoaKhung += PhienLamViec.KhungKhoa("21:00", "06:00", (1..7).toSet()) }
-            ChonChip(t("Giờ học 14:00–16:30 (T2–T6)", "Study 14:00–16:30 (Mon–Fri)"), false) { vm.khoaKhung += PhienLamViec.KhungKhoa("14:00", "16:30", (1..5).toSet()) }
-            ChonChip(t("Trưa 12:00–13:30", "Nap 12:00–13:30"), false) { vm.khoaKhung += PhienLamViec.KhungKhoa("12:00", "13:30", (1..7).toSet()) }
-        }
-        var tu by remember { mutableStateOf("") }
-        var den by remember { mutableStateOf("") }
-        var ngay by remember { mutableStateOf((1..7).toSet()) }
-        Text(t("Hoặc tự đặt:", "Or set your own:"), fontSize = 14.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(tu, { tu = it.take(5) }, label = { Text(t("Từ (21:00)", "From")) }, singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(den, { den = it.take(5) }, label = { Text(t("Đến (06:00)", "To")) }, singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            (1..7).forEach { d -> ChonChip(t(TEN_THU[d - 1], TEN_THU_EN[d - 1]), d in ngay) { ngay = if (d in ngay) ngay - d else ngay + d } }
-        }
-        NutPhu(t("Thêm khung này", "Add this period"), Icons.Rounded.Add) {
-            fun chuan(s: String) = s.trim().replace('.', ':').replace('h', ':').let { if (Regex("^[0-9]:").containsMatchIn(it)) "0$it" else it }.let { if (Regex("^[0-9]{2}$").matches(it)) "$it:00" else it }
-            vm.khoaKhung += PhienLamViec.KhungKhoa(chuan(tu), chuan(den), ngay); tu = ""; den = ""
-        }
-        Phu(t("Khung qua đêm (21:00–06:00) tính theo ngày bắt đầu: chọn T2 là khoá từ tối thứ Hai tới sáng thứ Ba.", "Overnight periods count from the starting day."))
-    }
-    TheGioiHan(vm)
-    The(t("Mã PIN", "PIN"), Icons.Rounded.Key) {
-        if (vm.khoaTrenTv?.optBoolean("coPin") == true && vm.khoaTrenTv?.optBoolean("banCu") != true) Phu(t("Tivi đã có PIN. Để trống nếu không đổi.", "The TV already has a PIN. Leave empty to keep it."))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(vm.khoaPin, { vm.khoaPin = it.filter(Char::isDigit).take(4) }, label = { Text(t("PIN 4 số", "4-digit PIN")) }, singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
-            OutlinedTextField(vm.khoaPin2, { vm.khoaPin2 = it.filter(Char::isDigit).take(4) }, label = { Text(t("Nhập lại", "Repeat")) }, singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
-        }
-        Phu(t("Sai 5 lần thì tivi bắt chờ 1 phút. Quên PIN: kết nối lại tivi ở đây và đặt PIN mới. Tivi chỉ giữ dạng mã hoá của PIN.", "5 wrong tries: wait 1 minute. Forgot it: reconnect here and set a new one. The TV only keeps a hash."))
-    }
-    if (vm.khoaBao.isNotEmpty()) Phu(vm.khoaBao, Xanh)
-    NutChinh(t("Lưu & áp dụng lên tivi", "Save & apply to the TV"), enabled = !vm.dangBan, icon = Icons.Rounded.Lock) { vm.luuKhoaTre() }
-    if (vm.khoaTrenTv != null) NutPhu(t("Tắt và gỡ Khoá trẻ em", "Turn off and remove"), Icons.Rounded.LockOpen) { vm.tatKhoaTre() }
-    Phu(t("Lưu ý: khoá không chống được khôi phục cài đặt gốc hay đổi sang thiết bị khác cắm HDMI. Với hộp Android cắm vào tivi, trẻ vẫn đổi nguồn tivi được. Bấm Khôi phục tivi này cũng gỡ khoá.",
-        "Note: it can't stop a factory reset or another device on HDMI; with a box plugged into a TV, the TV's own input switch still works. Restore this TV also removes the lock."))
 }
 
 // ---------------- Cài app lên tivi (25/10/2026) ----------------

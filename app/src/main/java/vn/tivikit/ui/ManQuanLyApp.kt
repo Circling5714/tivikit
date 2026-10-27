@@ -175,7 +175,8 @@ private fun HangApp(vm: PhienLamViec, ql: QuanLyApp, a: QuanLyApp.App, hoi: (Str
                 if (a.dangTat) ChonChip(t("Bật lại", "Re-enable"), true) { lam { ql.batLaiApp(a) } }
                 else {
                     ChonChip(t("Mở", "Open"), false) { lam { ql.moApp(a) } }
-                    ChonChip(t("Buộc dừng", "Force stop"), false) { lam { ql.dung(a) } }
+                    // Buộc dừng app khoá là tắt luôn dịch vụ khoá (Android bỏ nó khỏi danh sách trợ năng): không cho ở đây.
+                    if (!ql.laKhoa(a)) ChonChip(t("Buộc dừng", "Force stop"), false) { lam { ql.dung(a) } }
                 }
                 ChonChip(t("Xoá cache", "Clear cache"), false) { lam { ql.xoaCache(a) } }
                 if (!ql.baoVe(a)) ChonChip(t("Xoá dữ liệu", "Clear data"), false) { lam { hoi("xoa") } }

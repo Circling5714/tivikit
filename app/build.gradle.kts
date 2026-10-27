@@ -100,4 +100,6 @@ dependencies {
     // Tivi LG webOS (25/10/2026): WebSocket SSAP cổng 3000 / 3001; SSH root vào tivi LG đã root (Homebrew Channel).
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.github.mwiede:jsch:0.2.25")
+    // Mã QR cài mã OTP Khoá trẻ em (28/10/2026): Project Nayuki, MIT, Java thuần ~40 KB.
+    implementation("io.nayuki:qrcodegen:1.8.0")
 }

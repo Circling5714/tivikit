@@ -1501,16 +1501,17 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     private val khoaDv = "$PKG_KHOA/$lopKhoa"
 
     /**
-     * App Khoá trẻ em đang có trên tivi: bản mới, không thì bản trước khi đổi tên gói (GoiCu.KHOA — vẫn khoá được, chờ
-     * phụ huynh đặt lại PIN để chuyển); null nếu không có.
+     * App Khoá trẻ em đang có trên tivi: bản mới, không thì bản trước khi đổi tên gói (GoiCu.KHOA — vẫn khoá bằng PIN cũ,
+     * chờ phụ huynh cài mã OTP để chuyển); null nếu không có.
      */
     private fun goiKhoa(): String? = when { coGoi(PKG_KHOA) -> PKG_KHOA; coGoi(GoiCu.KHOA) -> GoiCu.KHOA; else -> null }
 
     fun khoaDaCai(): Boolean = goiKhoa() != null
 
     /**
-     * Trạng thái trên tivi (không có PIN): {bat, khung, moTamPhut, coPin, moTamDen, dangKhoa, dichVuChay}, thêm
-     * banCu=true khi là app bản cũ; null nếu chưa cài.
+     * Trạng thái trên tivi (không có mã): {bat, khung, moTamPhut, moTamDen, dangKhoa, dichVuChay…}; app khoá 1.2 thêm
+     * {coOtp, soDuPhong, choGiay, yeuCauGo, goDuoc}, bản trước đó có coPin. Thêm banCu=true khi là app bản trước khi đổi
+     * tên gói; null nếu chưa cài.
      */
     fun docKhoa(): org.json.JSONObject? {
         val g = goiKhoa() ?: return null
@@ -1518,16 +1519,32 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }
 
     /**
+     * Nhập mã Khoá trẻ em (28/10/2026): tivi kiểm tra mã OTP / mã dự phòng — TiviKit không giữ mã gốc — đúng thì trả phiên
+     * cho các lệnh đổi cấu hình. {ok, phien} / {loi: "sai", con} / {loi: "cho", giay}; null nếu không đọc được.
+     */
+    fun xacThucKhoa(ma: String): org.json.JSONObject? {
+        require(ma.length in 6..8 && ma.all { it in '0'..'9' }) { "ma" }
+        return docQua(PKG_KHOA, "xac-thuc --arg $ma")
+    }
+
+    /** Báo tivi quên mã: 24 giờ sau đổi được khoá không cần mã. {yeuCauGo, goDuocLuc}. */
+    fun quenMaKhoa(): org.json.JSONObject? = docQua(PKG_KHOA, "quen-ma")
+
+    /** Lệnh khoá trả "can-ma": phiên nhập mã không có / hết hạn. */
+    private fun kiemPhien(kq: String) { if (kq.contains("can-ma")) throw CanMaException() }
+
+    /**
      * Cài (nếu cần), cấp quyền tự canh gác, ghi cấu hình, bật dịch vụ khoá; tivi còn bản cũ (trước khi đổi tên gói) thì
      * tắt và gỡ bản đó khi bản mới đã chạy. [json] không chứa dấu nháy đơn.
      */
     fun caiKhoa(apk: ByteArray, json: String, bao: (String) -> Unit) {
         require(!json.contains('\'')) { "json" }
-        // Chưa có, hoặc khác bản đi kèm (VD bản dựng trước khi mã nguồn đổi tên lớp) thì cài đè: giữ giờ khoá và PIN.
+        // Chưa có, hoặc khác bản đi kèm (VD bản dựng trước khi mã nguồn đổi tên lớp) thì cài đè: giữ giờ khoá và mã.
         caiAppPhu(PKG_KHOA, apk) { bao(t("Cài app Khoá trẻ em lên tivi…", "Installing the Kids lock app on the TV…")) }
         sh("pm grant $PKG_KHOA android.permission.WRITE_SECURE_SETTINGS 2>/dev/null; cmd appops set $PKG_KHOA AUTO_START allow 2>/dev/null; $capThongKe")
-        bao(t("Ghi giờ khoá và mã PIN…", "Saving the schedule and PIN…"))
+        bao(t("Ghi giờ khoá và mã…", "Saving the schedule and code…"))
         val kq = sh("content call --uri $khoaUri --method dat --arg '$json'")
+        kiemPhien(kq)
         if (!kq.contains("ok=1")) error(t("Tivi không nhận cấu hình: ${kq.trim()}", "The TV rejected the settings: ${kq.trim()}"))
         // Khoá tính theo giờ tivi: bật giờ tự động ngay (app khoá giữ nó bật từ đây, xem KhoaDichVu.giuGioTuDong).
         if (org.json.JSONObject(json).optBoolean("bat")) sh("settings put global auto_time 1")
@@ -1551,16 +1568,27 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         return docQua(PKG_KHOA, "thoi-gian")
     }
 
-    /** Mở tạm [phut] phút từ điện thoại (0 = khoá lại ngay nếu đang trong giờ khoá / đã hết giờ xem). */
-    fun moTamKhoa(phut: Int) { val g = goiKhoa() ?: return; sh("content call --uri content://$g --method mo-tam --arg $phut") }
-
-    /** Tắt khoá (bản mới, cả bản cũ nếu còn): cấu hình bat=false, bỏ dịch vụ khỏi danh sách trợ năng; [go] = gỡ luôn app. */
-    fun tatKhoa(go: Boolean) {
-        listOf(PKG_KHOA, GoiCu.KHOA).filter { coGoi(it) }.forEach { tatKhoaGoi(it, go) }
+    /**
+     * Mở tạm [phut] phút từ điện thoại (0 = khoá lại ngay nếu đang trong giờ khoá / đã hết giờ xem). Tivi có mã OTP thì
+     * kèm [phien] (app khoá 1.2 nhận JSON); không thì gửi số phút như bản cũ.
+     */
+    fun moTamKhoa(phut: Int, phien: String?) {
+        val g = goiKhoa() ?: return
+        val arg = if (phien == null) "$phut" else { require(PHIEN.matches(phien)) { "phien" }; "'{\"phut\":$phut,\"phien\":\"$phien\"}'" }
+        kiemPhien(sh("content call --uri content://$g --method mo-tam --arg $arg"))
     }
 
-    private fun tatKhoaGoi(goi: String, go: Boolean) {
-        sh("content call --uri content://$goi --method dat --arg '{\"bat\":false,\"khung\":[]}' 2>/dev/null; true")
+    /**
+     * Tắt khoá (bản mới, cả bản cũ nếu còn): cấu hình bat=false (kèm [phien] nếu có), bỏ dịch vụ khỏi danh sách trợ năng;
+     * [go] = gỡ luôn app. Chỗ gọi lo hỏi mã trước (màn Khoá trẻ em, Khôi phục): shell gỡ được app dù không có phiên.
+     */
+    fun tatKhoa(go: Boolean, phien: String? = null) {
+        listOf(PKG_KHOA, GoiCu.KHOA).filter { coGoi(it) }.forEach { tatKhoaGoi(it, go, phien) }
+    }
+
+    private fun tatKhoaGoi(goi: String, go: Boolean, phien: String? = null) {
+        val p = phien?.takeIf { PHIEN.matches(it) }?.let { ",\"phien\":\"$it\"" }.orEmpty()
+        sh("content call --uri content://$goi --method dat --arg '{\"bat\":false,\"khung\":[]$p}' 2>/dev/null; true")
         // Tên lớp dịch vụ tuỳ bản đang cài: mới, hoặc dựng trước khi mã nguồn đổi tên (GoiCu.LOP_KHOA_CU).
         boTroNang("$goi/$lopKhoa"); boTroNang("$goi/${GoiCu.LOP_KHOA_CU}")
         if (go) sh("pm uninstall $goi")
@@ -2034,6 +2062,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     class MatKetNoiTvException(val daTat: Int, val goi: String) : Exception("mat-ket-noi")
     /** Tivi tự khởi động lại ngay sau khi tắt [goi] (gói tắt xong gần nhất): dừng dọn, [goi] là nghi phạm. */
     class TiviKhoiDongLaiException(val goi: String, val daTat: Int) : Exception("khoi-dong-lai")
+    /** App khoá trên tivi đòi phiên nhập mã (không kèm, hay đã hết hạn): nhập lại mã Khoá trẻ em. */
+    class CanMaException : Exception("can-ma")
 
     companion object {
         /**
@@ -2079,6 +2109,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         const val PKG_HOME_XIAOMI = "com.ts.launcher"
         /** App Khoá trẻ em (module khoa/). */
         const val PKG_KHOA = "vn.tivikit.khoa"
+        /** Phiên app khoá trả sau khi nhập đúng mã (khoa/XacThuc.moPhien): 16 byte viết hex. */
+        private val PHIEN = Regex("^[0-9a-f]{32}$")
         /** Bản sao lưu trên tivi: thư mục của shell, còn sau khi gỡ app / Home sạch, chỉ mất khi khôi phục cài đặt gốc. */
         const val TEP_SAO_LUU_TV = "/data/local/tmp/cleantv-sao-luu.json"
         const val GAC = "/data/local/tmp/cleantv-gac"

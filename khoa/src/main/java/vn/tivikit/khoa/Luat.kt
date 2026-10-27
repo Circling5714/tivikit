@@ -2,19 +2,18 @@ package vn.tivikit.khoa
 
 import org.json.JSONArray
 import org.json.JSONObject
-import java.security.MessageDigest
 import java.util.Calendar
 
 /** Một khung giờ khoá: phút trong ngày [tu, den) — den < tu là qua đêm (21:00–06:00); ngay 1 = Thứ Hai … 7 = Chủ Nhật. */
 data class Khung(val tu: Int, val den: Int, val ngay: Set<Int>)
 
 /**
- * Cấu hình phụ huynh đặt từ TiviKit. pinBam = SHA-256(muoi + PIN), tivi không giữ PIN gốc. [phutThuong] / [phutCuoiTuan]:
- * số phút được xem mỗi ngày thứ Hai–Sáu / thứ Bảy–Chủ Nhật, 0 = không giới hạn (25/10/2026).
+ * Cấu hình phụ huynh đặt từ TiviKit. [phutThuong] / [phutCuoiTuan]: số phút được xem mỗi ngày thứ Hai–Sáu / thứ Bảy–Chủ
+ * Nhật, 0 = không giới hạn (25/10/2026). [coMa]: tivi đã có mã mở khoá (Kho.maMo, lưu riêng; 28/10/2026 thay PIN).
  */
 data class CauHinh(
-    val bat: Boolean, val muoi: String, val pinBam: String, val khung: List<Khung>, val moTamPhut: Int = 60,
-    val phutThuong: Int = 0, val phutCuoiTuan: Int = 0,
+    val bat: Boolean, val khung: List<Khung>, val moTamPhut: Int = 60,
+    val phutThuong: Int = 0, val phutCuoiTuan: Int = 0, val coMa: Boolean = false,
 )
 
 /** Luật khoá, không đụng Android để test được trên máy tính. */
@@ -24,8 +23,6 @@ object Luat {
         val ks = o.optJSONArray("khung") ?: JSONArray()
         CauHinh(
             bat = o.optBoolean("bat"),
-            muoi = o.optString("muoi"),
-            pinBam = o.optString("pinBam"),
             khung = (0 until ks.length()).map { i ->
                 val k = ks.getJSONObject(i)
                 val ng = k.optJSONArray("ngay") ?: JSONArray("[1,2,3,4,5,6,7]")
@@ -58,7 +55,7 @@ object Luat {
     }
 
     fun trongGio(c: CauHinh, luc: Calendar): Boolean {
-        if (!c.bat || c.pinBam.isBlank()) return false
+        if (!c.bat || !c.coMa) return false
         val ngay = thu(luc); val p = luc.get(Calendar.HOUR_OF_DAY) * 60 + luc.get(Calendar.MINUTE)
         return c.khung.any { trongKhung(it, ngay, p) }
     }
@@ -80,9 +77,9 @@ object Luat {
     /** Số phút được xem ngày [thu] (1 = Thứ Hai … 7 = Chủ Nhật); 0 = không giới hạn. */
     fun gioiHanPhut(c: CauHinh, thu: Int): Int = if (thu >= 6) c.phutCuoiTuan else c.phutThuong
 
-    /** Đã xem hết giờ hôm nay: khoá tới hết ngày (PIN mở thêm moTamPhut). Khoá tắt / chưa có PIN thì không. */
+    /** Đã xem hết giờ hôm nay: khoá tới hết ngày (nhập mã mở thêm moTamPhut). Khoá tắt / chưa có mã thì không. */
     fun hetGioXem(c: CauHinh, thu: Int, giayDaXem: Long): Boolean {
-        if (!c.bat || c.pinBam.isBlank()) return false
+        if (!c.bat || !c.coMa) return false
         val gh = gioiHanPhut(c, thu)
         return gh > 0 && giayDaXem >= gh * 60L
     }
@@ -108,7 +105,7 @@ object Luat {
     /** Vì sao tivi khoá: hết giờ xem hôm nay (ưu tiên: khung giờ khoá có hết thì vẫn khoá tới hết ngày) hay trong khung giờ khoá. */
     enum class LyDo { HET_GIO, GIO_KHOA }
 
-    /** Lúc [luc] có khoá không, vì sao; null = không khoá (kể cả đang mở tạm bằng PIN tới [moTamDen]). */
+    /** Lúc [luc] có khoá không, vì sao; null = không khoá (kể cả đang mở tạm bằng mã tới [moTamDen]). */
     fun lyDo(c: CauHinh?, luc: Calendar, giayDaXem: Long, moTamDen: Long): LyDo? = when {
         c == null || luc.timeInMillis < moTamDen -> null
         hetGioXem(c, thu(luc), giayDaXem) -> LyDo.HET_GIO
@@ -130,8 +127,9 @@ object Luat {
         return null
     }
 
-    fun bam(muoi: String, pin: String): String =
-        MessageDigest.getInstance("SHA-256").digest((muoi + pin).toByteArray()).joinToString("") { "%02x".format(it) }
-
-    fun dungPin(c: CauHinh, pin: String): Boolean = c.pinBam.isNotBlank() && bam(c.muoi, pin) == c.pinBam
+    /**
+     * Sai mã 5 lần liền thì chờ, lần chờ sau lâu hơn: 1, 5, 15 rồi 60 phút (28/10/2026). Trước đây lần nào cũng chờ 1 phút,
+     * nên dò hết 10.000 PIN 4 số chỉ mất chưa tới 2 ngày bấm liền.
+     */
+    fun phutCho(lan: Int): Int = intArrayOf(1, 5, 15, 60)[lan.coerceIn(0, 3)]
 }

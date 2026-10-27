@@ -65,12 +65,15 @@ class QuanLyApp(private val vm: PhienLamViec) {
     private val thuMucAnh by lazy { File(vm.ctx.filesDir, "anh-app").apply { mkdirs() } }
 
     /**
-     * Gói của chính app này (Home sạch, Khoá trẻ em — cả bản trước khi đổi tên gói, đang chờ đặt lại PIN — Kênh nhanh,
+     * Gói của chính app này (Home sạch, Khoá trẻ em — cả bản trước khi đổi tên gói, đang chờ cài mã OTP — Kênh nhanh,
      * Hẹn giờ, bộ gõ tiếng Việt, TiviKit khi chạy trên tivi): không gỡ / xoá dữ liệu ở đây.
      */
-    fun baoVe(a: App) = a.tv.pkg in ThaoTacTv.HOME_SACH || a.tv.pkg == ThaoTacTv.PKG_KHOA || a.tv.pkg == vn.tivikit.dulieu.GoiCu.KHOA ||
+    fun baoVe(a: App) = a.tv.pkg in ThaoTacTv.HOME_SACH || laKhoa(a) ||
         vn.tivikit.dulieu.KenhNhanh.laGoiKenh(a.tv.pkg) || a.tv.pkg == vn.tivikit.dulieu.HenGio.GOI || a.tv.pkg == vn.tivikit.dulieu.GoChu.GOI ||
         a.tv.pkg == vm.ctx.packageName
+
+    /** App Khoá trẻ em (bản mới hay bản trước khi đổi tên gói): cũng không buộc dừng ở đây (28/10/2026). */
+    fun laKhoa(a: App) = a.tv.pkg == ThaoTacTv.PKG_KHOA || a.tv.pkg == vn.tivikit.dulieu.GoiCu.KHOA
 
     fun mo() { vm.man = Man.QUAN_LY_APP; bao = ""; if (ds.isEmpty()) tai() }
 

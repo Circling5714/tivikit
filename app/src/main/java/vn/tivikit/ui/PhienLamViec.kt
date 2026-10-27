@@ -108,6 +108,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     val kenhNhanh by lazy { KenhNhanhTivi(this) }
     /** Hẹn giờ bật / tắt tivi, mở app (ui/HenGioTivi.kt). */
     val henGio by lazy { HenGioTivi(this) }
+    /** Khoá trẻ em: giờ khoá, giới hạn, mã OTP, hộp nhập mã (ui/KhoaTreTivi.kt). */
+    val khoaTre by lazy { KhoaTreTivi(this) }
     /** Làm mới tivi: RAM, bộ nhớ, đóng app nằm nền, xoá cache khi gần đầy (ui/LamMoiTivi.kt). */
     val lamMoi by lazy { LamMoiTivi(this) }
     /** Kiểm tra mạng tivi: sóng Wi-Fi, băng tần, ping, nhận xét (ui/MangTivi.kt). */
@@ -489,7 +491,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     }
 
     /** Về màn chính, giữ kết nối. */
-    fun veHub() { dangDon = false; dangKhoiPhuc = false; sauKetNoi = null; man = Man.CHINH }
+    fun veHub() { dangDon = false; dangKhoiPhuc = false; sauKetNoi = null; man = Man.CHINH; khoaTre.boPhien() }
 
     private fun xuLyBanMoi(b: vn.tivikit.CapNhat.BanMoi) {
         val p = ctx.getSharedPreferences("ota", Context.MODE_PRIVATE)
@@ -550,6 +552,19 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
             try { khoi() } catch (e: Throwable) {
                 loi = moTaLoi(e)
             } finally { dangBan = false; thongBao = "" }
+        }
+    }
+
+    /** Như [chay]; xong (đã hết bận) thì làm tiếp việc [khoi] trả về, việc đó lại gọi [chay] được (hỏi mã rồi mở màn). */
+    internal fun chayRoi(viec: String, khoi: suspend () -> (() -> Unit)?) {
+        if (dangBan) return
+        dangBan = true; loi = ""; thongBao = viec
+        viewModelScope.launch {
+            var tiep: (() -> Unit)? = null
+            try { tiep = khoi() } catch (e: Throwable) {
+                loi = moTaLoi(e)
+            } finally { dangBan = false; thongBao = "" }
+            tiep?.invoke()
         }
     }
 
@@ -762,7 +777,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         daNapCu = false
         // Nút gán riêng / ô Kênh nhanh thuộc về tivi trước: tivi này đọc lại từ config.json của nó (napTuJson, màn Nút
         // remote, màn Kênh nhanh).
-        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); khoaTre.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
         xemManHinh.tat(); kenhDieuKhien.dong(); dangPhat.dong()
         tv.quenTivi()
@@ -856,8 +871,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         baoChuyen = listOfNotNull(
             if (xong.isNotEmpty()) t("Đã chuyển ${xong.joinToString(" và ")} sang TiviKit mới (tên gói vn.tivikit), nút remote và dock giữ nguyên.",
                 "Moved ${xong.joinToString(" and ")} to the new TiviKit (package vn.tivikit); remote buttons and the dock are kept.") else null,
-            if (kq.khoaCho) t("Khoá trẻ em vẫn là bản cũ và vẫn khoá: mở Khoá trẻ em, đặt lại PIN rồi Lưu để chuyển.",
-                "The Kids lock is still the old version and keeps working: open Kids lock, set the PIN again and Save to move it.") else null,
+            if (kq.khoaCho) t("Khoá trẻ em vẫn là bản cũ và vẫn khoá bằng PIN cũ: mở Khoá trẻ em, cài mã OTP rồi Lưu để chuyển.",
+                "The Kids lock is still the old version and keeps working with the old PIN: open Kids lock, set up the OTP code and Save to move it.") else null,
             if (kq.loi.isNotEmpty()) t("Chưa chuyển được: ${kq.loi.joinToString("; ")}. Bản cũ vẫn chạy, lần kết nối sau app thử lại.",
                 "Not moved yet: ${kq.loi.joinToString("; ")}. The old ones keep working; the app tries again next time.") else null,
         ).joinToString(" ")
@@ -927,7 +942,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     // Đi qua hàng đợi Main như ghiTuIo, để dòng tổng kết không chen lên trước dòng tiến độ.
     /** Tên tivi gửi kèm số liệu ẩn danh: hãng + model + device + Android. */
-    private fun tenTiviDem(): String = thongTin?.let { "${it.tenHienThi} (${it.device}) Android ${it.android}" } ?: ""
+    internal fun tenTiviDem(): String = thongTin?.let { "${it.tenHienThi} (${it.device}) Android ${it.android}" } ?: ""
 
     private fun ghi(s: String) { viewModelScope.launch(Dispatchers.Main) { nhatKy += s } }
     /** 0..1 khi đang tắt/bật lại từng gói, -1 khi không đếm được. */
@@ -941,92 +956,6 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
                 if (b.toInt() > 0) tienDo = a.toFloat() / b.toFloat()
             }
         }
-    }
-
-    // ---------- Khoá trẻ em (23/10/2026) ----------
-
-    /** Một khung giờ khoá: "HH:MM", ngay 1 = Thứ Hai … 7 = Chủ Nhật. */
-    data class KhungKhoa(val tu: String, val den: String, val ngay: Set<Int>)
-    var khoaTrenTv by mutableStateOf<org.json.JSONObject?>(null)
-    var khoaBat by mutableStateOf(true)
-    var khoaPin by mutableStateOf("")
-    var khoaPin2 by mutableStateOf("")
-    val khoaKhung = androidx.compose.runtime.mutableStateListOf<KhungKhoa>()
-    var khoaBao by mutableStateOf("")
-    /** Đúng PIN trên tivi thì mở bao lâu (anh Alex chốt 60 phút). */
-    val KHOA_MO_TAM = 60
-    /** Giới hạn xem mỗi ngày, phút (0 = không giới hạn): thứ Hai–Sáu và thứ Bảy, Chủ Nhật (25/10/2026). */
-    var khoaPhutThuong by mutableStateOf(0)
-    var khoaPhutCuoiTuan by mutableStateOf(0)
-    /** Báo cáo 7 ngày đọc từ app khoá; null = tivi chưa có app khoá bản đếm giờ. */
-    var khoaThoiGian by mutableStateOf<vn.tivikit.dulieu.ThoiGianXem?>(null)
-
-    private suspend fun docThoiGianKhoa(j: org.json.JSONObject?): vn.tivikit.dulieu.ThoiGianXem? =
-        if (j == null || j.optBoolean("banCu")) null
-        else io { runCatching { tv.docThoiGianKhoa()?.let { vn.tivikit.dulieu.ThoiGianXem.tuJson(it) } }.getOrNull() }
-
-    fun moKhoaTre() = chay(t("Đọc cài đặt khoá trên tivi…", "Reading the lock settings…")) {
-        val j = io { tv.docKhoa() }
-        khoaTrenTv = j; khoaBao = ""; khoaPin = ""; khoaPin2 = ""
-        khoaKhung.clear()
-        khoaPhutThuong = j?.optInt("phutThuong") ?: 0; khoaPhutCuoiTuan = j?.optInt("phutCuoiTuan") ?: 0
-        khoaThoiGian = docThoiGianKhoa(j)
-        if (j != null) {
-            khoaBat = j.optBoolean("bat")
-            val ks = j.optJSONArray("khung") ?: org.json.JSONArray()
-            for (i in 0 until ks.length()) {
-                val k = ks.getJSONObject(i); val ng = k.optJSONArray("ngay") ?: org.json.JSONArray()
-                khoaKhung += KhungKhoa(k.optString("tu"), k.optString("den"), (0 until ng.length()).map { ng.getInt(it) }.toSet())
-            }
-        }
-        if (khoaKhung.isEmpty() && khoaPhutThuong == 0 && khoaPhutCuoiTuan == 0) { khoaBat = true; khoaKhung += KhungKhoa("21:00", "06:00", (1..7).toSet()) }
-        man = Man.KHOA_TRE
-    }
-
-    fun luuKhoaTre() = chay(t("Đang cài khoá lên tivi…", "Setting up the lock on the TV…")) {
-        // Khoá bản cũ (trước khi đổi tên gói): PIN của nó không đọc ra được, bản mới cần PIN mới.
-        val coPin = khoaTrenTv?.optBoolean("coPin") == true && khoaTrenTv?.optBoolean("banCu") != true
-        if (!coPin || khoaPin.isNotEmpty()) {
-            if (!Regex("^[0-9]{4}$").matches(khoaPin)) error(t("Mã PIN phải đúng 4 chữ số.", "The PIN must be exactly 4 digits."))
-            if (khoaPin != khoaPin2) error(t("Hai lần nhập PIN không giống nhau.", "The two PINs don't match."))
-        }
-        if (khoaKhung.isEmpty() && khoaPhutThuong == 0 && khoaPhutCuoiTuan == 0) error(t("Thêm ít nhất một khung giờ khoá hoặc đặt giới hạn mỗi ngày.", "Add a lock period or a daily limit."))
-        val gio = Regex("^([01][0-9]|2[0-3]):[0-5][0-9]$")
-        khoaKhung.forEach { if (!gio.matches(it.tu) || !gio.matches(it.den) || it.ngay.isEmpty()) error(t("Khung giờ ${it.tu}–${it.den} chưa đúng (giờ dạng 21:00, chọn ít nhất một ngày).", "Period ${it.tu}–${it.den} is not valid.")) }
-        val j = org.json.JSONObject().put("bat", khoaBat).put("moTamPhut", KHOA_MO_TAM)
-            .put("khung", org.json.JSONArray(khoaKhung.map { org.json.JSONObject().put("tu", it.tu).put("den", it.den).put("ngay", org.json.JSONArray(it.ngay.sorted())) }))
-            .put("phutThuong", khoaPhutThuong).put("phutCuoiTuan", khoaPhutCuoiTuan)
-        if (khoaPin.isNotEmpty()) {
-            val muoi = java.util.UUID.randomUUID().toString().replace("-", "").take(16)
-            val bam = java.security.MessageDigest.getInstance("SHA-256").digest((muoi + khoaPin).toByteArray()).joinToString("") { "%02x".format(it) }
-            j.put("muoi", muoi).put("pinBam", bam)
-        }
-        val apk = io { vn.tivikit.CapNhat.moAsset(ctx, "khoa.apk").readBytes() }
-        io { tv.caiKhoa(apk, j.toString()) { thongBao = it } }
-        kotlinx.coroutines.delay(2500)
-        khoaTrenTv = io { tv.docKhoa() }
-        khoaThoiGian = docThoiGianKhoa(khoaTrenTv)
-        khoaPin = ""; khoaPin2 = ""
-        val chay = khoaTrenTv?.optBoolean("dichVuChay") == true
-        val coHan = khoaPhutThuong > 0 || khoaPhutCuoiTuan > 0
-        khoaBao = if (!khoaBat) t("Đã lưu. Khoá đang tắt.", "Saved. The lock is off.")
-            else if (chay && coHan) t("Đã bật khoá. Trong khung giờ khoá hoặc khi đã xem hết giờ trong ngày, tivi hiện màn khoá (còn 5 phút thì báo trước); nhập đúng PIN thì mở $KHOA_MO_TAM phút.",
-                "The lock is on. During the periods, or once today's time is used up, the TV shows the lock screen (with a 5-minute warning); the PIN unlocks it for $KHOA_MO_TAM minutes.")
-            else if (chay) t("Đã bật khoá. Trong khung giờ, tivi hiện màn khoá; nhập đúng PIN thì mở $KHOA_MO_TAM phút.", "The lock is on. During the periods the TV shows the lock screen; the PIN unlocks it for $KHOA_MO_TAM minutes.")
-            else t("Đã lưu nhưng dịch vụ khoá chưa chạy. Tắt tivi bật lại rồi mở lại màn này kiểm tra.", "Saved, but the lock service isn't running yet. Restart the TV and check again.")
-        vn.tivikit.Dem.gui(ctx, "khoa", tenTiviDem(), khoaKhung.size, if (khoaBat) "bat" else "tat")
-    }
-
-    fun moTamKhoaTre(phut: Int) = chay(t("Đang gửi lệnh…", "Sending…")) {
-        io { tv.moTamKhoa(phut) }
-        kotlinx.coroutines.delay(800)
-        khoaTrenTv = io { tv.docKhoa() }
-        khoaBao = if (phut > 0) t("Đã mở tạm $phut phút.", "Unlocked for $phut minutes.") else t("Đã khoá lại (nếu đang trong giờ khoá hoặc đã hết giờ xem).", "Locked again (if within a period or out of time for today).")
-    }
-
-    fun tatKhoaTre() = chay(t("Đang tắt khoá…", "Turning the lock off…")) {
-        io { tv.tatKhoa(go = true) }
-        khoaTrenTv = null; khoaThoiGian = null; khoaBao = t("Đã tắt và gỡ Khoá trẻ em khỏi tivi.", "The Kids lock is off and removed from the TV.")
     }
 
     // ---------- Cài app lên tivi (25/10/2026) ----------
@@ -1906,7 +1835,12 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         man = Man.KET_NOI
     }
 
-    fun chayKhoiPhuc(goLauncher: Boolean) = chay(t("Đang khôi phục…", "Restoring…")) {
+    /** Khôi phục gỡ cả Khoá trẻ em: tivi có khoá đang bật với mã OTP thì hỏi mã trước (trẻ cầm điện thoại của bố mẹ). */
+    private val lyDoKhoiPhuc get() = t("Khôi phục gỡ luôn Khoá trẻ em trên tivi: nhập mã để tiếp tục.", "Restoring also removes the Kids lock from the TV: enter the code to continue.")
+
+    fun chayKhoiPhuc(goLauncher: Boolean) = khoaTre.quaCua(lyDoKhoiPhuc) { khoiPhucCoSaoLuu(goLauncher) }
+
+    private fun khoiPhucCoSaoLuu(goLauncher: Boolean) = chay(t("Đang khôi phục…", "Restoring…")) {
         val info = thongTin ?: return@chay
         val sl = kho.doc(info.khoaLuu) ?: error(t("Tivi này chưa có bản sao lưu trong máy.", "This phone has no backup for this TV."))
         nhatKy.clear()
@@ -1972,7 +1906,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         if (sl != null) saoLuu = sl
     }
 
-    fun chayKhoiPhucKhongSaoLuu(goLauncher: Boolean) = chay(t("Đang khôi phục…", "Restoring…")) {
+    fun chayKhoiPhucKhongSaoLuu(goLauncher: Boolean) = khoaTre.quaCua(lyDoKhoiPhuc) { khoiPhucKhongSaoLuu(goLauncher) }
+
+    private fun khoiPhucKhongSaoLuu(goLauncher: Boolean) = chay(t("Đang khôi phục…", "Restoring…")) {
         nhatKy.clear()
         val loiKp = io { tv.khoiPhucKhongSaoLuu(goLauncher) { s -> ghiTuIo(s) } }
         veApp()
@@ -1990,7 +1926,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         nhatKy.clear(); saoLuu = null; saoLuuTuTv = false; goiTatKhongSaoLuu = null; epSetupwraith = false
         dsTatTv = null; chonBatLai.clear(); batLaiBao = ""
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
-        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); khoaTre.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
         xemManHinh.tat(); kenhDieuKhien.dong(); dangPhat.dong()
         dangDon = false; sauKetNoi = null

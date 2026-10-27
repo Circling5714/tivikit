@@ -54,7 +54,7 @@ private fun dongGioiHan(bc: ThoiGianXem, i: Int): String {
     val han = n.gioiHanPhut * 60L
     val gh = t("Giới hạn ", "Limit ") + ThoiGianXem.chuGioiHan(n.gioiHanPhut)
     return when {
-        n.giay > han -> "$gh · " + t("quá ", "over by ") + ThoiGianXem.chu(n.giay - han) + t(" (mở bằng PIN)", " (PIN unlocks)")
+        n.giay > han -> "$gh · " + t("quá ", "over by ") + ThoiGianXem.chu(n.giay - han) + t(" (mở bằng mã)", " (unlocked with the code)")
         i == bc.ngay.lastIndex && n.ngay == bc.homNay -> "$gh · " + t("còn ", "") + ThoiGianXem.chu(han - n.giay) + t("", " left")
         else -> "$gh · " + t("trong giới hạn", "within the limit")
     }
@@ -165,10 +165,11 @@ private val MUC_GIOI_HAN = listOf(0, 30, 60, 90, 120, 180, 240)
 /** Thẻ giới hạn giờ xem mỗi ngày: ngày thường và cuối tuần riêng. */
 @Composable
 internal fun TheGioiHan(vm: PhienLamViec) = The(t("Giới hạn mỗi ngày", "Daily limit"), Icons.Rounded.HourglassBottom) {
-    DongMucGioiHan(t("Thứ Hai – Thứ Sáu", "Monday – Friday"), vm.khoaPhutThuong) { vm.khoaPhutThuong = it }
-    DongMucGioiHan(t("Thứ Bảy, Chủ Nhật", "Saturday, Sunday"), vm.khoaPhutCuoiTuan) { vm.khoaPhutCuoiTuan = it }
-    Phu(t("Tính lúc màn hình tivi sáng (không tính màn hình chờ, lúc đang khoá). Còn 5 phút tivi báo trước; hết giờ thì khoá tới hết ngày, nhập đúng PIN mở thêm ${vm.KHOA_MO_TAM} phút.",
-        "Counts while the TV screen is on (not the screensaver or while locked). The TV warns 5 minutes ahead; when time is up it stays locked for the rest of the day, and the PIN adds ${vm.KHOA_MO_TAM} minutes."))
+    val k = vm.khoaTre
+    DongMucGioiHan(t("Thứ Hai – Thứ Sáu", "Monday – Friday"), k.phutThuong) { k.phutThuong = it }
+    DongMucGioiHan(t("Thứ Bảy, Chủ Nhật", "Saturday, Sunday"), k.phutCuoiTuan) { k.phutCuoiTuan = it }
+    Phu(t("Tính lúc màn hình tivi sáng (không tính màn hình chờ, lúc đang khoá). Còn 5 phút tivi báo trước; hết giờ thì khoá tới hết ngày, nhập mã mở thêm ${k.MO_TAM} phút.",
+        "Counts while the TV screen is on (not the screensaver or while locked). The TV warns 5 minutes ahead; when time is up it stays locked for the rest of the day, and the code adds ${k.MO_TAM} minutes."))
 }
 
 @OptIn(ExperimentalLayoutApi::class)

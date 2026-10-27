@@ -67,7 +67,10 @@ class DongLenhTivi(private val vm: PhienLamViec) {
     private var dangCho: KetNoiAdb.LenhDangChay? = null
     private var tachDangChay: DongLenh.BoTach? = null
 
-    fun mo() {
+    /** Dòng lệnh tắt / gỡ được cả Khoá trẻ em: tivi có khoá đang bật với mã OTP thì hỏi mã trước (28/10/2026). */
+    fun mo() = vm.khoaTre.quaCua(t("Dòng lệnh ADB tắt được cả Khoá trẻ em: nhập mã để mở.", "The ADB shell can turn off the Kids lock too: enter the code to open it.")) { moNgay() }
+
+    private fun moNgay() {
         daHieu = prefs.getBoolean(DA_HIEU, false)
         if (lichSu.isEmpty()) napLichSu()
         vm.man = Man.DONG_LENH

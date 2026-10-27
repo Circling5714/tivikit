@@ -9,8 +9,7 @@ import java.util.Calendar
 
 class LuatTest {
     private fun luc(y: Int, mo: Int, d: Int, h: Int, mi: Int) = Calendar.getInstance().apply { clear(); set(y, mo - 1, d, h, mi) }
-    private val muoi = "abc"
-    private fun ch(vararg k: Khung, bat: Boolean = true) = CauHinh(bat, muoi, Luat.bam(muoi, "1234"), k.toList())
+    private fun ch(vararg k: Khung, bat: Boolean = true) = CauHinh(bat, k.toList(), coMa = true)
     private val CA_TUAN = (1..7).toSet()
 
     @Test fun thuHai_laMot() { assertEquals(1, Luat.thu(luc(2026, 10, 19, 10, 0))); assertEquals(7, Luat.thu(luc(2026, 10, 25, 10, 0))) }
@@ -38,20 +37,21 @@ class LuatTest {
         assertEquals(17, Luat.hetKhoaLuc(c, luc(2026, 10, 23, 15, 0))!!.get(Calendar.HOUR_OF_DAY))
     }
 
-    @Test fun tatHoacChuaCoPin_khongKhoa() {
+    @Test fun tatHoacChuaCoMa_khongKhoa() {
         val k = Khung(0, 0, CA_TUAN)
         assertFalse(Luat.trongGio(ch(k, bat = false), luc(2026, 10, 23, 10, 0)))
-        assertFalse(Luat.trongGio(CauHinh(true, muoi, "", listOf(k)), luc(2026, 10, 23, 10, 0)))
+        assertFalse(Luat.trongGio(CauHinh(true, listOf(k)), luc(2026, 10, 23, 10, 0)))
         assertNull(Luat.hetKhoaLuc(ch(k, bat = false), luc(2026, 10, 23, 10, 0)))
     }
 
-    @Test fun pin() {
-        val c = ch(Khung(0, 0, CA_TUAN))
-        assertTrue(Luat.dungPin(c, "1234")); assertFalse(Luat.dungPin(c, "1243"))
+    @Test fun saiNhieuLan_choLauDan() {
+        assertEquals(listOf(1, 5, 15, 60, 60, 60), (0..5).map { Luat.phutCho(it) })
     }
 
     @Test fun docJson() {
+        // Cấu hình của bản 1.1 còn muoi / pinBam: đọc được, PIN bỏ qua (chưa có mã OTP thì không khoá).
         val c = Luat.docJson("""{"bat":true,"muoi":"m","pinBam":"x","khung":[{"tu":"21:00","den":"06:30","ngay":[1,2,9]}],"moTamPhut":60}""")!!
+        assertFalse(c.coMa)
         assertEquals(Khung(1260, 390, setOf(1, 2)), c.khung[0]); assertEquals(60, c.moTamPhut)
         assertEquals(0, c.phutThuong); assertEquals(0, c.phutCuoiTuan)
         assertNull(Luat.docJson("""{"khung":[{"tu":"25:00","den":"06:00"}]}"""))
@@ -74,7 +74,7 @@ class LuatTest {
         assertFalse(Luat.hetGioXem(c, 1, 3599)); assertTrue(Luat.hetGioXem(c, 1, 3600))
         assertFalse(Luat.hetGioXem(han(0), 1, 99_999))                       // 0 = không giới hạn
         assertFalse(Luat.hetGioXem(c.copy(bat = false), 1, 99_999))
-        assertFalse(Luat.hetGioXem(c.copy(pinBam = ""), 1, 99_999))          // chưa có PIN thì không khoá được
+        assertFalse(Luat.hetGioXem(c.copy(coMa = false), 1, 99_999))         // chưa có mã thì không khoá được
         assertTrue(Luat.hetGioXem(han(120, 0), 1, 7200)); assertFalse(Luat.hetGioXem(han(120, 0), 7, 7200))
     }
 
@@ -85,7 +85,7 @@ class LuatTest {
         assertEquals(Luat.LyDo.HET_GIO, Luat.lyDo(c, trongKhung, 3600, 0))   // khung 16:30 hết vẫn khoá tới hết ngày
         assertEquals(Luat.LyDo.HET_GIO, Luat.lyDo(c, ngoaiKhung, 3600, 0))
         assertNull(Luat.lyDo(c, ngoaiKhung, 3599, 0))
-        assertNull(Luat.lyDo(c, ngoaiKhung, 3600, ngoaiKhung.timeInMillis + 1))  // đang mở tạm bằng PIN
+        assertNull(Luat.lyDo(c, ngoaiKhung, 3600, ngoaiKhung.timeInMillis + 1))  // đang mở tạm bằng mã
         assertNull(Luat.lyDo(null, ngoaiKhung, 3600, 0))
     }
 

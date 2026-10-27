@@ -91,12 +91,21 @@ Màn chính → TiviKit Launcher (mở màn Quản lý launcher, thẻ TiviKit L
 
 - **Hỏng thì:** tắt công tắc vừa bật, Áp dụng lại.
 
-## 6. Khoá trẻ em: giới hạn giờ xem
+## 6. Khoá trẻ em: mã OTP, giới hạn giờ xem
 
-- **Thử:** Khoá trẻ em → giới hạn giờ xem ngày thường và cuối tuần đều 6 phút → Lưu; xem tivi liên tục.
-- **Đạt khi:** còn 5 phút (tức sau khoảng 1 phút xem) thì tivi báo trước; hết giờ thì tivi khoá tới nửa đêm, nhập PIN
-  mở được 60 phút; báo cáo thời gian xem trên điện thoại có số phút đúng.
-- **Hỏng thì:** mở bằng PIN, tắt giới hạn rồi Lưu.
+Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app Mật khẩu của iPhone…) trên điện thoại.
+
+- **Thử mã OTP:** Khoá trẻ em → thẻ Mã mở khoá → Tạo mã OTP → quét QR bằng app xác thực → nhập mã app đang hiện →
+  Kiểm tra → cất 10 mã dự phòng, đánh dấu Đã cất → Lưu & áp dụng.
+- **Đạt khi:** về màn chính rồi vào lại Khoá trẻ em thì app hỏi mã; mã sai báo còn mấy lần, mã đúng mở màn khoá; mỗi
+  mã dự phòng dùng được một lần; Dòng lệnh ADB và Khôi phục cũng hỏi mã.
+- **Thử màn khoá:** thêm khung giờ khoá chứa giờ hiện tại → Lưu. Tivi hiện màn khoá với 6 ô số và giờ tivi; gõ mã
+  bằng remote (số hoặc mũi tên + OK) thì mở 60 phút; gõ một mã dự phòng 8 số cũng mở được.
+- **Thử giới hạn:** giới hạn giờ xem ngày thường và cuối tuần đều 6 phút → Lưu; xem tivi liên tục. Còn 5 phút (tức
+  sau khoảng 1 phút xem) thì tivi báo trước; hết giờ thì tivi khoá tới nửa đêm, nhập mã mở được 60 phút; báo cáo
+  thời gian xem trên điện thoại có số phút đúng.
+- **Hỏng thì:** nhập mã (hoặc mã dự phòng) trong TiviKit, tắt khung giờ / giới hạn rồi Lưu, hay Tắt và gỡ Khoá trẻ
+  em. Mất cả app xác thực lẫn mã dự phòng: hộp nhập mã → Quên mã?, 24 giờ sau vào lại được không cần mã.
 
 ## 7. Quản lý app, Làm mới tivi, Kiểm tra mạng, Cài đặt nhanh
 
