@@ -152,7 +152,10 @@ data class ThongTinTv(
     }
 }
 
-/** Tên dễ đọc cho các app hay gặp (shell không lấy được nhãn app). */
+/**
+ * Tên dễ đọc cho các app hay gặp, kèm vai trò với gói hệ thống (Home gốc, trợ lý giọng nói…). Gói không có ở đây thì
+ * tenDep lấy tên tivi báo (TenTrenTv, đọc bằng TrenTv), rồi mới tới đuôi tên gói.
+ */
 val TEN_APP = mapOf(
     "com.netflix.ninja" to "Netflix",
     "com.netflix.mediaclient" to "Netflix",
@@ -253,5 +256,5 @@ private val TEN_APP_EN = mapOf(
     "com.google.android.tv.frameworkpackagestubs" to "Google TV's empty browser",
 )
 
-fun tenDep(pkg: String): String = (if (!vn.tivikit.NgonNgu.tiengViet) TEN_APP_EN[pkg] else null) ?: TEN_APP[pkg] ?: pkg.substringAfterLast('.')
-    .replace('_', ' ').replaceFirstChar { it.uppercase() }
+fun tenDep(pkg: String): String = (if (!vn.tivikit.NgonNgu.tiengViet) TEN_APP_EN[pkg] else null) ?: TEN_APP[pkg] ?: TenTrenTv[pkg]
+    ?: pkg.substringAfterLast('.').replace('_', ' ').replaceFirstChar { it.uppercase() }

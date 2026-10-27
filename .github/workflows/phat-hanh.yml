@@ -81,6 +81,7 @@ jobs:
           scripts/dung-hen-gio.sh
           scripts/dung-go.sh
           scripts/dung-tivikit-launcher.sh
+          scripts/dung-tren-tv.sh
 
       - name: Unit test và dựng app
         run: ./gradlew --console=plain :app:testReleaseUnitTest :app:assembleRelease

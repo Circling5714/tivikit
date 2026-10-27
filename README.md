@@ -66,7 +66,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 - ⚠️ **Làm mới tivi**: RAM, CPU, nhiệt độ chip, bộ nhớ, thời gian tivi chạy liền; app nào đang ăn CPU và tivi quá tải vì việc gì (VD CH Play đang cập nhật dồn); một chạm đóng app nằm nền, chỉ xoá cache khi bộ nhớ gần đầy; chạy liền quá 7 ngày thì gợi ý khởi động lại.
 - ⚠️ **Kiểm tra mạng**: sóng Wi-Fi, băng tần, độ trễ, kèm nhận xét cách sửa khi YouTube giật; rồi xem CH Play và tài khoản Google: gói Google bị tắt, giờ tivi lệch, tài khoản cần đăng nhập lại (lúc CH Play báo nhầm là lỗi Wi-Fi).
 - ⚠️ **Cài đặt nhanh**: hiệu ứng nhanh hơn, tự tắt sau 4 giờ không dùng, màn hình chờ, tiếng bấm remote.
-- ⚠️ **Quản lý app**: dung lượng, xoá cache, gỡ, lưu APK; tắt / bật lại app (VD tắt YouTube gốc khi đã dùng SmartTube); thẻ Đang chạy ngầm cho thấy RAM từng app chạy nền và chỉ ra app nên tắt (VD microG không còn app nào dùng, trình cập nhật ROM của box).
+- ⚠️ **Quản lý app**: dung lượng, xoá cache, gỡ, lưu APK; tắt / bật lại app (VD tắt YouTube gốc khi đã dùng SmartTube); thẻ Đang chạy ngầm cho thấy RAM từng app chạy nền và chỉ ra app nên tắt (VD microG không còn app nào dùng, trình cập nhật ROM của box). Tên và ảnh app hỏi thẳng tivi bằng một lớp Java nhỏ chạy qua app_process (không cài gì lên tivi), cả danh sách một lượt; các màn khác cũng hiện tên thật thay vì đuôi tên gói.
 - ✅ **DNS chặn quảng cáo** (Android 9 trở lên): AdGuard, AdGuard Gia đình, NextDNS hoặc máy chủ DNS-over-TLS tự nhập, chặn cho mọi app trên tivi; đặt xong app kiểm tra lại, không chạy thì trả về như cũ. Đã thử NextDNS trên box TX3 (Android 9).
 
 ### Kết nối
@@ -165,6 +165,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 | `hengio/` | Hẹn giờ bật / tắt tivi, mở app (`vn.tivikit.hengio`) |
 | `go/` | Bộ gõ phụ để gõ tiếng Việt có dấu từ điện thoại (`vn.tivikit.go`) |
 | `launcher/` | TiviKit Launcher `vn.tivikit.launcher` (Jetpack Compose): màn Home kính mờ, dock, âm lịch; bí danh `.Home` tắt sẵn, launcher tự bật khi TiviKit gọi `bat-home` |
+| `trentv/` | Lớp Java TiviKit chạy trên tivi bằng app_process, không cài (`assets/tren-tv.jar`): tên + ảnh app (`TenApp`) |
 | `patches/launcher-vgs.patch` | Phần CleanTV sửa trên launcher CleanYourTV (thời tiết, font Lexend, cụm nút, máy chiếu, màn chờ, ô kênh `link_tiles`, logo ô Kênh nhanh qua `app_banners` trỏ tới ảnh `kenh-*.jpg`, nút remote mở link vào app qua đích `intent:` trong `app_keys`, mở app khi bật từ chế độ chờ…), đã chuyển lên commit ghi trong `upstream-commit.txt` |
 | `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi (`lam-du-lieu.py`, `cap_nhat_mau.py`), vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), tải máy chủ scrcpy có kiểm SHA-256 (`tai-scrcpy.sh`), phát hành (`phat_hanh.py`) |
 | `.github/workflows/` | Phát hành (dựng, ký, đăng GitHub Release), Cập nhật mẫu tivi (hằng tuần từ CleanYourTV) và Kiểm tra (unit test mỗi lần đẩy code) |
@@ -235,7 +236,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 - ⚠️ **Refresh the TV**: RAM, CPU load, chip temperature, storage and uptime; which processes use the CPU and why the TV is overloaded (e.g. the Play Store catching up on updates); close background apps in one tap, clear caches only when storage is nearly full, suggest a reboot after 7 days up.
 - ⚠️ **Network check**: Wi-Fi signal, band and latency, with advice when YouTube stutters; then the Play Store and Google account: disabled Google packages, a wrong clock, an account that needs signing in again (when the Play Store wrongly blames the Wi-Fi).
 - ⚠️ **Quick settings**: faster animations, auto-off after 4 idle hours, screensaver, remote click sounds.
-- ⚠️ **Manage apps**: size, clear cache, uninstall, save the APK, disable / re-enable (e.g. turn off the stock YouTube when using SmartTube); a Running in the background card shows each app's RAM and flags the ones worth disabling (e.g. microG that no app uses, the box's firmware updater).
+- ⚠️ **Manage apps**: size, clear cache, uninstall, save the APK, disable / re-enable (e.g. turn off the stock YouTube when using SmartTube); a Running in the background card shows each app's RAM and flags the ones worth disabling (e.g. microG that no app uses, the box's firmware updater). App names and pictures come straight from the TV through a small Java class run with app_process (nothing is installed), the whole list at once; other screens show real names instead of package suffixes.
 - ✅ **Ad-blocking DNS** (Android 9+): AdGuard, AdGuard Family, NextDNS or your own DNS-over-TLS server, for every app on the TV; checked after setting and reverted if it fails. NextDNS tried on the TX3 Mini (Android 9).
 
 ### Connection
@@ -306,6 +307,8 @@ No usage data: CleanTV's anonymous counter, "send package list" button and websi
   *TiviKit builds on CleanTV 2.8.2 by AlexVGS (MIT), with fixes and the clean Home patch ported up to CleanTV 3.0.0: the original app, the clean-up logic, the clean Home patches, the kids lock, backup and restore.*
 - CleanTV dựa trên **[CleanYourTV](https://github.com/Gathin23/cleanyourtv)** của Gathin và cộng đồng (MIT): màn Home sạch và các danh sách tivi đều từ dự án đó.
   *CleanTV is built on CleanYourTV by Gathin and contributors (MIT): the clean Home launcher and the TV lists come from that project.*
+- Ý tưởng chạy lớp Java nhỏ trên tivi bằng app_process (tên + ảnh app) và giữ một phiên scrcpy cho phím, dán chữ qua clipboard: từ **[tv-remote](https://github.com/HoangTran0410/tv-remote)** của HoangTran0410 (MIT).
+  *The ideas of running a small Java class on the TV with app_process (app names and pictures), keeping a scrcpy session for keys and pasting text through the clipboard come from tv-remote by HoangTran0410 (MIT).*
 - Thư viện / libraries: libadb-android, Conscrypt, Bouncy Castle, OkHttp, JSch, AndroidX / Jetpack Compose. Phông / fonts: Inter (app, TiviKit Launcher), Lexend và Outfit (Home sạch), OFL. Âm lịch của TiviKit Launcher theo thuật toán của Hồ Ngọc Đức, chuyển từ Home sạch (CleanYourTV, MIT); ảnh nền đồi chè là tranh Scenes của CleanYourTV / TiviKit Launcher's lunar calendar is Hồ Ngọc Đức's algorithm ported from the clean Home (CleanYourTV, MIT); its tea-hill wallpaper is a CleanYourTV Scenes picture. Thời tiết / weather: Open-Meteo (CC BY 4.0). Toạ độ phường/xã / ward coordinates: © OpenStreetMap contributors (ODbL). Chế độ LG cài [LG TV Vibehack](https://github.com/hoangvya19/lg-tv-webos-vibehack) (MIT) lên tivi đã root / the LG mode installs it on rooted TVs.
 - Toàn văn giấy phép / full licence texts: [NOTICE](NOTICE) và mục "Giấy phép mã nguồn mở" trong app / and "Open-source licenses" in the app.
 

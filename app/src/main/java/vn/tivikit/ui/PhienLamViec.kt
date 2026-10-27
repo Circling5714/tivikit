@@ -395,6 +395,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         private set
 
     init {
+        vn.tivikit.dulieu.TenTrenTv.nap(ctx)
         if (vn.tivikit.BuildConfig.TU_CAP_NHAT) viewModelScope.launch {
             val b = runCatching { io { vn.tivikit.CapNhat.kiemTra(ctx) } }.getOrNull()
             banMoi = b
@@ -745,6 +746,16 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         return t.substring(0, i) to p
     }
 
+    /**
+     * Tên mọi app trên tivi, hỏi PackageManager của tivi qua TrenTv (một lệnh, ~2 giây trên TX3), nhớ vào TenTrenTv. Gói
+     * trong [caiDat] mà tivi không báo tên (app đang tắt…) cũng ghi là đã hỏi, để lần nối sau khỏi hỏi lại.
+     */
+    internal suspend fun docTenTrenTv(caiDat: Set<String> = emptySet()): Map<String, vn.tivikit.adb.TrenTv.TenTv> {
+        val m = io { vn.tivikit.adb.TrenTv(adb).tenApp { vn.tivikit.CapNhat.moAsset(ctx, vn.tivikit.adb.TrenTv.ASSET).readBytes() } }
+        if (m.isNotEmpty()) vn.tivikit.dulieu.TenTrenTv.them(ctx, (caiDat - m.keys).associateWith { "" } + m.mapValues { it.value.ten })
+        return m
+    }
+
     private suspend fun sauKhiKetNoi(host: String) {
         daNapCu = false
         // Nút gán riêng / ô Kênh nhanh thuộc về tivi trước: tivi này đọc lại từ config.json của nó (napTuJson, màn Nút
@@ -765,6 +776,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         tiviCuaDsCai = info.khoaLuu
         var tt = io { tv.docTrangThai() }
         trangThai = tt
+        // Tên app thật từ chính tivi cho tenDep (TrenTv, 27/10/2026): chạy nền, chỉ khi có gói chưa hỏi (app mới cài).
+        if (vn.tivikit.dulieu.TenTrenTv.thieu(tt.caiDat)) { val goi = tt.caiDat; viewModelScope.launch { runCatching { docTenTrenTv(goi) } } }
         // Đổi tên gói (25/10/2026): app phụ cài từ bản cũ (com.icm.cleantv.*) chép sang gói mới rồi gỡ.
         baoChuyen = ""
         if (vn.tivikit.dulieu.GoiCu.APP_PHU.any { it in tt.caiDat }) {

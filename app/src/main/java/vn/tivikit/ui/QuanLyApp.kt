@@ -108,10 +108,31 @@ class QuanLyApp(private val vm: PhienLamViec) {
     }
 
     /**
-     * Đọc tên + ảnh các app chưa có trong kho, từng app một ở nền (màn vẫn bấm được). Chỉ nhớ khi đọc được; mất kết
-     * nối thì dừng, lần mở sau đọc tiếp.
+     * Đọc tên + ảnh các app chưa có trong kho ở nền (màn vẫn bấm được). Trước hết hỏi thẳng tivi (TrenTv, 27/10/2026): tên cả
+     * danh sách một lệnh, ảnh 12 app một lệnh. App nào tivi không trả thì đọc APK như trước (TenApk), từng app một. Chỉ nhớ
+     * khi đọc được; mất kết nối thì dừng, lần mở sau đọc tiếp.
      */
     private suspend fun docTenAnh() {
+        val chua = ds.filter { it.ten == null }
+        if (chua.isEmpty()) return
+        try {
+            val ten = vm.docTenTrenTv()
+            val tren = vn.tivikit.adb.TrenTv(vm.adb)
+            for (lo in chua.chunked(12)) {
+                val anh = vm.io { tren.anhApp({ vn.tivikit.CapNhat.moAsset(vm.ctx, vn.tivikit.adb.TrenTv.ASSET).readBytes() }, lo.map { it.tv.pkg }) }
+                for (a in lo) {
+                    val t = ten[a.tv.pkg]?.ten?.takeIf { it.isNotBlank() } ?: continue
+                    val bm = anh[a.tv.pkg]?.webp?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+                    a.ten = t
+                    bm?.let { a.anh = it.asImageBitmap() }
+                    luuKho(a, t, bm)
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            if (ThaoTacTv.laMatKetNoi(e)) return
+        }
         for (a in ds.toList()) {
             if (a.ten != null) continue
             val kq: TenApk.KetQua? = try {
