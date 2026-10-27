@@ -56,7 +56,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
   - ⚠️ VTVgo: VTV1–9, đài địa phương, VTVcab… từ danh sách kênh của VTVgo (tivi cần có app VTVgo bản tivi). Ô kênh VTVgo kiểu cũ trên Home sạch (không gán được nút remote) chuyển được sang ô Kênh nhanh.
   - ⚠️ Logo kênh trên ô: tải ảnh kênh của VTVgo lúc lưu ô rồi gửi lên tivi (app không đóng sẵn logo của đài); ô TV360 dùng chung khi VTVgo có kênh cùng tên (VTV1–9, HTV9, Hà Nội 1, ANTV, QPVN…). Cần Home sạch bản mới: tivi đang có bản cũ thì mở Home sạch, bấm Áp dụng một lần.
 - ✅ **Hẹn giờ**: bật / tắt tivi và mở app theo lịch; báo trước 60 giây khi sắp tắt, cho hoãn 30 phút. Có nút thử "tivi tự bật sau 2 phút"; tivi ngủ sâu hoặc rút điện thì không tự bật được.
-- **Khoá trẻ em** (từ CleanTV): hẹn giờ khoá tivi theo ngày trong tuần, mã PIN 4 số mở 60 phút, che cả HDMI và chặn remote.
+- **Khoá trẻ em** (từ CleanTV): hẹn giờ khoá tivi theo ngày trong tuần, mã PIN 4 số mở 60 phút, che cả HDMI và chặn remote. Khoá bật thì giờ tivi luôn tự động theo mạng: tắt giờ tự động để chỉnh giờ né khoá thì app bật lại ngay.
   - ⚠️ Mới: giới hạn giờ xem mỗi ngày (ngày thường / cuối tuần), báo trước 5 phút, hết giờ thì khoá đến nửa đêm; báo cáo thời gian xem 7 ngày và theo từng app.
 - ⚠️ **Gửi ảnh, video** (chỉ trên điện thoại): gửi file vào thư mục `Download/TiviKit` trên tivi rồi mở xem.
 - ⚠️ **Bộ cài đặt mẫu**: lưu một bộ app (file APK hoặc app gợi ý) kèm DNS chặn quảng cáo, rồi cài một lượt cho tivi đang nối hoặc lần lượt cho nhiều tivi.
@@ -226,7 +226,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
   - ⚠️ VTVgo: VTV1–9, local stations, VTVcab… from VTVgo's channel list (the TV needs the VTVgo app for TV). Old-style VTVgo tiles on the clean Home (no remote button) can be moved to Quick channel tiles.
   - ⚠️ Channel logos on the tiles: VTVgo's channel picture is downloaded when a tile is saved and sent to the TV (no station logos are bundled); TV360 tiles share it when VTVgo has a channel of the same name (VTV1–9, HTV9, Hà Nội 1, ANTV, QPVN…). Needs the new clean Home: on a TV with an older one, open Clean Home and press Apply once.
 - ✅ **Timer**: turn the TV on / off and open apps on a schedule, with a 60-second warning and a 30-minute snooze, plus a "turn on in 2 minutes" test. A TV in deep standby can't be woken.
-- **Kids lock** (from CleanTV): weekday lock periods, a 4-digit PIN unlocks for 60 minutes, covers HDMI and blocks the remote.
+- **Kids lock** (from CleanTV): weekday lock periods, a 4-digit PIN unlocks for 60 minutes, covers HDMI and blocks the remote. While it is on, the TV's clock stays automatic: turning automatic time off to dodge the lock gets switched back at once.
   - ⚠️ New: daily viewing limits (weekdays / weekends), a 5-minute warning, a lock until midnight when time is up, and a 7-day, per-app viewing report.
 - ⚠️ **Send photos, videos** (phone only) to `Download/TiviKit` on the TV and open them.
 - ⚠️ **Setup sets**: a saved set of apps plus ad-blocking DNS, applied to the connected TV or to several TVs in turn.

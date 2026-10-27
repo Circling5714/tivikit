@@ -1529,6 +1529,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         bao(t("Ghi giờ khoá và mã PIN…", "Saving the schedule and PIN…"))
         val kq = sh("content call --uri $khoaUri --method dat --arg '$json'")
         if (!kq.contains("ok=1")) error(t("Tivi không nhận cấu hình: ${kq.trim()}", "The TV rejected the settings: ${kq.trim()}"))
+        // Khoá tính theo giờ tivi: bật giờ tự động ngay (app khoá giữ nó bật từ đây, xem KhoaDichVu.giuGioTuDong).
+        if (org.json.JSONObject(json).optBoolean("bat")) sh("settings put global auto_time 1")
         bao(t("Bật dịch vụ khoá…", "Turning the lock service on…"))
         // Bản cài đè từ bản có tên lớp cũ: bỏ tên dịch vụ cũ (không còn lớp đó) trước khi bật tên mới.
         boTroNang("$PKG_KHOA/${GoiCu.LOP_KHOA_CU}")

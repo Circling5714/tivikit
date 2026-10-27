@@ -1603,6 +1603,8 @@ private fun ManKhoaTre(vm: PhienLamViec) = Cuon {
         Text(t("Khoá trẻ em", "Kids lock"), style = KieuTieuDeLon)
         Phu(t("Tới giờ khoá, hay xem hết giờ trong ngày, tivi hiện màn khoá che mọi thứ (cả HDMI, YouTube) và chặn phím remote. Nhập đúng mã PIN trên tivi thì mở ${vm.KHOA_MO_TAM} phút. Tắt tivi bật lại vẫn khoá.",
             "During the lock periods, or once the day's time is used up, the TV shows a lock screen over everything (HDMI and YouTube too) and blocks the remote. The right PIN unlocks it for ${vm.KHOA_MO_TAM} minutes. It stays locked after a restart."))
+        Phu(t("Khoá bật thì giờ tivi luôn tự động theo mạng: ai tắt giờ tự động để chỉnh giờ né khoá, app bật lại ngay.",
+            "While the lock is on, the TV keeps its clock automatic: turning automatic time off to dodge the lock gets switched back at once."))
     }
     vm.khoaTrenTv?.let { j ->
         The(t("Trên tivi", "On the TV"), Icons.Rounded.Lock) {

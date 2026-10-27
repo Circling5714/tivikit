@@ -72,6 +72,24 @@ class KhoaDichVu : AccessibilityService() {
         override fun run() { capNhat(); tay.postDelayed(this, NHIP_MS) }
     }
 
+    /**
+     * Giờ tự động (27/10/2026): khung giờ khoá, giới hạn mỗi ngày và lượt mở tạm đều tính theo giờ tivi — trẻ tắt giờ tự
+     * động rồi chỉnh giờ là né được khoá (tv-remote khoá luôn Cài đặt vì lý do này). Khoá đang bật thì ai tắt giờ tự động
+     * là bật lại ngay, Android đồng bộ lại giờ mạng. Cần WRITE_SECURE_SETTINGS (TiviKit cấp qua ADB, như CanhGac).
+     */
+    private val gioTuDong = object : android.database.ContentObserver(tay) {
+        override fun onChange(selfChange: Boolean) = giuGioTuDong()
+    }
+
+    private fun giuGioTuDong() {
+        if (kho.cauHinh?.bat != true) return
+        runCatching {
+            val cr = contentResolver
+            if (android.provider.Settings.Global.getInt(cr, android.provider.Settings.Global.AUTO_TIME, 1) == 0)
+                android.provider.Settings.Global.putInt(cr, android.provider.Settings.Global.AUTO_TIME, 1)
+        }
+    }
+
     /** Màn hình tắt / bật, màn hình chờ chạy / thôi: đếm cho đúng lúc đổi. */
     private val manHinh = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
@@ -94,12 +112,15 @@ class KhoaDichVu : AccessibilityService() {
             addAction(Intent.ACTION_DREAMING_STARTED); addAction(Intent.ACTION_DREAMING_STOPPED)
         }
         runCatching { if (Build.VERSION.SDK_INT >= 33) registerReceiver(manHinh, f, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(manHinh, f) }
+        runCatching { contentResolver.registerContentObserver(android.provider.Settings.Global.getUriFor(android.provider.Settings.Global.AUTO_TIME), false, gioTuDong) }
+        giuGioTuDong()
         tay.post(nhip)
     }
 
     override fun onDestroy() {
         tay.removeCallbacksAndMessages(null)
         runCatching { unregisterReceiver(manHinh) }
+        runCatching { contentResolver.unregisterContentObserver(gioTuDong) }
         if (::kho.isInitialized) { demGio(); luuDem() }
         anBaoTruoc()
         anKhoa()
