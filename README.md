@@ -79,6 +79,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 
 ### Nâng cao
 
+- ⚠️ **Set App Link**: chọn app mở link của từng trang trên tivi (YouTube, FPT Play, VieON, Netflix, Spotify… hoặc trang tự thêm), VD link YouTube gửi qua Telegram, Zalo, trình duyệt mở thẳng bằng SmartTube thay vì hỏi chọn app. Đặt xong app hỏi lại tivi để báo đã nhận chưa; trả về như cũ bằng "Hỏi mỗi lần". Android 11 trở xuống đặt theo app (`pm set-app-link`), Android 12 trở lên theo lựa chọn của người dùng (`pm set-app-links-user-selection`). Lệnh đã thử tay trên tivi Skyworth (Android 11): mọi dạng link YouTube mở thẳng bằng SmartTube; màn hình trong app và Android 12 trở lên chưa thử.
 - ⚠️ **Dòng lệnh ADB**: gõ lệnh shell chạy thẳng trên tivi như `adb shell` trên máy tính; kết quả hiện dần, bấm Dừng được, `cd` được giữ cho lệnh sau, dán lệnh có sẵn `adb shell` ở đầu thì app tự bỏ. Gần 200 lệnh mẫu có giải thích, xếp từ hay dùng tới ít dùng (thông tin tivi, app, tăng tốc, mở màn cài đặt bị giấu, cấp quyền cho app, mạng, remote, màn hình chờ, file, nhật ký…); lệnh có chỗ trống như `<gói>` thì điền trong hộp, chọn được gói đang có trên tivi. Lệnh nguy hiểm (tắt / gỡ gói tivi cần, xoá cả thư mục, tắt Wi-Fi hay ADB, khởi động vào recovery…) được hỏi lại, loại nặng phải tích xác nhận; lệnh tắt gói được ghi vào bản sao lưu để Khôi phục bật lại; đổi cài đặt thì in giá trị cũ để trả lại. Lệnh chỉ nhận từ ô gõ trong app; lịch sử lệnh chỉ lưu trên điện thoại.
 
 ### Khác
@@ -236,6 +237,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 
 ### Advanced
 
+- ⚠️ **Set App Link**: choose the app that opens each site's links on the TV (YouTube, FPT Play, VieON, Netflix, Spotify… or a site you add), e.g. YouTube links from Telegram, Zalo or a browser open straight in SmartTube instead of asking. After applying, the app asks the TV whether it took the choice; "Ask every time" puts it back. Android 11 and older work per app (`pm set-app-link`), Android 12 and newer per user selection (`pm set-app-links-user-selection`). The commands were tried by hand on a Skyworth TV (Android 11): every kind of YouTube link opened straight in SmartTube; the in-app screen and Android 12+ are untested.
 - ⚠️ **ADB shell**: run shell commands right on the TV like `adb shell` on a computer, with live output, a Stop button and `cd` that carries over; a pasted leading `adb shell` is dropped. Nearly 200 explained examples, most used first (TV info, apps, speed-ups, hidden settings screens, app permissions, network, remote, screensaver, files, logs…); blanks like `<package>` are filled in a dialog that lists the TV's packages. Dangerous commands (disabling or removing packages the TV needs, deleting whole folders, turning off Wi-Fi or ADB, booting into recovery…) ask first, and the worst need a tick; disabled packages go into the backup so Restore turns them back on; changed settings print their old value so you can put it back. Commands only come from the app's own input box; the history stays on the phone.
 
 ### Also

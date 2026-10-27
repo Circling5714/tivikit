@@ -135,6 +135,7 @@ fun UngDung(vm: PhienLamViec = viewModel()) {
                         Man.CHUYEN_MAY -> ManChuyenMay(vm)
                         Man.LG -> ManLg(vm)
                         Man.DONG_LENH -> ManDongLenh(vm)
+                        Man.LIEN_KET_APP -> ManLienKetApp(vm)
                     }
                 }
                 if (vm.loi.isNotEmpty() || (vm.dangBan && vm.man != Man.DANG_TAT)) ThanhTrangThai(vm)
@@ -205,7 +206,7 @@ private fun quayLai(vm: PhienLamViec) {
         Man.HOME_SACH -> if (vm.moNangCao) { vm.moNangCao = false; Man.HOME_SACH } else vm.manTruocHome
         Man.XONG -> Man.HOME_SACH
         Man.HUONG_DAN, Man.GIAY_PHEP -> vm.manTruoc
-        Man.KHOA_TRE, Man.CAI_APK, Man.DIEU_KHIEN, Man.QUAN_LY_APP, Man.GUI_FILE, Man.DNS, Man.GAN_PHIM, Man.KENH_NHANH, Man.HEN_GIO, Man.LAM_MOI, Man.MANG, Man.CAI_DAT_NHANH, Man.CHUYEN_MAY, Man.LG -> { vm.veHub(); Man.CHINH }
+        Man.KHOA_TRE, Man.CAI_APK, Man.DIEU_KHIEN, Man.QUAN_LY_APP, Man.GUI_FILE, Man.DNS, Man.GAN_PHIM, Man.KENH_NHANH, Man.HEN_GIO, Man.LAM_MOI, Man.MANG, Man.CAI_DAT_NHANH, Man.CHUYEN_MAY, Man.LG, Man.LIEN_KET_APP -> { vm.veHub(); Man.CHINH }
         // Rời Dòng lệnh thì dừng lệnh đang chạy (logcat…), không để chạy ngầm trên tivi.
         Man.DONG_LENH -> { vm.dongLenh.dung(); vm.veHub(); Man.CHINH }
         // Đang soạn bộ / chọn tivi thì về danh sách bộ; mở từ màn chính (chưa nối tivi) thì về màn chính.

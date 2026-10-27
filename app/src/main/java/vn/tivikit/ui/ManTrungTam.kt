@@ -169,6 +169,8 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
     // Công cụ cho người rành (27/10/2026): để cuối, cách xa các công cụ hằng ngày.
     TieuDeMuc(t("Nâng cao", "Advanced"))
     NhomChucNang(vm, listOf(
+        MucChucNang(Icons.Rounded.Link, MauO.ngoc, "Set App Link",
+            t("Chọn app mở link: VD link YouTube mở thẳng bằng SmartTube", "Choose which app opens links, e.g. YouTube links in SmartTube")) { vm.moChucNang { vm.lienKet.mo() } },
         MucChucNang(Icons.Rounded.Terminal, MauO.xam, t("Dòng lệnh ADB", "ADB shell"),
             t("Gõ lệnh shell chạy trên tivi, kèm gần 200 lệnh mẫu có giải thích", "Run shell commands on the TV, with nearly 200 explained examples")) { vm.moChucNang { vm.dongLenh.mo() } },
     ))

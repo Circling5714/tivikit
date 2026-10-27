@@ -74,7 +74,17 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 | Lệnh mẫu "Hiệu ứng chuyển màn nhanh gấp đôi" | In giá trị cũ trước khi đổi; cài đặt tivi đúng giá trị mới |
 | `logcat` chạy rồi bấm Quay lại | Lệnh dừng, không chạy ngầm trên tivi |
 
-## 7. Các tính năng còn lại
+## 7. Set App Link
+
+| Thử | Đạt khi |
+| --- | --- |
+| Nâng cao → Set App Link | Hiện các trang có app nhận link (VD YouTube khi có SmartTube), mỗi trang ghi đang mở bằng gì |
+| Bấm YouTube → chọn SmartTube | App báo đã đặt; mở một link YouTube từ Telegram / trình duyệt trên tivi thì vào thẳng SmartTube |
+| Bấm YouTube → Hỏi mỗi lần | App báo đã trả về; mở link YouTube thì tivi lại hỏi chọn app |
+| Trang khác → gõ một tên miền (VD vimeo.com) | Thêm dòng mới, ghi đúng app nào nhận (hoặc chưa có app nào) |
+| Tivi Android 12 trở lên có YouTube gốc: chọn SmartTube cho YouTube | Link YouTube mở bằng SmartTube; app báo đã tắt tự mở link của YouTube gốc |
+
+## 8. Các tính năng còn lại
 
 | Thử | Đạt khi |
 | --- | --- |

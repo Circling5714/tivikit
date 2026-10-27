@@ -162,6 +162,10 @@ object DongLenh {
             l("dumpsys meminfo {goi}", "RAM app đang dùng (dòng TOTAL).", "RAM used by an app (TOTAL row).")
             l("pm install -r {file}", "Cài file APK đã có trên tivi, VD file gửi bằng TiviKit vào /sdcard/Download/TiviKit (cài từ điện thoại thì dùng mục Cài app).",
                 "Install an APK already on the TV, e.g. one sent by TiviKit into /sdcard/Download/TiviKit (from the phone, use Install apps).")
+            l("pm set-app-link --user 0 {goi} always", "Luôn mở link của app bằng chính nó, không hỏi chọn app (Android 11 trở xuống; VD link YouTube mở bằng SmartTube). Dễ hơn: dùng Set App Link.",
+                "Always open the app's links in it without asking (Android 11 and older; e.g. YouTube links in SmartTube). Easier: use Set App Link.")
+            l("pm set-app-links-user-selection --user 0 --package {goi} true all", "Như lệnh trên, cho Android 12 trở lên.", "Same as above, for Android 12 and newer.")
+            l("dumpsys package d", "App nào đang được đặt luôn mở link của trang nào (Android 11 trở xuống).", "Which apps are set to always open which sites' links (Android 11 and older).")
         }
         with(Nhom.NHANH) {
             l("settings put global window_animation_scale 0.5; settings put global transition_animation_scale 0.5; settings put global animator_duration_scale 0.5",

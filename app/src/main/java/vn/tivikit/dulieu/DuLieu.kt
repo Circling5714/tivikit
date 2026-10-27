@@ -207,6 +207,18 @@ val TEN_APP = mapOf(
     "com.google.android.apps.tv.launcherx" to "Màn hình Home gốc (Google TV)",
     "com.gathin.tvhome" to "Home sạch (CleanYourTV)",
     "com.ts.launcher" to "Home sạch (bản cho Xiaomi)",
+    // Trình duyệt và app hay nhận link (màn Set App Link, 27/10/2026).
+    "com.coccoc.trinhduyet_tv" to "Cốc Cốc",
+    "com.phlox.tvwebbrowser" to "TV Bro",
+    "com.android.chrome" to "Chrome",
+    "org.mozilla.tv.firefox" to "Firefox",
+    "com.cloudmosa.puffinTV" to "Puffin TV",
+    "com.google.android.tv.frameworkpackagestubs" to "Trình duyệt trống của Google TV",
+    "com.spotify.music" to "Spotify",
+    "com.valvesoftware.steamlink" to "Steam Link",
+    "com.iqiyi.i18n.tv" to "iQIYI",
+    "com.irdeto.kplus" to "K+",
+    "org.videolan.vlc" to "VLC",
 )
 
 private val TEN_APP_EN = mapOf(
@@ -227,6 +239,7 @@ private val TEN_APP_EN = mapOf(
     "com.icm.cleantv.kenh" to "Quick channel (old TiviKit)",
     "com.icm.cleantv.hengio" to "Timer (old TiviKit)",
     "com.icm.cleantv.khoa" to "Kids lock (old TiviKit)",
+    "com.google.android.tv.frameworkpackagestubs" to "Google TV's empty browser",
 )
 
 fun tenDep(pkg: String): String = (if (!vn.tivikit.NgonNgu.tiengViet) TEN_APP_EN[pkg] else null) ?: TEN_APP[pkg] ?: pkg.substringAfterLast('.')
