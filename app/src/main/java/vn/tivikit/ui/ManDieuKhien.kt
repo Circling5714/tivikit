@@ -172,9 +172,12 @@ private fun TheDangPhat(dk: DieuKhien, b: DangPhatTv.Bai) {
         vn.tivikit.dulieu.DangPhat.CHO -> t("đang tải", "loading")
         else -> t("đã dừng", "paused")
     }
+    val app = vn.tivikit.dulieu.tenDep(b.goi)
+    val gio = vn.tivikit.dulieu.DangPhat.dongHo(b.viTriLuc(bayGio))
     The(t("Đang phát", "Now playing"), Icons.Rounded.MusicNote) {
-        Phu("${vn.tivikit.dulieu.tenDep(b.goi)} · $tt · ${vn.tivikit.dulieu.DangPhat.dongHo(b.viTriLuc(bayGio))}")
-        Text(b.tieuDe ?: t("Không có tên bài", "No title"), fontWeight = FontWeight.SemiBold, maxLines = 2,
+        // App không gửi tên bài (SmartTube trên Skyworth: description=null, null, null): tên app lên làm dòng chính.
+        Phu(if (b.tieuDe != null) "$app · $tt · $gio" else "${tt.replaceFirstChar { it.uppercase() }} · $gio")
+        Text(b.tieuDe ?: app, fontWeight = FontWeight.SemiBold, maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         b.phu?.let { Text(it, fontSize = 13.sp, color = ChuPhu, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
