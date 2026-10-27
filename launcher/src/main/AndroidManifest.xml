@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Thời tiết từ Open-Meteo cho nơi TiviKit gửi. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Tên Wi-Fi trên nút mạng: Android chỉ cho app có quyền vị trí đọc. Không hỏi người dùng; TiviKit cấp qua ADB. -->
@@ -8,6 +11,8 @@
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
     <!-- Mục "Gỡ cài đặt" trong menu app: mở hộp gỡ của hệ thống. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- App mở gần đây cả khi mở bằng giọng nói / nút remote: TiviKit cấp qua ADB (appops GET_USAGE_STATS). -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <!-- Android 11+: thấy các app có màn mở (app tivi và app điện thoại cài thêm). -->
@@ -19,6 +24,11 @@
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Biết gói nào là launcher để không đưa vào phần app gần đây. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
         </intent>
     </queries>
 
@@ -55,7 +65,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity-alias>
-        <!-- Cấu hình (tên lời chào, dock, ngôn ngữ) chỉ đặt được từ ADB (TiviKit). -->
+        <!-- Thẻ Đang phát: quyền đọc phiên phát nhạc / video (không đọc thông báo); TiviKit cho phép qua
+             cmd notification allow_listener. -->
+        <service
+            android:name=".NgheNhac"
+            android:exported="true"
+            android:label="TiviKit Launcher"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+        <!-- Cấu hình (tên lời chào, dock, ngôn ngữ, nơi xem thời tiết) chỉ đặt được từ ADB (TiviKit). -->
         <provider
             android:name=".CauHinhProvider"
             android:authorities="${applicationId}"

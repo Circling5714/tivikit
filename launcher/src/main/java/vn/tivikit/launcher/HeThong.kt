@@ -1,7 +1,10 @@
 package vn.tivikit.launcher
 
 import android.app.ActivityManager
+import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.TrafficStats
@@ -59,4 +62,20 @@ object HeThong {
         val am = ctx.getSystemService(ActivityManager::class.java) ?: return
         for (g in goi) runCatching { am.killBackgroundProcesses(g) }
     }
+
+    /**
+     * Gói đã mở trong 3 ngày qua, mới trước, theo thống kê sử dụng (bắt cả app mở bằng giọng nói, nút remote, từ app khác);
+     * rỗng nếu TiviKit chưa cấp quyền (appops GET_USAGE_STATS).
+     */
+    fun dungGanDay(ctx: Context): List<String> = runCatching {
+        val usm = ctx.getSystemService(UsageStatsManager::class.java) ?: return emptyList()
+        val bay = System.currentTimeMillis()
+        usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, bay - 3 * 86_400_000L, bay)
+            .filter { it.totalTimeInForeground > 0 }.sortedByDescending { it.lastTimeUsed }.map { it.packageName }.distinct()
+    }.getOrDefault(emptyList())
+
+    /** Gói có màn Home (các launcher): không đưa vào phần app gần đây. */
+    fun goiHome(pm: PackageManager): Set<String> = runCatching {
+        pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0).mapNotNull { it.activityInfo?.packageName }.toSet()
+    }.getOrDefault(emptySet())
 }

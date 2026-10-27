@@ -67,6 +67,9 @@ Màn chính → TiviKit Launcher (mở màn Quản lý launcher, thẻ TiviKit L
 | Trên tivi: Dọn RAM | Báo trống thêm bao nhiêu MB (Android 14 trở đi không có nút này) |
 | Trên tivi: nút Wi-Fi | Hiện tên Wi-Fi (TiviKit đã cấp quyền vị trí khi cài), tốc độ dưới nút; bấm mở cài đặt mạng |
 | Mở một app từ trang Ứng dụng rồi bấm Home | App đó hiện sau vạch ngăn trong dock |
+| Tivi có Home sạch đặt tên lời chào và nơi xem thời tiết → Cài lên tivi / Cập nhật | Lời chào có tên; dòng âm lịch có biểu tượng, nhiệt độ, trời (VD "26°C Nhiều mây") |
+| Mở app bằng giọng nói hay nút remote gán riêng, rồi bấm Home | App đó vẫn hiện sau vạch ngăn (thống kê sử dụng) |
+| Tivi thường (không phải box RAM thấp): phát nhạc / video trong SmartTube hay YouTube Music, bấm Home | Thẻ Đang phát trên dock: tên bài, tên app, sóng nhạc; OK mở lại đúng màn đang phát; giữ OK tạm dừng / phát tiếp |
 | Khôi phục (mục 1) khi TiviKit Launcher đang là Home | Home về như trước; TiviKit Launcher bị gỡ |
 
 - **Hỏng thì:** Quản lý launcher → Về Home gốc hay Đặt làm Home cho Home sạch; vẫn sai thì Khôi phục (mục 1).

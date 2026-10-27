@@ -4,6 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
+import android.media.session.MediaController
+import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.SystemClock
 import android.provider.Settings
@@ -17,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.time.LocalDateTime
 import java.util.Locale
@@ -34,7 +37,18 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     /** Dock đã lưu; null = chưa có (lần đầu), sẽ lấy dock mặc định. */
     private var dockLuu: List<String>? = null
     private var lichSu: List<String> = emptyList()
+    /** App mở gần đây theo thống kê sử dụng (rỗng = chưa có quyền) và các gói launcher (không đưa vào app gần đây). */
+    private var suDung: List<String> = emptyList()
+    private var goiHome: Set<String> = emptySet()
     private val dangTai = HashSet<String>()
+    private var noi: ThoiTiet.Noi? = null
+    /** Lần lấy thời tiết gần nhất (giờ hệ thống); 0 = chưa lấy. */
+    private var lucThoiTiet = 0L
+    private var dangLayThoiTiet = false
+    /** Phiên phát của thẻ Đang phát (mở app, tạm dừng / phát tiếp). */
+    private var phien: MediaController? = null
+    /** false = chưa được cho phép đọc phiên phát (thử lại mỗi lần màn Home hiện ra: TiviKit có thể vừa cấp quyền). */
+    @Volatile private var docDuocDangPhat = true
 
     fun batDau() {
         tt.coDonRam = HeThong.donDuocRam()
@@ -44,6 +58,7 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     }
 
     fun hien() {
+        docDuocDangPhat = true
         docApp()
         chayNhip()
     }
@@ -83,17 +98,28 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         tt.ten = j.optString("ten")
         dockLuu = if (j.has("dock")) CauHinh.dsGoi(j.optJSONArray("dock")) else null
         lichSu = CauHinh.dsGoi(j.optJSONArray("gan_day"))
+        val n = CauHinh.noi(j)
+        if (n != noi) {
+            noi = n
+            tt.thoiTiet = null
+            lucThoiTiet = 0L
+            if (n != null) docThoiTietCu(n)
+            xemThoiTiet()
+        }
         capNhatDock()
     }
 
     private fun docApp() {
         scope.launch {
             val ds = withContext(Dispatchers.IO) { runCatching { DanhSachApp.doc(pm, setOf(ctx.packageName)) }.getOrNull() } ?: return@launch
-            if (ds == tt.apps) return@launch
-            // App vừa cập nhật: vẽ lại ảnh (banner có thể đã đổi).
-            val cu = tt.apps.associateBy(AppTv::goi)
-            ds.forEach { a -> cu[a.goi]?.let { if (it.capNhat != a.capNhat) tt.anh.remove(a.goi) } }
-            tt.apps = ds
+            suDung = withContext(Dispatchers.IO) { HeThong.dungGanDay(ctx) }
+            goiHome = withContext(Dispatchers.IO) { HeThong.goiHome(pm) }
+            if (ds != tt.apps) {
+                // App vừa cập nhật: vẽ lại ảnh (banner có thể đã đổi).
+                val cu = tt.apps.associateBy(AppTv::goi)
+                ds.forEach { a -> cu[a.goi]?.let { if (it.capNhat != a.capNhat) tt.anh.remove(a.goi) } }
+                tt.apps = ds
+            }
             capNhatDock()
         }
     }
@@ -107,14 +133,66 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             ch.sua { it.put("dock", JSONArray(moi)) }
         }
         if (tt.dangDoi == null) tt.dock = dock
-        tt.ganDay = Dock.ganDay(lichSu, dock, coTren.toSet())
+        tt.ganDay = Dock.ganDayTu(suDung, lichSu, dock, coTren.toSet(), goiHome + ctx.packageName)
     }
 
     private fun luuDock(moi: List<String>) {
         dockLuu = moi
         tt.dock = moi
-        tt.ganDay = Dock.ganDay(lichSu, moi, tt.apps.map(AppTv::goi).toSet())
+        tt.ganDay = Dock.ganDayTu(suDung, lichSu, moi, tt.apps.map(AppTv::goi).toSet(), goiHome + ctx.packageName)
         ch.sua { it.put("dock", JSONArray(moi)) }
+    }
+
+    /** Thời tiết lưu lần trước cho đúng nơi này, còn mới (dưới 3 giờ): hiện ngay khi mở màn Home. */
+    private fun docThoiTietCu(n: ThoiTiet.Noi) {
+        val j = runCatching { JSONObject(File(ctx.filesDir, "thoi-tiet.json").readText()) }.getOrNull() ?: return
+        val luc = j.optLong("luc")
+        if (j.optDouble("lat") != n.lat || j.optDouble("lon") != n.lon || System.currentTimeMillis() - luc > 3 * 3_600_000L) return
+        tt.thoiTiet = ThoiTiet.HienTai(j.optInt("nhiet"), j.optInt("ma"))
+        lucThoiTiet = luc
+    }
+
+    /** Lấy thời tiết khi đã quá 30 phút (lỗi mạng thì thử lại sau 5 phút). */
+    private fun xemThoiTiet() {
+        val n = noi ?: return
+        val bay = System.currentTimeMillis()
+        if (dangLayThoiTiet || bay - lucThoiTiet < 30 * 60_000L) return
+        dangLayThoiTiet = true
+        scope.launch {
+            val h = withContext(Dispatchers.IO) { ThoiTiet.tai(n) }
+            dangLayThoiTiet = false
+            if (n != noi) return@launch
+            if (h == null) { lucThoiTiet = bay - 25 * 60_000L; return@launch }
+            tt.thoiTiet = h
+            lucThoiTiet = bay
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    File(ctx.filesDir, "thoi-tiet.json").writeText(JSONObject().put("lat", n.lat).put("lon", n.lon)
+                        .put("nhiet", h.nhietDo).put("ma", h.ma).put("luc", bay).toString())
+                }
+            }
+        }
+    }
+
+    /** Thẻ Đang phát: đọc phiên phát hiện tại (giữ ảnh bìa cũ nếu vẫn là bài đó). Chưa có quyền thì thôi đọc tới lần hiện sau. */
+    private fun xemDangPhat() {
+        if (!docDuocDangPhat) return
+        val ten = tt.apps.associate { it.goi to it.ten }
+        val cu = tt.dangPhat
+        scope.launch {
+            val kq = withContext(Dispatchers.IO) {
+                try {
+                    DangPhat.doc(ctx, { g -> ten[g] ?: g }, cu)
+                } catch (_: SecurityException) {
+                    docDuocDangPhat = false
+                    null
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            phien = kq?.second
+            if (kq?.first != tt.dangPhat) tt.dangPhat = kq?.first
+        }
     }
 
     /** Đồng hồ mỗi giây, tốc độ mạng mỗi giây, RAM / bộ nhớ / mạng mỗi 5 giây — chỉ khi màn Home đang hiện. */
@@ -127,6 +205,8 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             var dem = 0
             while (isActive) {
                 tt.bayGio = LocalDateTime.now()
+                if (dem % 2 == 0) xemDangPhat()
+                if (dem % 60 == 0) xemThoiTiet()
                 if (dem % 5 == 0) {
                     val ram = withContext(Dispatchers.IO) { HeThong.ramTrong(ctx) }
                     val boNho = withContext(Dispatchers.IO) { HeThong.boNhoTrong() }
@@ -271,5 +351,18 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     override fun dongMenu() {
         tt.traChon = tt.menu
         tt.menu = null
+    }
+
+    override fun moDangPhat() {
+        val c = phien ?: return
+        // Màn của chính phiên phát (đúng video / bài đang phát), không có thì mở app.
+        if (c.sessionActivity?.let { runCatching { it.send() }.isSuccess } == true) return
+        mo(c.packageName)
+    }
+
+    override fun dungPhat() {
+        val c = phien ?: return
+        if (c.playbackState?.state == PlaybackState.STATE_PLAYING) c.transportControls.pause() else c.transportControls.play()
+        scope.launch { delay(500); xemDangPhat() }
     }
 }

@@ -8,6 +8,8 @@ MÃ NGUỒN MỞ / OPEN SOURCE
 2. AndroidX, Jetpack Compose, Kotlin, kotlinx.coroutines — Google / JetBrains — Apache License 2.0 (mục B / section B)
 3. Phông chữ Inter (cắt gọn còn chữ Latin + tiếng Việt) / Inter font (subset to Latin + Vietnamese)
    The Inter Project Authors — https://github.com/rsms/inter — SIL Open Font License 1.1 (mục C / section C)
+4. Dữ liệu thời tiết / Weather data: Open-Meteo.com — https://open-meteo.com — CC BY 4.0
+   (chữ và mã thời tiết theo Weather.java của Home sạch / labels and codes follow the clean Home's Weather.java, MIT)
 
 ======================================================================
 A. MIT License (CleanTV, CleanYourTV)

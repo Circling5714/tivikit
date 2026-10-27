@@ -24,11 +24,41 @@ object TiviKitLauncher {
     const val LENH_DOC = "content call --uri content://$GOI --method doc"
 
     /**
-     * Cấu hình gửi khi cài / cập nhật: tên lời chào (như tên chào của Home sạch) và ngôn ngữ của TiviKit trên điện thoại.
-     * Nháy đơn đổi thành ’ vì lệnh shell bọc JSON trong nháy đơn.
+     * Cấu hình gửi khi cài / cập nhật: tên lời chào và nơi xem thời tiết (như của Home sạch), ngôn ngữ của TiviKit trên
+     * điện thoại, và [dock] chỉ khi mới cài (cập nhật thì giữ dock người dùng đã sắp trên tivi). Nháy đơn đổi thành ’ vì
+     * lệnh shell bọc JSON trong nháy đơn.
      */
-    fun cauHinh(ten: String, tiengViet: Boolean): String =
-        JSONObject().put("ten", ten.replace('\'', '’').trim().take(40)).put("ngon_ngu", if (tiengViet) "vi" else "en").toString()
+    fun cauHinh(ten: String, tiengViet: Boolean, noi: ThanhPho? = null, dock: List<String>? = null): String {
+        val o = JSONObject().put("ten", boNhay(ten).trim().take(40)).put("ngon_ngu", if (tiengViet) "vi" else "en")
+        if (noi != null && !noi.lat.isNaN() && !noi.lon.isNaN()) o.put("noi", JSONObject().put("ten", boNhay(noi.ten)).put("lat", noi.lat).put("lon", noi.lon))
+        if (!dock.isNullOrEmpty()) o.put("dock", org.json.JSONArray(dock.filter { TEN_GOI.matches(it) }))
+        return o.toString()
+    }
+
+    private val TEN_GOI = Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+")
+
+    private fun boNhay(s: String) = s.replace('\'', '’')
+
+    /** Những gì lấy được từ config.json của Home sạch trên tivi: tên lời chào, nơi xem thời tiết, các app trong dock. */
+    data class TuHomeSach(val ten: String = "", val noi: ThanhPho? = null, val dock: List<String> = emptyList())
+
+    /** Đọc config.json của Home sạch ([j] null = tivi không có Home sạch); bỏ ô kênh giả vgs.kenh.* trong dock. */
+    fun tuHomeSach(j: JSONObject?): TuHomeSach {
+        if (j == null) return TuHomeSach()
+        val ten = j.optString("greeting_name").trim()
+        val noiTen = j.optString("weather_place").trim()
+        val noi = if (noiTen.isEmpty()) null else ThanhPho(noiTen, j.optDouble("weather_lat"), j.optDouble("weather_lon")).takeIf { !it.lat.isNaN() && !it.lon.isNaN() }
+        val dock = j.optJSONArray("dock_apps")?.let { a -> (0 until a.length()).map { a.optString(it).trim() } }.orEmpty()
+            .filter { it.isNotEmpty() && !it.startsWith(KenhVtvGo.TIEN_TO) && TEN_GOI.matches(it) }
+        return TuHomeSach(ten, noi, dock)
+    }
+
+    /**
+     * Lệnh cấp quyền sau khi cài: vị trí (tên Wi-Fi), đọc phiên phát (thẻ Đang phát, không đọc thông báo), thống kê sử
+     * dụng (app mở gần đây cả khi mở bằng giọng nói / nút remote). Lệnh nào tivi không có thì bỏ qua.
+     */
+    const val LENH_CAP_QUYEN = "pm grant $GOI android.permission.ACCESS_FINE_LOCATION 2>/dev/null; " +
+        "cmd notification allow_listener $GOI/$GOI.NgheNhac 2>/dev/null; appops set $GOI GET_USAGE_STATS allow 2>/dev/null; true"
 
     fun lenhDat(json: String): String {
         require(!json.contains('\'')) { "json" }

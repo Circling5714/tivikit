@@ -46,4 +46,11 @@ object Dock {
     /** App mở gần đây cho phần sau vạch ngăn: chưa có trong dock, còn trên tivi, tối đa [toiDa] app. */
     fun ganDay(lichSu: List<String>, dock: List<String>, coTren: Set<String>, toiDa: Int = 3): List<String> =
         lichSu.filter { it !in dock && it in coTren }.distinct().take(toiDa)
+
+    /**
+     * App gần đây theo thống kê sử dụng [suDung] nếu có (TiviKit đã cấp quyền), không thì theo lịch sử mở từ màn Home
+     * [lichSu]; bỏ các gói [boQua] (launcher, chính màn Home).
+     */
+    fun ganDayTu(suDung: List<String>, lichSu: List<String>, dock: List<String>, coTren: Set<String>, boQua: Set<String>, toiDa: Int = 3): List<String> =
+        ganDay(suDung.ifEmpty { lichSu }.filter { it !in boQua }, dock, coTren, toiDa)
 }

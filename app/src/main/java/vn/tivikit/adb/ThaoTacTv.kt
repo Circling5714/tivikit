@@ -1732,14 +1732,14 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }
 
     /**
-     * Cài / cập nhật TiviKit Launcher (chỉ khi khác bản đi kèm), cấp quyền vị trí (Android chỉ cho app có quyền đó đọc tên
-     * Wi-Fi), biên dịch sẵn sau mỗi lần cài (mở Home nguội 1,55 → 1,1 giây trên TX3 Mini), rồi gửi [cauHinh]
-     * (TiviKitLauncher.cauHinh: tên lời chào, ngôn ngữ).
+     * Cài / cập nhật TiviKit Launcher (chỉ khi khác bản đi kèm), cấp quyền (TiviKitLauncher.LENH_CAP_QUYEN: tên Wi-Fi, thẻ
+     * Đang phát, app mở gần đây), biên dịch sẵn sau mỗi lần cài (mở Home nguội 1,55 → 1,1 giây trên TX3 Mini), rồi gửi
+     * [cauHinh] (TiviKitLauncher.cauHinh: tên lời chào, nơi xem thời tiết, ngôn ngữ, dock khi mới cài).
      */
     fun caiTkl(apk: ByteArray, cauHinh: String, bao: (String) -> Unit) {
         var vuaCai = false
         caiAppPhu(TiviKitLauncher.GOI, apk) { vuaCai = true; bao(t("Cài TiviKit Launcher lên tivi…", "Installing TiviKit Launcher on the TV…")) }
-        sh("pm grant ${TiviKitLauncher.GOI} android.permission.ACCESS_FINE_LOCATION 2>/dev/null; true")
+        sh(TiviKitLauncher.LENH_CAP_QUYEN)
         if (vuaCai) {
             bao(t("Tối ưu cho tivi yếu…", "Optimising for slow TVs…"))
             runCatching { sh("cmd package compile -m speed -f ${TiviKitLauncher.GOI}") }

@@ -35,9 +35,19 @@ class CauHinh(ctx: Context) {
 
         const val TEN_TOI_DA = 40
 
+        /** Nơi xem thời tiết đã lưu ("noi": {ten, lat, lon}); null nếu chưa có / sai. */
+        fun noi(j: JSONObject): ThoiTiet.Noi? {
+            val o = j.optJSONObject("noi") ?: return null
+            val lat = o.optDouble("lat")
+            val lon = o.optDouble("lon")
+            if (lat.isNaN() || lon.isNaN() || lat !in -90.0..90.0 || lon !in -180.0..180.0) return null
+            return ThoiTiet.Noi(o.optString("ten").trim().take(60), lat, lon)
+        }
+
         /**
          * Ghép cấu hình TiviKit gửi ([moi]) vào [cu]: chỉ nhận "ten" (chữ, tối đa 40 ký tự, "" = bỏ tên), "dock" (mảng tên
-         * gói hợp lệ) và "ngon_ngu" ("vi" / "en" / "" = theo tivi). Trả các khoá đã nhận.
+         * gói hợp lệ), "ngon_ngu" ("vi" / "en" / "" = theo tivi) và "noi" (nơi xem thời tiết {ten, lat, lon}; sai / rỗng =
+         * bỏ). Trả các khoá đã nhận.
          */
         fun tron(cu: JSONObject, moi: JSONObject): List<String> {
             val nhan = mutableListOf<String>()
@@ -54,6 +64,11 @@ class CauHinh(ctx: Context) {
                 val nn = moi.optString("ngon_ngu")
                 if (nn == "vi" || nn == "en") cu.put("ngon_ngu", nn) else cu.remove("ngon_ngu")
                 nhan += "ngon_ngu"
+            }
+            if (moi.has("noi")) {
+                val n = noi(moi)
+                if (n == null) cu.remove("noi") else cu.put("noi", JSONObject().put("ten", n.ten).put("lat", n.lat).put("lon", n.lon))
+                nhan += "noi"
             }
             return nhan
         }

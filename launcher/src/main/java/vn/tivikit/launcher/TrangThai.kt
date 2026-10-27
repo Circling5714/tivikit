@@ -28,6 +28,10 @@ class TrangThaiHome {
     var tocLen by mutableLongStateOf(-1L)
     var coDonRam by mutableStateOf(true)
     var dangDon by mutableStateOf(false)
+    /** Thời tiết nơi TiviKit gửi; null = chưa có nơi / chưa lấy được. */
+    var thoiTiet by mutableStateOf<ThoiTiet.HienTai?>(null)
+    /** Bài / video đang phát hay tạm dừng trên tivi (thẻ Đang phát); null = không có. */
+    var dangPhat by mutableStateOf<BaiDangPhat?>(null)
 
     var thuVien by mutableStateOf(false)
     /** Gói đang mở menu (giữ OK). */
@@ -63,4 +67,8 @@ interface HanhDong {
     fun moThuVien() {}
     fun dongThuVien() {}
     fun dongMenu() {}
+    /** Mở app đang phát (thẻ Đang phát). */
+    fun moDangPhat() {}
+    /** Tạm dừng / phát tiếp bài đang phát. */
+    fun dungPhat() {}
 }

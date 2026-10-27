@@ -1,8 +1,13 @@
 package vn.tivikit.launcher
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -89,6 +94,10 @@ fun ManHinhChinh(tt: TrangThaiHome) {
                             BaoNho(loi)
                             Spacer(Modifier.height(14.dp))
                         }
+                        tt.dangPhat?.let { b ->
+                            TheDangPhat(tt, b)
+                            Spacer(Modifier.height(14.dp))
+                        }
                         DockHome(tt)
                     }
                 }
@@ -152,7 +161,16 @@ private fun KhoiGio(tt: TrangThaiHome, modifier: Modifier) {
             Column {
                 Nhan(Chu.ngay(ngay, viet), 17.sp, FontWeight.SemiBold, Color.White, gian = 2.4.sp)
                 Spacer(Modifier.height(5.dp))
-                Nhan(amLich, 12.5.sp, FontWeight.Medium, Color.White.copy(alpha = 0.86f))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val nhat = Color.White.copy(alpha = 0.86f)
+                    Nhan(amLich, 12.5.sp, FontWeight.Medium, nhat)
+                    tt.thoiTiet?.let { h ->
+                        Nhan("  ·  ", 12.5.sp, FontWeight.Medium, nhat)
+                        Hinh(hinhThoiTiet(h.ma, luc.hour), 14, Color.White.copy(alpha = 0.92f))
+                        Spacer(Modifier.width(4.dp))
+                        Nhan(ThoiTiet.dong(h, viet), 12.5.sp, FontWeight.Medium, nhat)
+                    }
+                }
             }
         }
         if (tt.ramTrong > 0) Nhan(Chu.thongSo(tt.ramTrong, tt.boNhoTrong, viet), 14.sp, FontWeight.SemiBold, Color.White.copy(alpha = 0.95f))
@@ -197,6 +215,67 @@ private fun NutKinh(hinh: ImageVector, chu: String, onClick: () -> Unit) {
         Hinh(hinh, 18)
         Spacer(Modifier.width(9.dp))
         Nhan(chu, 15.sp, FontWeight.Medium, Color.White, modifier = Modifier.widthIn(max = 190.dp))
+    }
+}
+
+/** Biểu tượng thời tiết theo mã WMO; trời quang / ít mây buổi tối thì là mặt trăng. */
+private fun hinhThoiTiet(ma: Int, gio: Int): ImageVector {
+    val dem = gio >= 18 || gio < 6
+    return when (ThoiTiet.loai(ma)) {
+        ThoiTiet.Loai.QUANG -> if (dem) Icons.Rounded.NightsStay else Icons.Rounded.WbSunny
+        ThoiTiet.Loai.IT_MAY -> if (dem) Icons.Rounded.NightsStay else Icons.Rounded.WbCloudy
+        ThoiTiet.Loai.MAY -> Icons.Rounded.Cloud
+        ThoiTiet.Loai.SUONG -> Icons.Rounded.Dehaze
+        ThoiTiet.Loai.MUA_PHUN -> Icons.Rounded.Grain
+        ThoiTiet.Loai.MUA -> Icons.Rounded.Umbrella
+        ThoiTiet.Loai.TUYET -> Icons.Rounded.AcUnit
+        ThoiTiet.Loai.DONG -> Icons.Rounded.Thunderstorm
+        ThoiTiet.Loai.KHAC -> Icons.Rounded.Thermostat
+    }
+}
+
+/**
+ * Thẻ Đang phát (như ảnh mẫu): ảnh bìa / biểu tượng app, tên bài, tên app · nghệ sĩ, sóng nhạc khi đang phát. OK mở đúng
+ * màn đang phát, giữ OK để tạm dừng / phát tiếp.
+ */
+@Composable
+private fun TheDangPhat(tt: TrangThaiHome, b: BaiDangPhat) {
+    var chon by remember { mutableStateOf(false) }
+    val to by animateFloatAsState(if (chon) 1.05f else 1f, tween(140), label = "dang-phat")
+    val vien = RoundedCornerShape(16.dp)
+    LaunchedEffect(b.goi) { tt.hd.canAnh(b.goi) }
+    Row(Modifier.graphicsLayer { scaleX = to; scaleY = to }
+        .nutTv({ tt.hd.moDangPhat() }, onGiu = { tt.hd.dungPhat() }, onChon = { chon = it })
+        .kinh(LocalNen.current, vien, toi = if (chon) 0.05f else 0.16f, sang = if (chon) 0.22f else 0.10f)
+        .then(if (chon) Modifier.border(2.dp, XanhChon, vien) else Modifier)
+        .widthIn(min = 250.dp, max = 400.dp).padding(start = 10.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        val anh = b.anh ?: tt.anh[b.goi]?.bieuTuong
+        if (anh != null) Image(anh, null, Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+        else Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+            Hinh(Icons.Rounded.MusicNote, 18)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f, fill = false)) {
+            Nhan(b.tieuDe, 13.sp, FontWeight.SemiBold, Color.White)
+            if (b.phu.isNotBlank()) Nhan(b.phu, 11.sp, FontWeight.Medium, XanhChon.copy(alpha = 0.95f))
+        }
+        Spacer(Modifier.width(12.dp))
+        if (b.dangPhat) SongNhac() else Hinh(Icons.Rounded.Pause, 16, Color.White.copy(alpha = 0.85f))
+    }
+}
+
+/** Ba vạch nhạc nhảy (chỉ vẽ lại, không dựng lại giao diện mỗi khung hình). */
+@Composable
+private fun SongNhac() {
+    val chay = rememberInfiniteTransition(label = "song")
+    val pha by chay.animateFloat(0f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "pha")
+    Canvas(Modifier.size(16.dp, 14.dp)) {
+        val w = size.width / 5
+        for (i in 0..2) {
+            val h = size.height * (0.35f + 0.65f * kotlin.math.abs(kotlin.math.sin((pha + i * 0.33f) * Math.PI)).toFloat())
+            drawRoundRect(XanhChon, Offset(i * 2 * w, size.height - h), Size(w, h), CornerRadius(w / 2))
+        }
     }
 }
 
