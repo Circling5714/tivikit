@@ -17,6 +17,12 @@ class ChuTest {
         assertEquals("Chúc ngủ ngon", Chu.loiChao(23, "", true))
         assertEquals("Chúc ngủ ngon", Chu.loiChao(2, "", true))
         assertEquals("Good morning, The Smiths", Chu.loiChao(4, "The Smiths", false))
+        // Tên đã là lời chào thì hiện nguyên.
+        assertEquals("Chào CaoMinh Family", Chu.loiChao(20, " Chào CaoMinh Family ", true))
+        assertEquals("Xin chào cả nhà!", Chu.loiChao(8, "Xin chào cả nhà!", true))
+        assertEquals("Hi there", Chu.loiChao(8, "Hi there", false))
+        assertEquals("Chào buổi sáng, Hiếu", Chu.loiChao(8, "Hiếu", true))
+        assertEquals("Chào buổi sáng, Chàng trai", Chu.loiChao(8, "Chàng trai", true))
     }
 
     @Test

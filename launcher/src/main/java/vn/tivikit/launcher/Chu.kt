@@ -33,8 +33,12 @@ object Chu {
         else -> Buoi.DEM
     }
 
+    /** Tên tự nó đã là lời chào (Home sạch của Skyworth đặt "Chào CaoMinh Family"): hiện nguyên, khỏi "Chào buổi tối, Chào …". */
+    private val DA_LA_LOI_CHAO = Regex("^(xin chào|chào|hello|hi|hey|good (morning|afternoon|evening|night))(?=[\\s,!.]|$)", RegexOption.IGNORE_CASE)
+
     /** "Chào buổi sáng, Nhà bác Hùng" / "Good morning, The Smiths"; không có tên thì chỉ lời chào. */
     fun loiChao(gio: Int, ten: String, viet: Boolean): String {
+        if (DA_LA_LOI_CHAO.containsMatchIn(ten.trim())) return ten.trim()
         val chao = when (buoi(gio)) {
             Buoi.SANG -> if (viet) "Chào buổi sáng" else "Good morning"
             Buoi.TRUA -> if (viet) "Chào buổi trưa" else "Good afternoon"

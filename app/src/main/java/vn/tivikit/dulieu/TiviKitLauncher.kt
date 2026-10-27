@@ -62,7 +62,16 @@ object TiviKitLauncher {
         // Người dùng chọn "Không hiện" thời tiết ở phần Tuỳ chỉnh: launcher bỏ nơi đã lưu.
         else if (boNoiNeuRong) o.put("noi", JSONObject.NULL)
         if (!dock.isNullOrEmpty()) o.put("dock", org.json.JSONArray(dock.filter { TEN_GOI.matches(it) }))
-        return o.toString()
+        return chiAscii(o.toString())
+    }
+
+    /**
+     * Chữ ngoài ASCII thành \uXXXX (JSON vẫn đọc ra đúng chữ): lệnh shell gửi qua libadb chỉ an toàn với ASCII — tên lời chào
+     * "Chào CaoMinh Family", nơi "Nghĩa Lộ" làm hỏng lệnh với BufferOverflowException (Skyworth, 27/10/2026), như lý do bộ
+     * gõ tiếng Việt gửi base64.
+     */
+    fun chiAscii(s: String): String = buildString(s.length) {
+        for (c in s) if (c.code < 0x80) append(c) else append("\\u").append(String.format(java.util.Locale.ROOT, "%04x", c.code))
     }
 
     private val TEN_GOI = Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+")
@@ -91,7 +100,7 @@ object TiviKitLauncher {
         "cmd notification allow_listener $GOI/$GOI.NgheNhac 2>/dev/null; appops set $GOI GET_USAGE_STATS allow 2>/dev/null; true"
 
     fun lenhDat(json: String): String {
-        require(!json.contains('\'')) { "json" }
+        require(!json.contains('\'') && json.all { it.code < 0x80 }) { "json" }
         return "content call --uri content://$GOI --method dat --arg '$json'"
     }
 
@@ -100,7 +109,7 @@ object TiviKitLauncher {
      * đi kèm; tên lời chào, nơi xem thời tiết, có ảnh nền riêng (để điền sẵn phần Tuỳ chỉnh).
      */
     data class TrangThai(val ban: String?, val homeBat: Boolean = false, val canCapNhat: Boolean = false, val ten: String = "",
-                         val noi: ThanhPho? = null, val coNenRieng: Boolean = false) {
+                         val noi: ThanhPho? = null, val coNenRieng: Boolean = false, val khongDocDuocDangPhat: Boolean = false) {
         val daCai: Boolean get() = ban != null
     }
 
@@ -110,7 +119,7 @@ object TiviKitLauncher {
         val n = ch?.optJSONObject("noi")
         val noi = n?.let { ThanhPho(it.optString("ten"), it.optDouble("lat"), it.optDouble("lon")) }?.takeIf { !it.lat.isNaN() && !it.lon.isNaN() }
         return TrangThai(j?.optString("ban")?.takeIf { it.isNotBlank() } ?: "?", j?.optBoolean("homeBat") == true, canCapNhat,
-            ch?.optString("ten").orEmpty(), noi, (j?.optLong("nen") ?: 0L) > 0)
+            ch?.optString("ten").orEmpty(), noi, (j?.optLong("nen") ?: 0L) > 0, j?.optString("dangPhat") == "khong-co-quyen")
     }
 
     /** Đọc kết quả `content call … doc` của launcher ("Result: Bundle[{json={…}}]"); null nếu không đọc được. */

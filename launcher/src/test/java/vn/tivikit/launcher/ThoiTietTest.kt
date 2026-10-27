@@ -71,5 +71,12 @@ class ThoiTietTest {
         // Có thống kê sử dụng: theo nó, bỏ launcher; không có thì theo lịch sử mở từ màn Home.
         assertEquals(listOf("c.c", "b.b"), Dock.ganDayTu(listOf("home.sach", "c.c", "a.a", "b.b"), listOf("d.d"), listOf("a.a"), coTren, setOf("home.sach")))
         assertEquals(listOf("d.d"), Dock.ganDayTu(emptyList(), listOf("d.d", "a.a"), listOf("a.a"), coTren, setOf("home.sach")))
+        // Dock vừa 7 ô: 6 app ghim (đang có trên tivi) thì chỉ còn 1 app gần đây; 7 thì không còn.
+        val nhieu = (1..9).map { "g.g$it" }
+        val coNhieu = nhieu.toSet()
+        assertEquals(listOf("g.g9"), Dock.ganDayTu(listOf("g.g9", "g.g8", "g.g7"), emptyList(), nhieu.take(6), coNhieu, emptySet()))
+        assertEquals(emptyList<String>(), Dock.ganDayTu(listOf("g.g9", "g.g8"), emptyList(), nhieu.take(7), coNhieu, emptySet()))
+        // App ghim đã gỡ khỏi tivi không tính chỗ.
+        assertEquals(2, Dock.ganDayTu(listOf("g.g8", "g.g9"), emptyList(), nhieu.take(5) + "da.go", coNhieu, emptySet()).size)
     }
 }

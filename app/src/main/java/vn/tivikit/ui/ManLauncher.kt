@@ -108,6 +108,10 @@ private fun TheTiviKitLauncher(vm: PhienLamViec, ql: QuanLyLauncher) {
         }
         if (k?.daCai == true) Phu(t("Trên tivi: OK để mở app, giữ OK để ghim vào dock, dời chỗ, gỡ; ô lưới cuối dock là Tất cả ứng dụng.",
             "On the TV: OK opens an app; hold OK to pin it to the dock, move or uninstall it; the grid at the end of the dock shows all apps."))
+        if (k?.khongDocDuocDangPhat == true) Phu(t("Tivi này (máy RAM thấp) không cho app đọc bài đang phát nên không có thẻ Đang phát.",
+            "This TV (a low-RAM device) doesn't let apps read what's playing, so there's no Now playing card."), Cam)
+        else if (k?.daCai == true) Phu(t("Thẻ Đang phát hiện khi có app phát trong nền (nhạc, hay SmartTube bật phát nền); app dừng khi về Home thì không có gì để hiện.",
+            "The Now playing card shows while an app plays in the background (music, or SmartTube with background playback on); apps that stop on Home have nothing to show."))
         if (k?.daCai == true && ql.tklMo) TuyChinhTkl(vm, ql, k)
     }
 }

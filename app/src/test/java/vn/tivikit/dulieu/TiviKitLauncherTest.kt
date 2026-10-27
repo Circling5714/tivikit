@@ -56,12 +56,32 @@ class TiviKitLauncherTest {
         assertNull(trong.noi)
         assertFalse(trong.coNenRieng)
         assertTrue(trong.canCapNhat)
+        assertFalse(trong.khongDocDuocDangPhat)
+        assertTrue(TiviKitLauncher.trangThai(JSONObject("""{"ban":"1.0","dangPhat":"khong-co-quyen"}"""), false).khongDocDuocDangPhat)
+        assertFalse(TiviKitLauncher.trangThai(JSONObject("""{"ban":"1.0","dangPhat":{"goi":"org.smarttube.stable","tieuDe":"x"}}"""), false).khongDocDuocDangPhat)
         // "Không hiện" thời tiết: gửi noi = null để launcher bỏ nơi đã lưu; lúc cài / cập nhật thì không đụng tới.
         assertTrue(JSONObject(TiviKitLauncher.cauHinh("", true, null, boNoiNeuRong = true)).isNull("noi"))
         assertFalse(JSONObject(TiviKitLauncher.cauHinh("", true, null)).has("noi"))
         // Ảnh có sẵn đều có trong assets của app, ảnh đầu là ảnh mặc định của launcher.
         assertEquals(TiviKitLauncher.NEN_MAC_DINH, TiviKitLauncher.ANH_CO_SAN.first().asset)
         TiviKitLauncher.ANH_CO_SAN.forEach { assertTrue(it.asset, java.io.File("src/main/assets/${it.asset}").isFile) }
+    }
+
+    @Test
+    fun lenhChiCoAscii() {
+        // Skyworth: tên và nơi có dấu làm hỏng lệnh qua libadb (BufferOverflowException); JSON gửi đi chỉ còn ASCII.
+        val j = TiviKitLauncher.cauHinh("Chào CaoMinh Family", true, ThanhPho("Nghĩa Lộ", 21.6, 104.5), listOf("org.smarttube.stable"))
+        assertTrue(j, j.all { it.code < 0x80 })
+        val o = JSONObject(j)
+        assertEquals("Chào CaoMinh Family", o.getString("ten"))
+        assertEquals("Nghĩa Lộ", o.getJSONObject("noi").getString("ten"))
+        assertTrue(TiviKitLauncher.lenhDat(j).all { it.code < 0x80 })
+        assertEquals("\\u00e0 \\ud83d\\ude00", TiviKitLauncher.chiAscii("à 😀"))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun lenhDatTuChoiChuCoDau() {
+        TiviKitLauncher.lenhDat("{\"ten\":\"Hà Nội\"}")
     }
 
     @Test(expected = IllegalArgumentException::class)

@@ -52,8 +52,19 @@ class CauHinhProvider : ContentProvider() {
                 @Suppress("DEPRECATION")
                 val ma = if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()
                 val homeBat = pm.getComponentEnabledSetting(ComponentName(ctx, HOME)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                // Bài đang phát (như thẻ Đang phát đọc), hoặc "khong-co-quyen" (box RAM thấp không cho đọc phiên phát): TiviKit
+                // báo ở thẻ, và thử được phần đọc khi app phát nhạc đang mở.
+                val dangPhat: Any = try {
+                    DangPhat.doc(ctx, { g -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(g, 0)).toString() }.getOrDefault(g) })?.first?.let { b ->
+                        JSONObject().put("goi", b.goi).put("tieuDe", b.tieuDe).put("phu", b.phu).put("dangPhat", b.dangPhat)
+                    } ?: JSONObject.NULL
+                } catch (_: SecurityException) {
+                    "khong-co-quyen"
+                } catch (_: Exception) {
+                    JSONObject.NULL
+                }
                 val o = JSONObject().put("ban", pi.versionName).put("ma", ma).put("homeBat", homeBat).put("cauHinh", ch.doc())
-                    .put("nen", File(ctx.filesDir, ANH_NEN).length())
+                    .put("nen", File(ctx.filesDir, ANH_NEN).length()).put("dangPhat", dangPhat)
                 kq.putString("json", o.toString())
             }
             "bat-home", "tat-home" -> {

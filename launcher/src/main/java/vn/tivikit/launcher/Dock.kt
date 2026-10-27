@@ -47,10 +47,14 @@ object Dock {
     fun ganDay(lichSu: List<String>, dock: List<String>, coTren: Set<String>, toiDa: Int = 3): List<String> =
         lichSu.filter { it !in dock && it in coTren }.distinct().take(toiDa)
 
+    /** Dock vừa khít 7 ô banner (cùng 2 vạch và nút Tất cả): ghim nhiều thì bớt app gần đây (Skyworth 6 ghim + 3 gần đây tràn). */
+    const val O_VUA = 7
+
     /**
      * App gần đây theo thống kê sử dụng [suDung] nếu có (TiviKit đã cấp quyền), không thì theo lịch sử mở từ màn Home
-     * [lichSu]; bỏ các gói [boQua] (launcher, chính màn Home).
+     * [lichSu]; bỏ các gói [boQua] (launcher, chính màn Home). Mặc định lấy đủ chỗ trống còn lại cho dock vừa [O_VUA] ô.
      */
-    fun ganDayTu(suDung: List<String>, lichSu: List<String>, dock: List<String>, coTren: Set<String>, boQua: Set<String>, toiDa: Int = 3): List<String> =
+    fun ganDayTu(suDung: List<String>, lichSu: List<String>, dock: List<String>, coTren: Set<String>, boQua: Set<String>,
+                 toiDa: Int = (O_VUA - dock.count { it in coTren }).coerceIn(0, 3)): List<String> =
         ganDay(suDung.ifEmpty { lichSu }.filter { it !in boQua }, dock, coTren, toiDa)
 }
