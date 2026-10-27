@@ -151,6 +151,9 @@ object DongLenh {
             l("cmd package set-home-activity --user 0 {man}", "Đặt app Home mặc định (gói/màn lấy từ lệnh trên).", "Set the default Home (package/activity from the command above).")
             l("monkey -p {goi} -c android.intent.category.LAUNCHER 1", "Mở app bản điện thoại (app không có biểu tượng trên màn hình tivi).",
                 "Open a phone app (one with no icon on the TV home screen).")
+            l("am start -a android.intent.action.VIEW -d \"youtube://search?launch=voice\" -p org.smarttube.stable",
+                "Mở SmartTube vào tìm kiếm bằng giọng nói (mic bật ngay nếu trong SmartTube bật Tìm kiếm bằng giọng nói tức thì). Gán vào nút remote: Nút remote → SmartTube – tìm bằng giọng nói.",
+                "Open SmartTube's voice search (the mic starts at once if Instant voice search is on in SmartTube). To put it on a remote button: Remote buttons → SmartTube – voice search.")
             l("am kill {goi}", "Đóng app nằm nền (không đụng app đang mở).", "Close an app sitting in the background (leaves the open app alone).")
             l("pm uninstall -k --user 0 {goi}", "Gỡ app hệ thống khỏi người dùng (vẫn nằm trong máy). Khôi phục tivi KHÔNG cài lại được: nên dùng lệnh tắt app ở trên.",
                 "Remove a system app for the user (it stays in the firmware). Restore can NOT bring it back: prefer disabling above.")

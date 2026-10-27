@@ -48,6 +48,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 - ⚠️ **Điều khiển + gõ chữ** (chỉ trên điện thoại): remote trên điện thoại, gõ mật khẩu, tìm kiếm. Gõ tiếng Việt có dấu nhờ bộ gõ phụ `vn.tivikit.go`, tự cài lên tivi lần đầu gửi chữ có dấu; ô nhập không nhận bộ gõ thì gửi chữ không dấu.
 - ✅ **Xem màn hình tivi trực tiếp** ngay trên màn Điều khiển, cách làm của [scrcpy](https://github.com/Genymobile/scrcpy): tivi tự quay màn hình bằng bộ mã hoá H.264 và gửi qua ADB, trễ chưa tới nửa giây; khung hình ghim trên cùng, trượt xuống bấm remote vẫn thấy tivi; chạm lên hình là bấm đúng chỗ đó, phím remote cũng nhạy hơn. Phim có bản quyền (Netflix…) và cổng HDMI ra màn đen. Tivi không quay được video thì app dùng ảnh chụp làm mới 1,5 giây một lần. Đã xem được trên tivi thật từ điện thoại (bản thử 26/10/2026).
 - ✅ **Nút remote**: gán một nút thật trên remote (VD nút YouTube) để mở app khác như SmartTube. App đọc mã nút lúc bạn bấm rồi ghi vào Home sạch, nên cần cài Home sạch trước.
+  - ⚠️ Mới: gán nút mở thẳng tìm kiếm bằng giọng nói của SmartTube (chọn "SmartTube – tìm bằng giọng nói"). Cần Home sạch bản mới (tivi có bản cũ thì mở Home sạch, bấm Áp dụng một lần); để mic bật ngay, trong SmartTube bật Cài đặt → Tìm kiếm → Tìm kiếm bằng giọng nói tức thì.
 - **Kênh nhanh**: tối đa 6 ô, mỗi ô mở thẳng một kênh trong app xem truyền hình, gán được nút remote riêng, Hẹn giờ mở được. Mỗi ô là một app rất nhỏ TiviKit cài lên tivi.
   - TV360: VTV1, VTV3, HTV7… theo số kênh của TV360 (tivi cần có app TV360). ✅ Một ô đã thử; ⚠️ nhiều ô (tới 6) chưa thử.
   - ⚠️ VTVgo: VTV1–9, đài địa phương, VTVcab… từ danh sách kênh của VTVgo (tivi cần có app VTVgo bản tivi). Ô kênh VTVgo kiểu cũ trên Home sạch (không gán được nút remote) chuyển được sang ô Kênh nhanh.
@@ -154,7 +155,7 @@ TiviKit (`vn.tivikit`) là app riêng: cài song song được với CleanTV và
 | `kenh/` | Kênh nhanh TV360, mỗi ô một app (`vn.tivikit.kenh`, `kenh2` … `kenh6`) |
 | `hengio/` | Hẹn giờ bật / tắt tivi, mở app (`vn.tivikit.hengio`) |
 | `go/` | Bộ gõ phụ để gõ tiếng Việt có dấu từ điện thoại (`vn.tivikit.go`) |
-| `patches/launcher-vgs.patch` | Phần CleanTV sửa trên launcher CleanYourTV (thời tiết, font Lexend, cụm nút, máy chiếu, màn chờ, ô kênh `link_tiles`, logo ô Kênh nhanh qua `app_banners` trỏ tới ảnh `kenh-*.jpg`, mở app khi bật từ chế độ chờ…), đã chuyển lên commit ghi trong `upstream-commit.txt` |
+| `patches/launcher-vgs.patch` | Phần CleanTV sửa trên launcher CleanYourTV (thời tiết, font Lexend, cụm nút, máy chiếu, màn chờ, ô kênh `link_tiles`, logo ô Kênh nhanh qua `app_banners` trỏ tới ảnh `kenh-*.jpg`, nút remote mở link vào app qua đích `intent:` trong `app_keys`, mở app khi bật từ chế độ chờ…), đã chuyển lên commit ghi trong `upstream-commit.txt` |
 | `scripts/` | Dựng launcher, dựng các app phụ, dựng dữ liệu mẫu tivi (`lam-du-lieu.py`, `cap_nhat_mau.py`), vẽ ảnh nền giao diện TiviKit (`AnhNenTiviKit.java`), tải máy chủ scrcpy có kiểm SHA-256 (`tai-scrcpy.sh`), phát hành (`phat_hanh.py`) |
 | `.github/workflows/` | Phát hành (dựng, ký, đăng GitHub Release), Cập nhật mẫu tivi (hằng tuần từ CleanYourTV) và Kiểm tra (unit test mỗi lần đẩy code) |
 
@@ -206,6 +207,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 - ⚠️ **Remote + typing** (phone only): a remote on the phone, passwords and searches. Vietnamese with accents goes through a helper keyboard (`vn.tivikit.go`); fields that don't accept it get plain letters.
 - ✅ **Live TV screen** on the remote screen, the [scrcpy](https://github.com/Genymobile/scrcpy) way: the TV encodes its screen in H.264 and streams it over ADB, under half a second behind; the picture stays pinned at the top while you scroll the remote; tap the picture to press that spot, and remote keys respond faster. Copy-protected films (Netflix…) and HDMI inputs show black. A TV that can't encode video falls back to screenshots refreshed every 1.5 s. Tried from a phone with a real TV (test build, 26 Oct 2026).
 - ✅ **Remote buttons**: make a real remote button (e.g. YouTube) open another app such as SmartTube. Needs the clean Home.
+  - ⚠️ New: a button can open SmartTube's voice search directly (pick "SmartTube – voice search"). Needs the new clean Home (on a TV with an older one, open Clean Home and press Apply once); for the mic to start at once, turn on Settings → Search → Instant voice search in SmartTube.
 - **Quick channel**: up to 6 tiles, each opening one channel straight in a TV app, each able to take its own remote button and be opened by the Timer. Each tile is a tiny app TiviKit installs on the TV.
   - TV360: VTV1, VTV3, HTV7… by TV360's channel number (the TV needs the TV360 app). ✅ One tile tried; ⚠️ more tiles (up to 6) not yet.
   - ⚠️ VTVgo: VTV1–9, local stations, VTVcab… from VTVgo's channel list (the TV needs the VTVgo app for TV). Old-style VTVgo tiles on the clean Home (no remote button) can be moved to Quick channel tiles.

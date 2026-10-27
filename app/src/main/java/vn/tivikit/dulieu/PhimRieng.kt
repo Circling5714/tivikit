@@ -122,10 +122,27 @@ object PhimRieng {
         return if (giu) "hold:$k" else k
     }
 
-    /** Đích của một mục: gói, "input:…" hay từ hành động. */
+    /** Đích của một mục: gói, "gói/màn", "input:…", "intent:…" hay từ hành động. */
     fun dichCua(muc: String): String {
         val r = muc.trim().removePrefix("hold:").trim()
         return (if (r.startsWith("scan:")) r.removePrefix("scan:").substringAfter(':') else r.substringAfter(':')).trim()
+    }
+
+    /**
+     * Đích "SmartTube – tìm bằng giọng nói" (27/10/2026, anh chủ nhà muốn nút 597 trên remote Skyworth bật tìm kiếm giọng
+     * nói của SmartTube): Home sạch (bản vá TiviKit, RemoteKeys.launch) gửi link intent: này. SmartTube nhận
+     * `youtube://search?launch=voice` thì mở màn tìm kiếm (IntentExtractor.isStartVoiceCommand), và bật mic ngay nếu trong
+     * SmartTube bật Cài đặt → Tìm kiếm → "Tìm kiếm bằng giọng nói tức thì". Home sạch bản cũ không hiểu đích này.
+     */
+    fun dichTimGiong(goiSmartTube: String): String = "intent://search?launch=voice#Intent;scheme=youtube;package=$goiSmartTube;end"
+
+    fun laTimGiong(dich: String): Boolean = dich.startsWith("intent:") && dich.contains("launch=voice")
+
+    /** Gói app mà đích [dich] mở: chính gói, gói của "gói/màn", package= của "intent:…"; null với input:, guide:, từ hành động. */
+    fun goiCuaDich(dich: String): String? = when {
+        dich.startsWith("intent:") -> Regex(""";package=([A-Za-z0-9_.]+);""").find(dich)?.groupValues?.get(1)
+        dich.startsWith("input:") || dich.startsWith("guide:") || '.' !in dich -> null
+        else -> dich.substringBefore('/')
     }
 
     /** Các mục gán riêng ghi trong config.json. */

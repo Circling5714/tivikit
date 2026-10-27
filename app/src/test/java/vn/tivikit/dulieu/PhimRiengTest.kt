@@ -109,6 +109,27 @@ class PhimRiengTest {
         assertEquals("org.xbmc.kodi", PhimRieng.dichCua("hold:KEYCODE_BUTTON_8:org.xbmc.kodi"))
     }
 
+    /** Nút 597 của remote Skyworth → tìm kiếm giọng nói của SmartTube (27/10/2026). */
+    @Test fun dichTimGiong() {
+        val giong = PhimRieng.dichTimGiong("org.smarttube.stable")
+        assertEquals("intent://search?launch=voice#Intent;scheme=youtube;package=org.smarttube.stable;end", giong)
+        val muc = PhimRieng.muc(PhimRieng.Nut("/dev/input/event2", 597), giong)!!
+        assertEquals("scan:597", PhimRieng.khoaCua(muc))
+        assertEquals(giong, PhimRieng.dichCua(muc))
+        assertEquals(giong, PhimRieng.dichCua("hold:KEYCODE_BUTTON_3:$giong"))
+        assertTrue(PhimRieng.laTimGiong(giong))
+        assertFalse(PhimRieng.laTimGiong("org.smarttube.stable"))
+        // Gói app mà đích mở, để bấm thử biết chờ app nào lên.
+        assertEquals("org.smarttube.stable", PhimRieng.goiCuaDich(giong))
+        assertEquals("org.smarttube.stable", PhimRieng.goiCuaDich("org.smarttube.stable"))
+        assertEquals("io.github.maxhayim.brightness", PhimRieng.goiCuaDich("io.github.maxhayim.brightness/.QuickActivity"))
+        assertNull(PhimRieng.goiCuaDich("input:com.tcl.tvinput/.passthroughinput.TvPassThroughService/HW1"))
+        assertNull(PhimRieng.goiCuaDich("mute"))
+        // Ghi vào config.json như mọi mục khác, thay mục cũ cùng nút.
+        val j = PhimRieng.apVao(JSONObject().put("app_keys", JSONArray(listOf("scan:597:com.netflix.ninja"))), listOf(muc))
+        assertEquals(listOf(muc), mang(j, "app_keys"))
+    }
+
     private fun mang(j: JSONObject, k: String): List<String> = j.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
 
     @Test fun apVao_giuCauHinhVaBangPhimMau() {

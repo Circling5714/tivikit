@@ -1034,6 +1034,77 @@ index 00000000..37668a0f
 + */
 +public class NowPlayingListener extends NotificationListenerService {
 +}
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/RemoteKeys.java b/launcher/app/src/main/java/com/gathin/tvhome/RemoteKeys.java
+index 105fabc8..3704e37d 100644
+--- a/launcher/app/src/main/java/com/gathin/tvhome/RemoteKeys.java
++++ b/launcher/app/src/main/java/com/gathin/tvhome/RemoteKeys.java
+@@ -14,6 +14,7 @@ import android.os.Handler;
+ import android.os.Looper;
+ import android.view.KeyEvent;
+ 
++import java.net.URISyntaxException;
+ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.HashMap;
+@@ -33,8 +34,10 @@ import java.util.regex.Pattern;
+  * so both may call handle() for one event, and it answers each press once.
+  * A target of "input:<input id>" switches to that TV input (an HDMI port) instead of opening an app, a target
+  * of "inputs" opens the input switcher, for a remote whose source button sends a key Android does not map,
+- * one of the action words (back, home, recents, mute, sleep, screensaver, settings, wifi) does that action, and
+- * "package/.Activity" opens that activity rather than the app's launcher entry (an add-on's quick bar, say).
++ * one of the action words (back, home, recents, mute, sleep, screensaver, settings, wifi) does that action,
++ * "package/.Activity" opens that activity rather than the app's launcher entry (an add-on's quick bar, say), and
++ * an "intent:" URI (Intent.toUri) sends that intent, for a button that opens a link inside an app: SmartTube's
++ * voice search is "intent://search?launch=voice#Intent;scheme=youtube;package=org.smarttube.stable;end".
+  */
+ final class RemoteKeys {
+ 
+@@ -44,6 +47,9 @@ final class RemoteKeys {
+     /** The app_keys target that opens the input switcher, as "scan:365:inputs". */
+     static final String INPUTS = "inputs";
+ 
++    /** Prefix of an app_keys target that is an intent URI rather than an app. */
++    static final String INTENT = "intent:";
++
+     /** Pre-compiled regex patterns to avoid re-compiling Patterns on every entry during key parsing. */
+     private static final Pattern NUMERIC_KEY = Pattern.compile("[0-9]{1,6}");
+     private static final Pattern KEYCODE_KEY = Pattern.compile("KEYCODE_[A-Z0-9_]+");
+@@ -346,12 +352,12 @@ final class RemoteKeys {
+      * would read "input:com.tcl.tvinput" as its package, so an "input:" target never counts.
+      */
+     static boolean isActivity(String target) {
+-        return target != null && inputId(target) == null && target.indexOf('/') > 0;
++        return target != null && inputId(target) == null && !target.startsWith(INTENT) && target.indexOf('/') > 0;
+     }
+ 
+     /** Opens an app from a remote button: its TV entry if it has one, else its phone entry. An "input:<id>" target
+-     *  switches to that TV input (an HDMI port) instead, an action word runs that action, and a
+-     *  "package/.Activity" target opens that activity. */
++     *  switches to that TV input (an HDMI port) instead, an action word runs that action, a
++     *  "package/.Activity" target opens that activity, and an "intent:" URI sends that intent. */
+     static void launch(Context ctx, String pkg) {
+         if (pkg == null || runAction(ctx, pkg)) return;
+         if (INPUTS.equals(pkg)) {
+@@ -385,6 +391,19 @@ final class RemoteKeys {
+             }
+             return;
+         }
++        if (pkg.startsWith(INTENT)) {
++            // A link opened inside its app. The URI comes from the theme config, but it still gets no selector and
++            // no URI grants, like an intent: link a browser opens.
++            try {
++                Intent link = Intent.parseUri(pkg, Intent.URI_INTENT_SCHEME);
++                link.setSelector(null);
++                link.setFlags(link.getFlags() & ~(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
++                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION));
++                start(ctx, link);
++            } catch (URISyntaxException ignored) {
++            }
++            return;
++        }
+         ComponentName activity = isActivity(pkg) ? ComponentName.unflattenFromString(pkg) : null;
+         if (activity != null) {
+             try {
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/SystemSettings.java b/launcher/app/src/main/java/com/gathin/tvhome/SystemSettings.java
 index 20eb8e01..0d63d82f 100644
 --- a/launcher/app/src/main/java/com/gathin/tvhome/SystemSettings.java
@@ -5913,3 +5984,27 @@ index 635bced9..964c6db2 100644
 +    <string name="now_playing_none">Nothing is playing</string>
 +    <string name="screensaver">Screensaver</string>
  </resources>
+diff --git a/launcher/app/src/test/java/com/gathin/tvhome/RemoteKeysTest.java b/launcher/app/src/test/java/com/gathin/tvhome/RemoteKeysTest.java
+index 81fd1b20..8fa36f5d 100644
+--- a/launcher/app/src/test/java/com/gathin/tvhome/RemoteKeysTest.java
++++ b/launcher/app/src/test/java/com/gathin/tvhome/RemoteKeysTest.java
+@@ -164,6 +164,19 @@ public class RemoteKeysTest {
+         assertFalse(RemoteKeys.isActivity(null));
+     }
+ 
++    @Test public void intentTargetsKeepTheWholeUri() {
++        // SmartTube's voice search: the URI has colons, slashes and semicolons, and must reach Intent.parseUri()
++        // whole, never ComponentName.unflattenFromString().
++        String voice = "intent://search?launch=voice#Intent;scheme=youtube;package=org.smarttube.stable;end";
++        assertEquals(voice, RemoteKeys.parseAppScancodes(Arrays.asList("scan:597:" + voice)).get(597));
++        assertEquals(voice, parse("KEYCODE_BUTTON_3:" + voice).get(190));
++        assertEquals(voice, RemoteKeys.parseHoldAppScancodes(Arrays.asList("hold:scan:597:" + voice)).get(597));
++        assertFalse(RemoteKeys.isActivity(voice));
++        assertFalse(RemoteKeys.isAction(voice));
++        assertNull(RemoteKeys.inputId(voice));
++        assertFalse(RemoteKeys.inFront(voice, "org.smarttube.stable"));
++    }
++
+     /** Presses with a timer the test runs by hand, and the targets they open. */
+     private static final class Remote {
+         final List<Runnable> holds = new ArrayList<>();

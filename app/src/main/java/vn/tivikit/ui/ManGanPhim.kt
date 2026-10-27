@@ -61,6 +61,19 @@ internal fun ManGanPhim(vm: PhienLamViec) = Cuon {
                 Phu(t("2. Chọn app nút này sẽ mở:", "2. Pick the app this button opens:"))
                 val dau = g.dsApp.filter { it in PhimRieng.GOI_SMARTTUBE || it == g.goi }
                 dau.forEach { p -> LuaChon(g.goi == p, g.tenApp(p), p) { g.goi = p } }
+                // Đích thứ hai cho SmartTube (27/10/2026): mở thẳng tìm kiếm bằng giọng nói thay vì mở app.
+                g.dsApp.firstOrNull { it in PhimRieng.GOI_SMARTTUBE }?.let { st ->
+                    val giong = PhimRieng.dichTimGiong(st)
+                    LuaChon(g.goi == giong, g.tenApp(giong), t("Mở thẳng tìm kiếm bằng giọng nói của SmartTube", "Opens SmartTube's voice search directly")) { g.goi = giong }
+                }
+                if (g.goi?.let { PhimRieng.laTimGiong(it) } == true) {
+                    if (g.homeCu) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(NenCanhBao).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Phu(t("Home sạch trên tivi là bản cũ, chưa biết mở thẳng tìm kiếm giọng nói. Mở Home sạch, bấm Áp dụng một lần để cập nhật, rồi quay lại gán nút.",
+                            "The clean Home on the TV is an older build that can't open voice search directly. Open Clean Home, press Apply once to update it, then come back."), ChuChinh)
+                        NutPhu(t("Mở Home sạch", "Open Clean Home"), Icons.Rounded.Home, enabled = !vm.dangBan) { g.moHomeSach() }
+                    }
+                    Phu(GanPhim.NHAC_GIONG_NOI, Cam)
+                }
                 if (g.dsApp.none { it in PhimRieng.GOI_SMARTTUBE }) Phu(t("Tivi chưa có SmartTube. Cài ở mục Cài app (file APK hoặc đường link tải từ github.com/yuliskov/SmartTube) rồi mở lại màn này.",
                     "SmartTube isn't on the TV. Install it under Install apps (APK file or a download link from github.com/yuliskov/SmartTube), then reopen this screen."), Cam)
                 val khac = g.dsApp.filter { it !in dau }
@@ -71,7 +84,8 @@ internal fun ManGanPhim(vm: PhienLamViec) = Cuon {
                     t("Bo mạch CVTE: bật dịch vụ phím ngay lượt đổi Home từng làm một tivi treo ở màn khởi động. Tắt mở tivi một lần, thấy Home sạch lên bình thường rồi mới bật.",
                         "CVTE board: turning on the key helper in the same pass as the Home change once hung a TV on boot. Restart the TV once and check the clean Home comes up first."),
                     g.daKhoiDongLai) { g.daKhoiDongLai = it }
-                NutChinh(t("Lưu và áp dụng", "Save and apply"), enabled = !vm.dangBan && g.goi != null && (!g.laCvte || g.daKhoiDongLai), icon = Icons.Rounded.Check) { g.luu() }
+                val chanGiong = g.homeCu && g.goi?.let { PhimRieng.laTimGiong(it) } == true
+                NutChinh(t("Lưu và áp dụng", "Save and apply"), enabled = !vm.dangBan && g.goi != null && (!g.laCvte || g.daKhoiDongLai) && !chanGiong, icon = Icons.Rounded.Check) { g.luu() }
             }
         }
 
@@ -88,7 +102,7 @@ internal fun ManGanPhim(vm: PhienLamViec) = Cuon {
         }
         if (g.bao.isNotEmpty()) Phu(g.bao, if (g.thuOk == false) Cam else Xanh)
         val coYouTube = vm.trangThai?.let { GanPhim.YOUTUBE in it.caiDat && GanPhim.YOUTUBE !in it.daTat } == true
-        if (g.goiYTatYouTube || (coYouTube && vm.phimRieng.any { PhimRieng.dichCua(it) in PhimRieng.GOI_SMARTTUBE }))
+        if (g.goiYTatYouTube || (coYouTube && vm.phimRieng.any { PhimRieng.goiCuaDich(PhimRieng.dichCua(it)) in PhimRieng.GOI_SMARTTUBE }))
             TextButton(onClick = { vm.qlApp.mo() }, enabled = !vm.dangBan) {
                 Icon(Icons.Rounded.Apps, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
                 Text(t("Tắt YouTube gốc ở Quản lý app", "Disable the stock YouTube in Manage apps"))

@@ -38,6 +38,9 @@ class GanPhim(private val vm: PhienLamViec) {
     /** Nút + app vừa lưu, để bấm thử. */
     var vuaGan by mutableStateOf<Pair<PhimRieng.Nut, String>?>(null)
         private set
+    /** Home sạch trên tivi khác bản đi kèm app: chưa hiểu đích "intent:" (SmartTube – tìm bằng giọng nói). */
+    var homeCu by mutableStateOf(false)
+        private set
 
     /** [goiSan]: app chọn sẵn cho nút mới (màn Kênh nhanh mở sang đây với Kênh nhanh). */
     fun mo(goiSan: String? = null) = vm.chay(t("Đang đọc nút đã gán trên tivi…", "Reading mapped buttons on the TV…")) {
@@ -48,6 +51,7 @@ class GanPhim(private val vm: PhienLamViec) {
             val j = vm.io { vm.tv.docCauHinhTv() }
             vm.phimRieng.clear(); j?.let { vm.phimRieng.addAll(PhimRieng.docTu(it)) }
             laCvte = vm.io { vm.tv.laBoMachCvte() }
+            homeCu = !vm.io { vm.tv.homeLaBanDiKem(vn.tivikit.CapNhat.moAsset(vm.ctx, vm.tv.apkHome).use { it.readBytes() }) }
         }
         val ds = vm.appChoDock()
         dsApp = ds.filter { it in PhimRieng.GOI_SMARTTUBE }.sortedBy { PhimRieng.GOI_SMARTTUBE.indexOf(it) } + ds.filter { it !in PhimRieng.GOI_SMARTTUBE }
@@ -79,6 +83,9 @@ class GanPhim(private val vm: PhienLamViec) {
         if (laCvte && !daKhoiDongLai) error(t(
             "Tivi bo mạch CVTE: tắt mở tivi một lần sau khi cài Home sạch, thấy Home sạch lên bình thường rồi mới gán nút (đã có tivi CVTE treo ở màn khởi động khi đổi Home và bật dịch vụ phím cùng lượt).",
             "CVTE board: restart the TV once after installing the clean Home and check it comes up before mapping buttons (a CVTE TV hung on boot when Home changed and the key helper was turned on in one pass)."))
+        if (PhimRieng.laTimGiong(g) && homeCu) error(t(
+            "Home sạch trên tivi là bản cũ, chưa biết mở thẳng tìm kiếm giọng nói. Mở Home sạch, bấm Áp dụng một lần để cập nhật rồi gán lại.",
+            "The clean Home on the TV is an older build that can't open voice search directly. Open Clean Home, press Apply once to update it, then map again."))
         val m = PhimRieng.muc(n, g) ?: return@chay
         vm.damBaoKetNoi()
         val k = PhimRieng.khoaCua(m)
@@ -86,8 +93,12 @@ class GanPhim(private val vm: PhienLamViec) {
         vm.io { vm.tv.ghiPhimRieng(ds) }
         vm.phimRieng.clear(); vm.phimRieng.addAll(ds)
         vuaGan = n to g; nut = null; thuOk = null; goiYTatYouTube = false
-        bao = t("Đã gán: nút ${tenNut(n)} mở ${tenApp(g)}. Bấm Thử nút để kiểm tra trên tivi.", "Mapped: ${tenNut(n)} opens ${tenApp(g)}. Tap Test to check it on the TV.")
+        bao = t("Đã gán: nút ${tenNut(n)} mở ${tenApp(g)}. Bấm Thử nút để kiểm tra trên tivi.", "Mapped: ${tenNut(n)} opens ${tenApp(g)}. Tap Test to check it on the TV.") +
+            (if (PhimRieng.laTimGiong(g)) " " + NHAC_GIONG_NOI else "")
     }
+
+    /** Màn Nút remote báo Home sạch cũ: sang màn Home sạch để bấm Áp dụng (cập nhật Home sạch). */
+    fun moHomeSach() { vm.man = Man.CHINH; vm.moDoiTheme() }
 
     /** Bỏ một nút đã gán: nút trở lại việc cũ. */
     fun bo(muc: String) = vm.chay(t("Đang bỏ gán…", "Removing…")) {
@@ -105,8 +116,8 @@ class GanPhim(private val vm: PhienLamViec) {
         val (n, g) = vuaGan ?: return@chay
         vm.damBaoKetNoi()
         thuOk = null; goiYTatYouTube = false; bao = ""
-        // Kênh nhanh mở xong là tự đóng, TV360 lên trước mặt.
-        val mongDoi = if (KenhNhanh.laGoiKenh(g)) KenhNhanh.TV360 else g
+        // Kênh nhanh mở xong là tự đóng, TV360 lên trước mặt; đích "gói/màn", "intent:…" thì chờ app của nó.
+        val mongDoi = if (KenhNhanh.laGoiKenh(g)) KenhNhanh.TV360 else PhimRieng.goiCuaDich(g) ?: g
         val kq = vm.io { vm.tv.thuNut(n, mongDoi, 20, veHome = !vn.tivikit.ManHinh.laTv) }
         thuOk = kq.daBam && kq.goi == mongDoi
         bao = when {
@@ -129,14 +140,18 @@ class GanPhim(private val vm: PhienLamViec) {
     }
 
     /** Kết nối tivi khác. */
-    fun quen() { nut = null; vuaGan = null; thuOk = null; bao = ""; goiYTatYouTube = false; laCvte = false; daKhoiDongLai = false; dsApp = emptyList() }
+    fun quen() { nut = null; vuaGan = null; thuOk = null; bao = ""; goiYTatYouTube = false; laCvte = false; daKhoiDongLai = false; dsApp = emptyList(); homeCu = false }
 
     /** Tên app: ô Kênh nhanh kèm kênh của nó, nhãn thật nếu Quản lý app đã đọc, không thì tên quen / đuôi tên gói. */
-    fun tenApp(p: String): String = vm.kenhNhanh.tenO(p)
+    fun tenApp(p: String): String = if (PhimRieng.laTimGiong(p)) t("SmartTube – tìm bằng giọng nói", "SmartTube – voice search") else vm.kenhNhanh.tenO(p)
         ?: vm.qlApp.ds.firstOrNull { it.tv.pkg == p }?.ten?.takeIf { it.isNotEmpty() } ?: tenDep(p)
 
     companion object {
         const val YOUTUBE = "com.google.android.youtube.tv"
+
+        /** Đích tìm bằng giọng nói chỉ mở màn tìm kiếm; mic tự bật là nhờ tuỳ chọn trong SmartTube. */
+        val NHAC_GIONG_NOI: String get() = t("Để mic bật ngay khi bấm nút, trong SmartTube bật Cài đặt → Tìm kiếm → Tìm kiếm bằng giọng nói tức thì; chưa bật thì nút mở màn tìm kiếm của SmartTube.",
+            "For the mic to start as soon as you press the button, turn on Settings → Search → Instant voice search in SmartTube; otherwise the button opens SmartTube's search screen.")
 
         /** Tên nút cho người đọc: nhãn phím Android trong keylayout (BUTTON_3), không có thì mã quét. */
         fun tenNut(n: PhimRieng.Nut): String = n.tenAndroid ?: t("mã ${n.maQuet}", "code ${n.maQuet}")
