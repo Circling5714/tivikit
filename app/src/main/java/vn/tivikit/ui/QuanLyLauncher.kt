@@ -119,7 +119,8 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
             chan.isEmpty() -> Hoi.DatHome(m, emptyList())
             // Đang được Home sạch mở đè rồi thì cách "không tắt" chính là hiện trạng: chỉ hỏi tắt.
             chan.all { Launcher.tatDuocDeNhuong(it, tt, ThaoTacTv.HOME_GOC_BIET) } -> Hoi.DatHome(m, chan, coTheMoDe = moDeDuoc && m.goi != tt.homeMo)
-            moDeDuoc -> Hoi.DatHome(m, emptyList(), moDe = true)
+            // Home sạch thì câu "Home sạch tự mở đè" riêng của nó (HopHoiLauncher), không phải "mở … đè lên".
+            moDeDuoc -> Hoi.DatHome(m, emptyList(), moDe = m.loai != Loai.HOME_SACH)
             else -> { bao = khongDat(m, chan); null }
         }
     }
