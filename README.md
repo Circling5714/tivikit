@@ -48,7 +48,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 - ⚠️ **Điều khiển + gõ chữ** (chỉ trên điện thoại): remote trên điện thoại, gõ mật khẩu, tìm kiếm. Gõ tiếng Việt có dấu nhờ bộ gõ phụ `vn.tivikit.go`, tự cài lên tivi lần đầu gửi chữ có dấu; ô nhập không nhận bộ gõ thì gửi chữ không dấu.
 - ✅ **Xem màn hình tivi trực tiếp** ngay trên màn Điều khiển, cách làm của [scrcpy](https://github.com/Genymobile/scrcpy): tivi tự quay màn hình bằng bộ mã hoá H.264 và gửi qua ADB, trễ chưa tới nửa giây; khung hình ghim trên cùng, trượt xuống bấm remote vẫn thấy tivi; chạm lên hình là bấm đúng chỗ đó, phím remote cũng nhạy hơn. Phim có bản quyền (Netflix…) và cổng HDMI ra màn đen. Tivi không quay được video thì app dùng ảnh chụp làm mới 1,5 giây một lần. Đã xem được trên tivi thật từ điện thoại (bản thử 26/10/2026).
 - ✅ **Nút remote**: gán một nút thật trên remote (VD nút YouTube) để mở app khác như SmartTube. App đọc mã nút lúc bạn bấm rồi ghi vào Home sạch, nên cần cài Home sạch trước.
-  - ⚠️ Mới: gán nút mở thẳng tìm kiếm bằng giọng nói của SmartTube (chọn "SmartTube – tìm bằng giọng nói"). Cần Home sạch bản mới (tivi có bản cũ thì mở Home sạch, bấm Áp dụng một lần); để mic bật ngay, trong SmartTube bật Cài đặt → Tìm kiếm → Tìm kiếm bằng giọng nói tức thì.
+  - ✅ Gán nút mở thẳng tìm kiếm bằng giọng nói của SmartTube (chọn "SmartTube – tìm bằng giọng nói"), đã thử trên tivi Skyworth (Android 11). Cần Home sạch bản mới (tivi có bản cũ thì mở Home sạch, bấm Áp dụng một lần); để mic bật ngay, trong SmartTube bật Cài đặt → Tìm kiếm → Tìm kiếm bằng giọng nói tức thì.
 - **Kênh nhanh**: tối đa 6 ô, mỗi ô mở thẳng một kênh trong app xem truyền hình, gán được nút remote riêng, Hẹn giờ mở được. Mỗi ô là một app rất nhỏ TiviKit cài lên tivi.
   - TV360: VTV1, VTV3, HTV7… theo số kênh của TV360 (tivi cần có app TV360). ✅ Một ô đã thử; ⚠️ nhiều ô (tới 6) chưa thử.
   - ⚠️ VTVgo: VTV1–9, đài địa phương, VTVcab… từ danh sách kênh của VTVgo (tivi cần có app VTVgo bản tivi). Ô kênh VTVgo kiểu cũ trên Home sạch (không gán được nút remote) chuyển được sang ô Kênh nhanh.
@@ -95,6 +95,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 - ✅ Ngày 26/10/2026, TiviKit 1.0 (gói `vn.tivikit`) trên box Tanix TX3 Mini (Android 9): dọn tivi, cài Home sạch, cài SmartTube từ danh sách gợi ý, DNS chặn quảng cáo (NextDNS).
 - ✅ Ngày 26/10/2026, bản thử của 1.3.0: xem màn hình tivi trực tiếp trên điện thoại, khung ghim khi trượt xuống. Phần quay màn hình cũng đã chạy riêng trên box TX3 Mini (bộ mã hoá Amlogic, khung đầu sau ~0,5 giây).
 - ✅ Ngày 25/10/2026 trên một tivi Skyworth, ở bản thử trước khi đổi tên gói sang `vn.tivikit`: cài file APK, Nút remote, Kênh nhanh TV360 (một ô), Hẹn giờ.
+- ✅ Ngày 27/10/2026 trên tivi Skyworth SWTV-22AE (Google TV, Android 11): cập nhật Home sạch bằng Áp dụng, gán một nút trên remote mở thẳng tìm kiếm bằng giọng nói của SmartTube.
 - ⚠️ Việc tự chuyển ô Kênh nhanh, lịch Hẹn giờ và nút remote đã gán từ bản thử cũ (`com.icm.cleantv`) sang gói mới chưa thử.
 - ⚠️ Chế độ tivi LG chưa thử trên tivi LG nào.
 - Khôi phục và khoá trẻ em gốc đã chạy trong CleanTV 2.8.2; với TiviKit thì chưa thử lại.
@@ -207,7 +208,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 - ⚠️ **Remote + typing** (phone only): a remote on the phone, passwords and searches. Vietnamese with accents goes through a helper keyboard (`vn.tivikit.go`); fields that don't accept it get plain letters.
 - ✅ **Live TV screen** on the remote screen, the [scrcpy](https://github.com/Genymobile/scrcpy) way: the TV encodes its screen in H.264 and streams it over ADB, under half a second behind; the picture stays pinned at the top while you scroll the remote; tap the picture to press that spot, and remote keys respond faster. Copy-protected films (Netflix…) and HDMI inputs show black. A TV that can't encode video falls back to screenshots refreshed every 1.5 s. Tried from a phone with a real TV (test build, 26 Oct 2026).
 - ✅ **Remote buttons**: make a real remote button (e.g. YouTube) open another app such as SmartTube. Needs the clean Home.
-  - ⚠️ New: a button can open SmartTube's voice search directly (pick "SmartTube – voice search"). Needs the new clean Home (on a TV with an older one, open Clean Home and press Apply once); for the mic to start at once, turn on Settings → Search → Instant voice search in SmartTube.
+  - ✅ A button can open SmartTube's voice search directly (pick "SmartTube – voice search"); tried on a Skyworth TV (Android 11). Needs the new clean Home (on a TV with an older one, open Clean Home and press Apply once); for the mic to start at once, turn on Settings → Search → Instant voice search in SmartTube.
 - **Quick channel**: up to 6 tiles, each opening one channel straight in a TV app, each able to take its own remote button and be opened by the Timer. Each tile is a tiny app TiviKit installs on the TV.
   - TV360: VTV1, VTV3, HTV7… by TV360's channel number (the TV needs the TV360 app). ✅ One tile tried; ⚠️ more tiles (up to 6) not yet.
   - ⚠️ VTVgo: VTV1–9, local stations, VTVcab… from VTVgo's channel list (the TV needs the VTVgo app for TV). Old-style VTVgo tiles on the clean Home (no remote button) can be moved to Quick channel tiles.
@@ -254,6 +255,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 - ✅ 26 Oct 2026, TiviKit 1.0 (`vn.tivikit`) on a Tanix TX3 Mini (Android 9): cleaning, installing the clean Home, SmartTube from the suggestions, ad-blocking DNS (NextDNS).
 - ✅ 26 Oct 2026, a 1.3.0 test build: the live TV screen on a phone, pinned while scrolling. Screen capture also ran on its own on the TX3 Mini (Amlogic encoder, first frame after ~0.5 s).
 - ✅ 25 Oct 2026 on one Skyworth TV, with a test build from before the package rename to `vn.tivikit`: APK install, Remote buttons, TV360 quick channel (one tile), Timer.
+- ✅ 27 Oct 2026 on a Skyworth SWTV-22AE (Google TV, Android 11): updating the clean Home with Apply, and a remote button opening SmartTube's voice search directly.
 - ⚠️ The automatic move of quick-channel tiles, timers and button mappings from the old test build (`com.icm.cleantv`) hasn't been tried.
 - ⚠️ The LG mode hasn't been tried on any LG TV.
 - Restore and the original kids lock ran in CleanTV 2.8.2; not re-tested with TiviKit.
