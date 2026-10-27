@@ -54,9 +54,7 @@ class ManHinhTv(private val adb: KetNoiAdb) {
             if (daDong) return
             daDong = true
             hangGui.shutdownNow()
-            runCatching { dieuKhien.close() }
-            runCatching { video.close() }
-            runCatching { mayChu.close() }
+            dongNen(dieuKhien, video, mayChu)
         }
     }
 
@@ -126,8 +124,18 @@ class ManHinhTv(private val adb: KetNoiAdb) {
             if (daDong) return
             daDong = true
             hangGui.shutdownNow()
-            runCatching { luong.close() }
-            runCatching { mayChu.close() }
+            dongNen(luong, mayChu)
+        }
+    }
+
+    private companion object {
+        /**
+         * Đóng các luồng ADB ở luồng riêng (27/10/2026): đóng là gửi gói CLSE qua socket, mà dong() hay được gọi từ luồng
+         * giao diện (rời màn, app xuống nền) — ở đó Android ném NetworkOnMainThreadException, gói không đi, máy chủ scrcpy
+         * trên tivi không biết để thoát (TX3: app xuống nền rồi lên lại thì còn hai máy chủ chạy song song).
+         */
+        fun dongNen(vararg luong: AdbStream) {
+            Thread({ luong.forEach { runCatching { it.close() } } }, "scrcpy-dong").apply { isDaemon = true; start() }
         }
     }
 
