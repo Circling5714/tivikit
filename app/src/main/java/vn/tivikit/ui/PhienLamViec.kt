@@ -780,6 +780,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         trangThai = tt
         // Tên app thật từ chính tivi cho tenDep (TrenTv, 27/10/2026): chạy nền, chỉ khi có gói chưa hỏi (app mới cài).
         if (vn.tivikit.dulieu.TenTrenTv.thieu(tt.caiDat)) { val goi = tt.caiDat; viewModelScope.launch { runCatching { docTenTrenTv(goi) } } }
+        // App phụ chạy nền (Home sạch, Khoá, Hẹn giờ, TiviKit Launcher): giữ khỏi bị tối ưu pin / hạ nhóm App Standby, mỗi lần nối.
+        val giu = ThaoTacTv.GIU_SONG.filter { it in tt.caiDat }
+        if (giu.isNotEmpty()) viewModelScope.launch { runCatching { io { adb.shell(ThaoTacTv.lenhGiuSong(giu)) } } }
         // Đổi tên gói (25/10/2026): app phụ cài từ bản cũ (com.icm.cleantv.*) chép sang gói mới rồi gỡ.
         baoChuyen = ""
         if (vn.tivikit.dulieu.GoiCu.APP_PHU.any { it in tt.caiDat }) {

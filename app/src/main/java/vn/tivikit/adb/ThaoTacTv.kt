@@ -394,6 +394,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         sh("pm grant $pkgHome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; true")
         bao(t("Tối ưu cho tivi yếu…", "Optimising for slow TVs…"))
         runCatching { sh("cmd package compile -m speed -f $pkgHome") }
+        runCatching { sh(lenhGiuSong(listOf(pkgHome))) }
 
         fun tatHomeGoc() {
             bao(t("Tắt Home gốc ($homeGoc)…", "Disabling the stock Home ($homeGoc)…"))
@@ -1659,6 +1660,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         adb.ghiFile(tam, apk)
         val out = sh("pm install -r $tam; rm -f $tam")
         if (!out.contains("Success")) error(t("Cài không được: ${out.trim().lines().lastOrNull()}", "Install failed: ${out.trim().lines().lastOrNull()}"))
+        if (goi in GIU_SONG) runCatching { sh(lenhGiuSong(listOf(goi))) }
     }
 
     /** JSON trạng thái của app phụ [goi] (content call … --method doc); null nếu không trả lời / đọc không được. */
@@ -2072,6 +2074,22 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         /** Namespace Java của launcher: không đổi theo tên gói. */
         const val NS_HOME = "com.gathin.tvhome"
         val HOME_SACH = setOf(PKG_HOME, PKG_HOME_XIAOMI)
+
+        /**
+         * App phụ phải chạy nền (27/10/2026): Home sạch (phím Home, mở đè), Khoá trẻ em, Hẹn giờ, TiviKit Launcher (thẻ Đang
+         * phát, thời tiết). Cách tv-remote giữ app của nó trên box RAM thấp (họ đo trên box FPT Play, Android 14): thêm vào danh
+         * sách bỏ qua tối ưu pin (Doze), xếp nhóm "đang dùng" (App Standby), cho chạy nền.
+         */
+        val GIU_SONG: Set<String> get() = HOME_SACH + setOf(PKG_KHOA, vn.tivikit.dulieu.HenGio.GOI, TiviKitLauncher.GOI)
+
+        /**
+         * Lệnh giữ [goi] chạy nền (xem GIU_SONG). Mỗi lệnh im lặng khi lỗi (Android 8 chưa có set-standby-bucket, gói vừa gỡ):
+         * một lệnh hỏng không chặn lệnh sau. Nhóm "đang dùng" tự hạ dần nếu app ít được mở nên chạy lại mỗi lần nối tivi.
+         */
+        fun lenhGiuSong(goi: Collection<String>): String = goi.filter { TEN_GOI.matches(it) }.joinToString("") { p ->
+            "dumpsys deviceidle whitelist +$p >/dev/null 2>&1; am set-standby-bucket $p active >/dev/null 2>&1; " +
+                "cmd appops set $p RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1; "
+        } + "true"
         const val SETUP = "com.google.android.tungsten.setupwraith"
         const val HOME_QUERY = "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"
         val HOME_GOC_BIET = listOf(
