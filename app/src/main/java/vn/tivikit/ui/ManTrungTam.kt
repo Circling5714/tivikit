@@ -166,6 +166,13 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
             }
         }
     }
+    // Công cụ cho người rành (27/10/2026): để cuối, cách xa các công cụ hằng ngày.
+    TieuDeMuc(t("Nâng cao", "Advanced"))
+    NhomChucNang(vm, listOf(
+        MucChucNang(Icons.Rounded.Terminal, MauO.xam, t("Dòng lệnh ADB", "ADB shell"),
+            t("Gõ lệnh shell chạy trên tivi, kèm gần 200 lệnh mẫu có giải thích", "Run shell commands on the TV, with nearly 200 explained examples")) { vm.moChucNang { vm.dongLenh.mo() } },
+    ))
+
     // Nhóm của chính app: dữ liệu trên điện thoại, giấy phép. Không cần nối tivi.
     TieuDeMuc("TiviKit")
     NhomChucNang(vm, listOfNotNull(

@@ -61,7 +61,20 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 | Kiểm tra mạng → Kiểm tra | Có sóng, độ trễ, nhận xét; thẻ CH Play đúng tình trạng tài khoản |
 | Cài đặt nhanh → hiệu ứng Nhanh, tự tắt 4 giờ | Cài đặt tivi hiện đúng giá trị mới; đặt lại được như cũ |
 
-## 6. Các tính năng còn lại
+## 6. Dòng lệnh ADB
+
+| Thử | Đạt khi |
+| --- | --- |
+| Nâng cao → Dòng lệnh ADB → Lệnh mẫu → "Tóm tắt máy" (nút ▶) | Hiện hãng, model, bản Android của tivi |
+| Gõ `ping 8.8.8.8`, đợi vài dòng rồi bấm Dừng | Từng dòng hiện ngay khi tới; sau khi Dừng, `ps -A \| grep ping` không còn ping |
+| Gõ `cd /sdcard`, rồi `ls` | `ls` liệt kê bộ nhớ trong; dấu nhắc ghi `/sdcard` |
+| Lệnh mẫu "Tắt app" với một app ít dùng → điền gói → Chạy → Vẫn chạy | Có hộp hỏi lại; app tắt; khung báo đã ghi vào bản sao lưu; Khôi phục bật lại được |
+| Gõ `rm -rf /sdcard/Download` rồi bấm Chạy (chưa đồng ý) | Hộp "Lệnh nguy hiểm"; Vẫn chạy chỉ bấm được sau khi tích; bấm Thôi |
+| Dán `adb shell getprop ro.product.model` | App bỏ "adb shell", chạy được, có dòng báo đã bỏ |
+| Lệnh mẫu "Hiệu ứng chuyển màn nhanh gấp đôi" | In giá trị cũ trước khi đổi; cài đặt tivi đúng giá trị mới |
+| `logcat` chạy rồi bấm Quay lại | Lệnh dừng, không chạy ngầm trên tivi |
+
+## 7. Các tính năng còn lại
 
 | Thử | Đạt khi |
 | --- | --- |

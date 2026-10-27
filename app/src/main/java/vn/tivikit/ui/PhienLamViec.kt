@@ -43,7 +43,7 @@ import vn.tivikit.dulieu.ThongTinTv
 import vn.tivikit.dulieu.TrangThaiGoi
 import java.net.Inet4Address
 
-enum class Man { CHINH, KET_NOI, THONG_TIN, CHON_GOI, DANG_TAT, HOME_SACH, XONG, KHOI_PHUC, HUONG_DAN, GIAY_PHEP, KHOA_TRE, CAI_APK, DIEU_KHIEN, QUAN_LY_APP, GUI_FILE, BO_CAI, DNS, GAN_PHIM, KENH_NHANH, HEN_GIO, LAM_MOI, MANG, CAI_DAT_NHANH, CHUYEN_MAY, LG }
+enum class Man { CHINH, KET_NOI, THONG_TIN, CHON_GOI, DANG_TAT, HOME_SACH, XONG, KHOI_PHUC, HUONG_DAN, GIAY_PHEP, KHOA_TRE, CAI_APK, DIEU_KHIEN, QUAN_LY_APP, GUI_FILE, BO_CAI, DNS, GAN_PHIM, KENH_NHANH, HEN_GIO, LAM_MOI, MANG, CAI_DAT_NHANH, CHUYEN_MAY, LG, DONG_LENH }
 
 /** Số app tối đa trong dock: bằng số cột lớn nhất của Home sạch (columns 1–8); dock dài hơn số cột thì tràn xuống hàng sau (22/10/2026, góp ý muốn hàng đầu nhiều app hơn). */
 const val DOCK_TOI_DA = 8
@@ -117,6 +117,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     val giuKetNoi by lazy { GiuKetNoi(this) }
     /** Tivi LG webOS: điều khiển, gõ chữ, mở app… không qua ADB (ui/LgTivi.kt). */
     val lg by lazy { LgTivi(this) }
+    /** Dòng lệnh ADB: gõ lệnh shell chạy trên tivi, lệnh mẫu có giải thích (ui/DongLenhTivi.kt). */
+    val dongLenh by lazy { DongLenhTivi(this) }
     /**
      * Tên các ô Kênh nhanh trên Home sạch (app_labels "vn.tivikit.kenh3=VTV3" trong config.json của tivi đang nối):
      * gói → tên. cauHinhHome ghép lại vào như phimRieng.
@@ -739,6 +741,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Nút gán riêng / ô Kênh nhanh thuộc về tivi trước: tivi này đọc lại từ config.json của nó (napTuJson, màn Nút
         // remote, màn Kênh nhanh).
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        dongLenh.quen()
         xemManHinh.tat()
         tv.quenTivi()
         thongBao = t("Đang đọc thông tin tivi…", "Reading the TV…")
@@ -1950,6 +1953,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         dsTatTv = null; chonBatLai.clear(); batLaiBao = ""
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        dongLenh.quen()
         xemManHinh.tat()
         dangDon = false; sauKetNoi = null
         taiLaiSaoLuu()

@@ -138,6 +138,39 @@ class KetNoiAdb private constructor(
         }
     }
 
+    /** Lệnh đang chạy ở màn Dòng lệnh: Dừng đóng luồng, read() đang chờ nhận lỗi và thoát. */
+    class LenhDangChay {
+        @Volatile internal var luong: io.github.muntashirakon.adb.AdbStream? = null
+        @Volatile var daDung = false
+            private set
+
+        fun dung() { daDung = true; runCatching { luong?.close() } }
+    }
+
+    /**
+     * Chạy [lenh] (đã bọc bằng DongLenh.boc) cho màn Dòng lệnh (27/10/2026): mỗi mẩu chữ tới là đưa ngay cho [nhan];
+     * [nhan] trả true khi đã thấy dấu kết thúc thì thôi đọc, không chờ tivi đóng luồng (lỗi đua của libadb, xem shell).
+     * Không hạn giờ: lệnh chạy liên tục (logcat, ping) thì người dùng bấm Dừng ([dk]).
+     */
+    fun chayLenh(lenh: String, dk: LenhDangChay, nhan: (String) -> Boolean) {
+        val stream = openStream("shell:$lenh")
+        dk.luong = stream
+        try {
+            if (dk.daDung) return
+            // InputStreamReader giữ lại byte dở của một chữ UTF-8 bị cắt giữa hai gói.
+            val vao = java.io.InputStreamReader(stream.openInputStream(), Charsets.UTF_8)
+            val buf = CharArray(8192)
+            while (!dk.daDung) {
+                val n = vao.read(buf)
+                if (n < 0 || nhan(String(buf, 0, n))) break
+            }
+        } catch (e: java.io.IOException) {
+            if (!dk.daDung) throw e
+        } finally {
+            runCatching { stream.close() }
+        }
+    }
+
     /** Ảnh PNG màn hình tivi (qua base64 để đi được đường shell có dấu kết thúc). */
     fun chupPng(): ByteArray {
         val b64 = shell("screencap -p | base64").filter { it.isLetterOrDigit() || it == '+' || it == '/' || it == '=' }
