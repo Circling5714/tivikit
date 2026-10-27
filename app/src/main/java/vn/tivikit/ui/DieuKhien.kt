@@ -14,7 +14,8 @@ import vn.tivikit.t
 
 /**
  * Remote trên điện thoại và ô gõ chữ (25/10/2026). Phím không đi qua vm.chay (khoá cả màn và hiện thanh "đang làm"):
- * remote phải bấm liên tục được. Phím vào một hàng đợi; luồng gửi lấy hết phím đang chờ gửi chung một lệnh, để tivi
+ * remote phải bấm liên tục được. Phím đi qua kênh scrcpy đang mở (đang xem màn hình, hay KenhDieuKhien — 27/10/2026), tivi
+ * nhận ngay; không có kênh thì vào một hàng đợi, luồng gửi lấy hết phím đang chờ gửi chung một lệnh `input`, để tivi
  * Android 9–10 (mỗi lệnh `input` ~0,5 giây) không trễ dồn.
  */
 class DieuKhien(private val vm: PhienLamViec) {
@@ -35,18 +36,21 @@ class DieuKhien(private val vm: PhienLamViec) {
     private class Phim(val ma: Int, val giu: Boolean)
     private val hang = Channel<Phim>(Channel.UNLIMITED)
     private var guiPhim: Job? = null
+    /** Phím đã vào hàng đợi `input` mà chưa gửi xong: còn thì phím mới cũng xếp hàng, cho đúng thứ tự bấm. */
+    private val choGui = java.util.concurrent.atomic.AtomicInteger()
 
     fun bam(ma: Int, giu: Boolean = false) {
-        // Đang xem màn hình tivi: phím đi qua kênh điều khiển của scrcpy, tivi nhận ngay. Nhấn giữ vẫn đi đường cũ
+        // Kênh scrcpy (đang xem màn hình, hay kênh không hình của màn Điều khiển): tivi nhận ngay. Nhấn giữ vẫn đi đường cũ
         // (`--longpress`): kênh scrcpy chỉ có nhấn / nhả, không tự sinh sự kiện giữ phím.
-        if (!giu && vm.xemManHinh.phim(ma)) return
+        if (!giu && choGui.get() == 0 && (vm.xemManHinh.phim(ma) || vm.kenhDieuKhien.phim(ma))) return
+        choGui.incrementAndGet()
         hang.trySend(Phim(ma, giu))
         if (guiPhim?.isActive != true) guiPhim = vm.viewModelScope.launch {
             for (p in hang) {
                 var dau: Phim? = p
                 while (dau != null) {
-                    val (lenh, conLai) = gom(dau)
-                    gui(lenh)
+                    val (lenh, so, conLai) = gom(dau)
+                    try { gui(lenh) } finally { choGui.addAndGet(-so) }
                     dau = conLai
                 }
             }
@@ -54,18 +58,18 @@ class DieuKhien(private val vm: PhienLamViec) {
     }
 
     /**
-     * Lệnh cho phím đầu + các phím thường đang chờ, đúng thứ tự bấm. Nhấn giữ thì gửi riêng (`--longpress` chỉ nhận
-     * một phím): gặp nó giữa chừng thì dừng gom, trả nó về làm phím đầu của lượt sau.
+     * Lệnh cho phím đầu + các phím thường đang chờ, đúng thứ tự bấm, kèm số phím trong lệnh. Nhấn giữ thì gửi riêng
+     * (`--longpress` chỉ nhận một phím): gặp nó giữa chừng thì dừng gom, trả nó về làm phím đầu của lượt sau.
      */
-    private fun gom(dau: Phim): Pair<String, Phim?> {
-        if (dau.giu) return PhimTv.lenhPhim(listOf(dau.ma), giu = true) to null
+    private fun gom(dau: Phim): Triple<String, Int, Phim?> {
+        if (dau.giu) return Triple(PhimTv.lenhPhim(listOf(dau.ma), giu = true), 1, null)
         val ds = mutableListOf(dau.ma)
         while (true) {
             val k = hang.tryReceive().getOrNull() ?: break
-            if (k.giu) return PhimTv.lenhPhim(ds) to k
+            if (k.giu) return Triple(PhimTv.lenhPhim(ds), ds.size, k)
             ds += k.ma
         }
-        return PhimTv.lenhPhim(ds) to null
+        return Triple(PhimTv.lenhPhim(ds), ds.size, null)
     }
 
     /** Chạy lệnh trên tivi; rớt kết nối thì nối lại đúng tivi đó một lần rồi chạy lại. */

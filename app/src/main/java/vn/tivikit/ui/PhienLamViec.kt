@@ -82,7 +82,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     val dieuKhien by lazy { DieuKhien(this) }
     /** Xem màn hình tivi trên màn Điều khiển (kiểu scrcpy). */
     val xemManHinh by lazy { XemManHinh(this) }
-    /** Kênh điều khiển scrcpy không hình (dán chữ có dấu khi bộ gõ của TiviKit không chạy được). */
+    /** Kênh điều khiển scrcpy không hình của màn Điều khiển: phím remote nhận ngay, dán chữ có dấu khi bộ gõ hỏng. */
     val kenhDieuKhien by lazy { KenhDieuKhien(this) }
     /** Hộp Góp ý & liên hệ, hộp Ủng hộ tác giả (LienHeUngHo.kt), mở được từ mọi màn. */
     var moLienHe by mutableStateOf(false)
@@ -751,7 +751,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // remote, màn Kênh nhanh).
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
-        xemManHinh.tat()
+        xemManHinh.tat(); kenhDieuKhien.dong()
         tv.quenTivi()
         thongBao = t("Đang đọc thông tin tivi…", "Reading the TV…")
         val (info, gp) = io { tv.docThongTin() }
@@ -1974,7 +1974,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
-        xemManHinh.tat()
+        xemManHinh.tat(); kenhDieuKhien.dong()
         dangDon = false; sauKetNoi = null
         taiLaiSaoLuu()
     }

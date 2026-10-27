@@ -51,10 +51,21 @@ internal fun ManDieuKhien(vm: PhienLamViec) {
     val x = vm.xemManHinh
     // Chạy TiviKit ngay trên tivi thì tự xem chính mình là vô nghĩa.
     val xemDuoc = !vn.tivikit.ManHinh.laTv && vm.ip.trim() != "127.0.0.1"
+    val vongDoi = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    // Kênh điều khiển scrcpy cho phím ăn ngay (27/10/2026): mở khi màn hiện (addObserver gửi ngay ON_START nếu app đang
+    // hiện), đóng khi app xuống nền hay rời màn.
+    val kenh = vm.kenhDieuKhien
+    DisposableEffect(vongDoi) {
+        val nghe = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_START) kenh.mo()
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) kenh.dong()
+        }
+        vongDoi.lifecycle.addObserver(nghe)
+        onDispose { vongDoi.lifecycle.removeObserver(nghe); kenh.dong() }
+    }
     // Theo dõi vòng đời ở cấp màn chứ không trong khung hình: khung chuyển từ phần cuộn lên chỗ ghim không được làm tắt
     // luồng. App xuống nền thì tạm dừng, rời màn Điều khiển thì tắt (đỡ tốn Wi-Fi và pin).
     if (xemDuoc) {
-        val vongDoi = androidx.compose.ui.platform.LocalLifecycleOwner.current
         DisposableEffect(vongDoi) {
             val nghe = androidx.lifecycle.LifecycleEventObserver { _, e ->
                 if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) x.tamDung()

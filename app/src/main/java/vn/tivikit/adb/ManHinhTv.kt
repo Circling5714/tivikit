@@ -59,8 +59,9 @@ class ManHinhTv(private val adb: KetNoiAdb) {
     }
 
     /**
-     * Phiên chỉ có kênh điều khiển (27/10/2026, GiaoThucScrcpy.lenhChayDieuKhien): dán chữ vào ô đang chọn. Một luồng đọc tin
-     * tivi gửi về để biết lúc clipboard đã đặt xong (ACK); luồng đó hết hay lỗi thì phiên đóng, máy chủ trên tivi tự thoát.
+     * Phiên chỉ có kênh điều khiển (27/10/2026, GiaoThucScrcpy.lenhChayDieuKhien): gửi phím, dán chữ vào ô đang chọn. Một
+     * luồng đọc tin tivi gửi về để biết lúc clipboard đã đặt xong (ACK); luồng đó hết hay lỗi thì phiên đóng, máy chủ trên
+     * tivi tự thoát.
      */
     class PhienDieuKhien internal constructor(
         private val luong: AdbStream,
@@ -82,6 +83,10 @@ class ManHinhTv(private val adb: KetNoiAdb) {
             runCatching { hangGui.execute { runCatching { ra.write(goi); ra.flush() }.onFailure { dong() } } }.onFailure { return false }
             return true
         }
+
+        /** Một lần bấm phím [ma]: nhấn rồi nhả. */
+        fun phim(ma: Int): Boolean =
+            gui(GiaoThucScrcpy.goiPhim(GiaoThucScrcpy.NHAN, ma)) && gui(GiaoThucScrcpy.goiPhim(GiaoThucScrcpy.NHA, ma))
 
         /**
          * Đặt [chu] vào clipboard của tivi rồi dán vào ô đang chọn; chặn tới khi tivi báo đã đặt (tối đa [choMs]). true chỉ
