@@ -23,6 +23,8 @@ object PhimTv {
     const val PHAT_DUNG = 85
     const val TUA_LUI = 89
     const val TUA_TOI = 90
+    const val BAI_SAU = 87
+    const val BAI_TRUOC = 88
     const val NGUON_VAO = 178
     const val KENH_LEN = 166
     const val KENH_XUONG = 167

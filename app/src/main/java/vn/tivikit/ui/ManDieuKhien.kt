@@ -52,16 +52,17 @@ internal fun ManDieuKhien(vm: PhienLamViec) {
     // Chạy TiviKit ngay trên tivi thì tự xem chính mình là vô nghĩa.
     val xemDuoc = !vn.tivikit.ManHinh.laTv && vm.ip.trim() != "127.0.0.1"
     val vongDoi = androidx.compose.ui.platform.LocalLifecycleOwner.current
-    // Kênh điều khiển scrcpy cho phím ăn ngay (27/10/2026): mở khi màn hiện (addObserver gửi ngay ON_START nếu app đang
-    // hiện), đóng khi app xuống nền hay rời màn.
+    // Kênh điều khiển scrcpy cho phím ăn ngay và thẻ Đang phát (27/10/2026): chạy khi màn hiện (addObserver gửi ngay ON_START
+    // nếu app đang hiện), thôi khi app xuống nền hay rời màn.
     val kenh = vm.kenhDieuKhien
+    val dangPhat = vm.dangPhat
     DisposableEffect(vongDoi) {
         val nghe = androidx.lifecycle.LifecycleEventObserver { _, e ->
-            if (e == androidx.lifecycle.Lifecycle.Event.ON_START) kenh.mo()
-            if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) kenh.dong()
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_START) { kenh.mo(); dangPhat.mo() }
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) { kenh.dong(); dangPhat.dong() }
         }
         vongDoi.lifecycle.addObserver(nghe)
-        onDispose { vongDoi.lifecycle.removeObserver(nghe); kenh.dong() }
+        onDispose { vongDoi.lifecycle.removeObserver(nghe); kenh.dong(); dangPhat.dong() }
     }
     // Theo dõi vòng đời ở cấp màn chứ không trong khung hình: khung chuyển từ phần cuộn lên chỗ ghim không được làm tắt
     // luồng. App xuống nền thì tạm dừng, rời màn Điều khiển thì tắt (đỡ tốn Wi-Fi và pin).
@@ -93,6 +94,7 @@ private fun ColumnScope.NoiDungDieuKhien(vm: PhienLamViec, moiXem: Boolean) {
         Text(t("Điều khiển tivi", "TV remote"), style = KieuTieuDeLon)
         Phu(t("Bấm như remote thật. Nhấn giữ OK để nhấn giữ trên tivi.", "Works like the real remote. Hold OK for a long press on the TV."))
     }
+    vm.dangPhat.bai?.let { TheDangPhat(dk, it) }
     if (moiXem) The(t("Màn hình tivi", "TV screen"), Icons.Rounded.Cast) {
         Phu(t("Xem màn hình tivi ngay trên điện thoại, trễ chưa tới nửa giây; chạm lên hình để bấm đúng chỗ đó. Khung hình ghim trên cùng, trượt xuống bấm remote vẫn thấy tivi. Phim có bản quyền (Netflix…) và cổng HDMI sẽ ra màn đen.",
             "See the TV screen live on the phone, under half a second behind; tap the picture to press that spot. The picture stays pinned at the top while you scroll the remote. Copy-protected films (Netflix…) and HDMI inputs show black."))
@@ -153,6 +155,35 @@ private fun ColumnScope.NoiDungDieuKhien(vm: PhienLamViec, moiXem: Boolean) {
         dismissButton = { TextButton(onClick = { hoiTat = false }) { Text(t("Thôi", "Cancel")) } },
         containerColor = The1,
     )
+}
+
+/**
+ * Thẻ Đang phát (27/10/2026, DangPhatTv): app, trạng thái, thời gian đã phát, tên bài; nút bài trước / phát-dừng / bài sau là
+ * phím media của remote. Bản dump không có độ dài bài nên không có thanh tiến độ.
+ */
+@Composable
+private fun TheDangPhat(dk: DieuKhien, b: DangPhatTv.Bai) {
+    var bayGio by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
+    if (b.dangPhat) LaunchedEffect(b) {
+        while (true) { bayGio = android.os.SystemClock.elapsedRealtime(); kotlinx.coroutines.delay(1000) }
+    }
+    val tt = when (b.tt) {
+        vn.tivikit.dulieu.DangPhat.PHAT -> t("đang phát", "playing")
+        vn.tivikit.dulieu.DangPhat.CHO -> t("đang tải", "loading")
+        else -> t("đã dừng", "paused")
+    }
+    The(t("Đang phát", "Now playing"), Icons.Rounded.MusicNote) {
+        Phu("${vn.tivikit.dulieu.tenDep(b.goi)} · $tt · ${vn.tivikit.dulieu.DangPhat.dongHo(b.viTriLuc(bayGio))}")
+        Text(b.tieuDe ?: t("Không có tên bài", "No title"), fontWeight = FontWeight.SemiBold, maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        b.phu?.let { Text(it, fontSize = 13.sp, color = ChuPhu, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NutRemote(Icons.Rounded.SkipPrevious, t("Bài trước", "Previous")) { dk.bam(PhimTv.BAI_TRUOC) }
+            NutRemote(if (b.dangPhat) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (b.dangPhat) t("Dừng", "Pause") else t("Phát", "Play"),
+                mau = Nhan) { dk.bam(PhimTv.PHAT_DUNG) }
+            NutRemote(Icons.Rounded.SkipNext, t("Bài sau", "Next")) { dk.bam(PhimTv.BAI_SAU) }
+        }
+    }
 }
 
 /**
