@@ -1,5 +1,10 @@
 package vn.tivikit.ui
 
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,10 +17,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -91,11 +102,63 @@ private fun TheTiviKitLauncher(vm: PhienLamViec, ql: QuanLyLauncher) {
                 if (k.canCapNhat) ChonChip(t("Cập nhật", "Update"), true) { lam { ql.caiTkl() } }
                 if (!laHome) ChonChip(t("Đặt làm Home", "Make it Home"), !k.canCapNhat) { lam { ql.datHomeTkl() } }
                 ChonChip(t("Mở thử", "Open"), false) { lam { ql.moThuTkl() } }
+                ChonChip(t("Tuỳ chỉnh", "Customise"), ql.tklMo) { ql.moTuyChinhTkl() }
                 if (!laHome) ChonChip(t("Gỡ", "Uninstall"), false) { lam { ql.hoi = QuanLyLauncher.Hoi.GoTkl } }
             }
         }
         if (k?.daCai == true) Phu(t("Trên tivi: OK để mở app, giữ OK để ghim vào dock, dời chỗ, gỡ; ô lưới cuối dock là Tất cả ứng dụng.",
             "On the TV: OK opens an app; hold OK to pin it to the dock, move or uninstall it; the grid at the end of the dock shows all apps."))
+        if (k?.daCai == true && ql.tklMo) TuyChinhTkl(vm, ql, k)
+    }
+}
+
+/**
+ * Tuỳ chỉnh TiviKit Launcher từ điện thoại: tên lời chào và nơi xem thời tiết (dùng chung với Home sạch), ảnh nền có sẵn
+ * trong TiviKit hoặc ảnh từ điện thoại (cắt giữa 16:9), rồi Áp dụng lên tivi.
+ */
+@Composable
+private fun TuyChinhTkl(vm: PhienLamViec, ql: QuanLyLauncher, k: TiviKitLauncher.TrangThai) {
+    HorizontalDivider(color = Vien)
+    OutlinedTextField(vm.tenChao, { vm.tenChao = it }, label = { Text(t("Tên lời chào (vd: Nhà bác Hùng)", "Greeting name (e.g. The Smiths)")) },
+        singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+    Text(t("Thời tiết", "Weather"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    ChonNoiThoiTiet(vm)
+    Text(t("Ảnh nền", "Wallpaper"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Phu(when {
+        ql.nenTklRieng != null -> t("Sẽ dùng ảnh vừa chọn từ điện thoại.", "The photo you just picked will be used.")
+        ql.nenTklAsset != null -> t("Sẽ dùng ảnh đang chọn bên dưới.", "The picture selected below will be used.")
+        k.coNenRieng -> t("Tivi đang dùng ảnh riêng; chọn ảnh khác để đổi.", "The TV uses its own picture; pick another to change it.")
+        else -> t("Tivi đang dùng ảnh mặc định (đồi chè).", "The TV uses the default picture (tea hills).")
+    })
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        TiviKitLauncher.ANH_CO_SAN.forEach { a -> AnhNenNho(vm, a, ql.nenTklAsset == a.asset) { ql.chonNenCoSan(a.asset) } }
+    }
+    val chonAnh = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) ql.chonNenDienThoai(uri) }
+    ql.nenTklRieng?.let { b ->
+        val anh = remember(b) { runCatching { BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() }.getOrNull() }
+        if (anh != null) Image(anh, null, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
+    }
+    NutPhu(t("Ảnh từ điện thoại", "Photo from the phone"), Icons.Rounded.AddPhotoAlternate, enabled = !vm.dangBan) {
+        runCatching { chonAnh.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+    }
+    NutChinh(t("Áp dụng lên tivi", "Apply to the TV"), enabled = !vm.dangBan, icon = Icons.Rounded.Check) { ql.apDungTkl() }
+}
+
+/** Ảnh nền có sẵn, thu nhỏ để chọn. */
+@Composable
+private fun AnhNenNho(vm: PhienLamViec, a: TiviKitLauncher.AnhCoSan, chon: Boolean, onClick: () -> Unit) {
+    val anh by produceState<ImageBitmap?>(null, a.asset) {
+        value = vm.io {
+            runCatching { vm.ctx.assets.open(a.asset).use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = 8 }) }?.asImageBitmap() }.getOrNull()
+        }
+    }
+    Column(Modifier.width(128.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)).background(The2)
+            .border(if (chon) 3.dp else 0.dp, if (chon) Nhan else Color.Transparent, RoundedCornerShape(10.dp))) {
+            anh?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+        }
+        Text(t(a.tenVi, a.tenEn), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (chon) Nhan else ChuChinh,
+            modifier = Modifier.padding(top = 4.dp))
     }
 }
 

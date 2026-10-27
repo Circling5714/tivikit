@@ -983,22 +983,7 @@ private fun TheHomeNoiDung(vm: PhienLamViec) {
             "Tiles that open VTV1, HTV7… straight in TV360 or VTVgo are set up under Quick channel."))
         NutPhu(t("Mở Kênh nhanh", "Open Quick channel"), Icons.Rounded.LiveTv, enabled = !vm.dangBan) { vm.kenhNhanh.mo() }
     }
-    The(t("Thời tiết", "Weather"), Icons.Rounded.WbSunny) {
-        OutlinedTextField(vm.timXa, { vm.doiTimXa(it) }, label = { Text(t("Tìm phường / xã hoặc thành phố", "Find your ward or city")) },
-            placeholder = { Text(t("vd: Bến Thành, Cửa Lò, Bali, Osaka", "e.g. Ben Thanh, Bali, Osaka")) },
-            singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-        vm.ketQuaXa.forEach { x ->
-            Text("${x.ten} · ${x.tinh}", fontSize = 14.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                .clickable { vm.chonXa(x) }.padding(horizontal = 12.dp, vertical = 10.dp))
-        }
-        Phu(t("Hoặc chọn nhanh thành phố:", "Or pick a city:"))
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChonChip(t("Không hiện", "Off"), vm.thanhPho == null) { vm.thanhPho = null }
-            vm.thanhPho?.takeIf { it !in THANH_PHO }?.let { tp -> ChonChip(tp.ten, true) { } }
-            THANH_PHO.forEach { tp -> ChonChip(tp.ten, vm.thanhPho == tp) { vm.thanhPho = tp } }
-        }
-        Phu(t("Dữ liệu thời tiết: Open-Meteo.com (CC BY 4.0), tivi tự lấy nửa giờ một lần. Toạ độ phường/xã © OpenStreetMap.", "Weather data: Open-Meteo.com (CC BY 4.0), refreshed by the TV every 30 minutes. Ward locations © OpenStreetMap."))
-    }
+    The(t("Thời tiết", "Weather"), Icons.Rounded.WbSunny) { ChonNoiThoiTiet(vm) }
     The(t("Đồng hồ & lời chào", "Clock & greeting"), Icons.Rounded.Schedule) {
         OutlinedTextField(vm.tenChao, { vm.tenChao = it }, label = { Text(t("Tên chào (vd: Nhà bác Hùng)", "Greeting name (e.g. The Smiths)")) },
             singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
@@ -1011,6 +996,25 @@ private fun TheHomeNoiDung(vm: PhienLamViec) {
         }
     }
     TheMayChieu(vm)
+}
+
+/** Chọn nơi xem thời tiết (phường / xã hoặc thành phố); dùng chung cho Home sạch và TiviKit Launcher (cùng một lựa chọn). */
+@Composable
+internal fun ChonNoiThoiTiet(vm: PhienLamViec) {
+    OutlinedTextField(vm.timXa, { vm.doiTimXa(it) }, label = { Text(t("Tìm phường / xã hoặc thành phố", "Find your ward or city")) },
+        placeholder = { Text(t("vd: Bến Thành, Cửa Lò, Bali, Osaka", "e.g. Ben Thanh, Bali, Osaka")) },
+        singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+    vm.ketQuaXa.forEach { x ->
+        Text("${x.ten} · ${x.tinh}", fontSize = 14.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+            .clickable { vm.chonXa(x) }.padding(horizontal = 12.dp, vertical = 10.dp))
+    }
+    Phu(t("Hoặc chọn nhanh thành phố:", "Or pick a city:"))
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ChonChip(t("Không hiện", "Off"), vm.thanhPho == null) { vm.thanhPho = null }
+        vm.thanhPho?.takeIf { it !in THANH_PHO }?.let { tp -> ChonChip(tp.ten, true) { } }
+        THANH_PHO.forEach { tp -> ChonChip(tp.ten, vm.thanhPho == tp) { vm.thanhPho = tp } }
+    }
+    Phu(t("Dữ liệu thời tiết: Open-Meteo.com (CC BY 4.0), tivi tự lấy nửa giờ một lần. Toạ độ phường/xã © OpenStreetMap.", "Weather data: Open-Meteo.com (CC BY 4.0), refreshed by the TV every 30 minutes. Ward locations © OpenStreetMap."))
 }
 
 @Composable

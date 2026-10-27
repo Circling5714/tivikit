@@ -1727,8 +1727,29 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         val coSan = runCatching {
             sh("sha256sum \$(pm path ${TiviKitLauncher.GOI} | head -n 1 | sed 's/^package://') 2>/dev/null").trim().substringBefore(' ')
         }.getOrDefault("")
-        return TiviKitLauncher.TrangThai(j?.optString("ban")?.takeIf { it.isNotBlank() } ?: "?", j?.optBoolean("homeBat") == true,
-            coSan != vn.tivikit.dulieu.sha256(apk))
+        return TiviKitLauncher.trangThai(j, coSan != vn.tivikit.dulieu.sha256(apk))
+    }
+
+    /** Gửi cấu hình cho TiviKit Launcher (TiviKitLauncher.cauHinh). */
+    fun datCauHinhTkl(cauHinh: String) { sh(TiviKitLauncher.lenhDat(cauHinh)) }
+
+    /**
+     * Ảnh nền của TiviKit Launcher; [anh] null = về ảnh mặc định đi kèm launcher. Gửi bằng content write như ảnh nền Home
+     * sạch rồi đọc lại cỡ file launcher đang giữ (nó kiểm ảnh xong mới thay, có thể chậm một chút): false nếu không nhận.
+     */
+    fun datNenTkl(anh: ByteArray?): Boolean {
+        if (anh == null) {
+            sh("content delete --uri ${TiviKitLauncher.URI_NEN} 2>/dev/null; true")
+            return true
+        }
+        val tam = "/data/local/tmp/tivikit-launcher-nen.jpg"
+        adb.ghiFile(tam, anh)
+        sh("content write --uri ${TiviKitLauncher.URI_NEN} < $tam 2>/dev/null; rm -f $tam")
+        repeat(10) {
+            if (TiviKitLauncher.docKetQua(sh(TiviKitLauncher.LENH_DOC))?.optLong("nen") == anh.size.toLong()) return true
+            Thread.sleep(300)
+        }
+        return false
     }
 
     /**

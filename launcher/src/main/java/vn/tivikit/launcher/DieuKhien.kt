@@ -54,7 +54,8 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         tt.coDonRam = HeThong.donDuocRam()
         // StateFlow phát giá trị hiện tại trước: lần đầu cũng đọc cấu hình ở đây.
         scope.launch { CauHinh.lanDoi.collect { apCauHinh() } }
-        scope.launch { tt.nen = withContext(Dispatchers.Default) { runCatching { taiNen() }.getOrNull() } }
+        // Lần đầu, và mỗi lần TiviKit gửi / bỏ ảnh nền riêng: dựng lại ảnh nền và bản mờ cho kính.
+        scope.launch { CauHinh.lanNen.collect { tt.nen = withContext(Dispatchers.Default) { runCatching { taiNen() }.getOrNull() } ?: tt.nen } }
     }
 
     fun hien() {

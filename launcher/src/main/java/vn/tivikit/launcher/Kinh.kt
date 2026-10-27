@@ -82,6 +82,13 @@ object AnhNen {
         return NenKinh(anh.asImageBitmap(), mo.asImageBitmap())
     }
 
+    /** File là ảnh giải mã được (TiviKit gửi ảnh nền riêng). */
+    fun hopLe(f: java.io.File): Boolean = runCatching {
+        val bien = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(f.path, bien)
+        bien.outWidth > 0 && bien.outHeight > 0
+    }.getOrDefault(false)
+
     /** Giải mã ảnh với cỡ vừa đủ phủ [w]×[h] (ảnh chụp 12 MP không làm đầy RAM của tivi). */
     fun giaiMa(mo: () -> InputStream, w: Int, h: Int): Bitmap? {
         val bien = BitmapFactory.Options().apply { inJustDecodeBounds = true }

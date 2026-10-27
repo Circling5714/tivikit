@@ -70,6 +70,9 @@ Màn chính → TiviKit Launcher (mở màn Quản lý launcher, thẻ TiviKit L
 | Tivi có Home sạch đặt tên lời chào và nơi xem thời tiết → Cài lên tivi / Cập nhật | Lời chào có tên; dòng âm lịch có biểu tượng, nhiệt độ, trời (VD "26°C Nhiều mây") |
 | Mở app bằng giọng nói hay nút remote gán riêng, rồi bấm Home | App đó vẫn hiện sau vạch ngăn (thống kê sử dụng) |
 | Tivi thường (không phải box RAM thấp): phát nhạc / video trong SmartTube hay YouTube Music, bấm Home | Thẻ Đang phát trên dock: tên bài, tên app, sóng nhạc; OK mở lại đúng màn đang phát; giữ OK tạm dừng / phát tiếp |
+| Tuỳ chỉnh → đổi tên lời chào, chọn ảnh nền có sẵn → Áp dụng lên tivi | Màn Home trên tivi đổi tên và ảnh ngay; thẻ ghi "Tivi đang dùng ảnh riêng" |
+| Tuỳ chỉnh → Ảnh từ điện thoại → Áp dụng | Ảnh chụp lên làm nền (cắt giữa 16:9), kính mờ theo màu ảnh |
+| Tuỳ chỉnh → Đồi chè → Áp dụng; thời tiết "Không hiện" → Áp dụng | Về ảnh mặc định; dòng âm lịch thôi hiện thời tiết |
 | Khôi phục (mục 1) khi TiviKit Launcher đang là Home | Home về như trước; TiviKit Launcher bị gỡ |
 
 - **Hỏng thì:** Quản lý launcher → Về Home gốc hay Đặt làm Home cho Home sạch; vẫn sai thì Khôi phục (mục 1).

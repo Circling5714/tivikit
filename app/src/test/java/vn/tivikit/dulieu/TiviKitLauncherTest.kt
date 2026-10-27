@@ -43,6 +43,27 @@ class TiviKitLauncherTest {
         assertTrue(TiviKitLauncher.LENH_CAP_QUYEN.contains("allow_listener vn.tivikit.launcher/vn.tivikit.launcher.NgheNhac"))
     }
 
+    @Test
+    fun tuyChinhTuDienThoai() {
+        // Đọc lại cấu hình launcher để điền sẵn phần Tuỳ chỉnh.
+        val j = JSONObject("""{"ban":"1.0","ma":1,"homeBat":true,"nen":81234,"cauHinh":{"ten":"hihi","noi":{"ten":"TP.HCM","lat":10.7769,"lon":106.7009}}}""")
+        val k = TiviKitLauncher.trangThai(j, canCapNhat = false)
+        assertEquals("hihi", k.ten)
+        assertEquals(ThanhPho("TP.HCM", 10.7769, 106.7009), k.noi)
+        assertTrue(k.coNenRieng)
+        assertTrue(k.homeBat)
+        val trong = TiviKitLauncher.trangThai(JSONObject("""{"ban":"1.0","cauHinh":{}}"""), canCapNhat = true)
+        assertNull(trong.noi)
+        assertFalse(trong.coNenRieng)
+        assertTrue(trong.canCapNhat)
+        // "Không hiện" thời tiết: gửi noi = null để launcher bỏ nơi đã lưu; lúc cài / cập nhật thì không đụng tới.
+        assertTrue(JSONObject(TiviKitLauncher.cauHinh("", true, null, boNoiNeuRong = true)).isNull("noi"))
+        assertFalse(JSONObject(TiviKitLauncher.cauHinh("", true, null)).has("noi"))
+        // Ảnh có sẵn đều có trong assets của app, ảnh đầu là ảnh mặc định của launcher.
+        assertEquals(TiviKitLauncher.NEN_MAC_DINH, TiviKitLauncher.ANH_CO_SAN.first().asset)
+        TiviKitLauncher.ANH_CO_SAN.forEach { assertTrue(it.asset, java.io.File("src/main/assets/${it.asset}").isFile) }
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun lenhDatTuChoiNhayDon() {
         TiviKitLauncher.lenhDat("{\"ten\":\"a'b\"}")

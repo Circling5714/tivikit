@@ -33,6 +33,9 @@ class CauHinh(ctx: Context) {
         /** Tăng mỗi lần cấu hình đổi (kể cả TiviKit ghi qua ADB) để màn Home đọc lại. */
         val lanDoi = MutableStateFlow(0)
 
+        /** Tăng mỗi lần TiviKit gửi / bỏ ảnh nền riêng (CauHinhProvider) để màn Home dựng lại ảnh nền và kính. */
+        val lanNen = MutableStateFlow(0)
+
         const val TEN_TOI_DA = 40
 
         /** Nơi xem thời tiết đã lưu ("noi": {ten, lat, lon}); null nếu chưa có / sai. */

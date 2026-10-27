@@ -43,6 +43,13 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
     /** TiviKit Launcher trên tivi (app phụ đi kèm TiviKit); null = chưa đọc được. */
     var tkl by mutableStateOf<TiviKitLauncher.TrangThai?>(null)
         private set
+    /** Phần Tuỳ chỉnh của thẻ TiviKit Launcher đang mở. */
+    var tklMo by mutableStateOf(false)
+    /** Ảnh nền chọn cho launcher, chưa gửi: ảnh có sẵn (đường dẫn trong assets) hoặc ảnh riêng từ điện thoại; cả hai null = giữ ảnh đang dùng. */
+    var nenTklAsset by mutableStateOf<String?>(null)
+        private set
+    var nenTklRieng by mutableStateOf<ByteArray?>(null)
+        private set
 
     sealed interface Hoi {
         /**
@@ -85,7 +92,10 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
     private fun apkTkl(): ByteArray = vn.tivikit.CapNhat.moAsset(vm.ctx, TiviKitLauncher.APK).use { it.readBytes() }
 
     /** Kết nối tivi khác. */
-    fun quen() { tt = null; ban = emptyMap(); homeSachMoi = false; dangMo = null; bao = ""; daThu = null; hoi = null; tkl = null }
+    fun quen() {
+        tt = null; ban = emptyMap(); homeSachMoi = false; dangMo = null; bao = ""; daThu = null; hoi = null
+        tkl = null; tklMo = false; nenTklAsset = null; nenTklRieng = null
+    }
 
     // ---------- TiviKit Launcher (27/10/2026) ----------
 
@@ -122,6 +132,47 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         val m = tt?.ds?.firstOrNull { it.goi == TiviKitLauncher.GOI && !it.dangTat }
             ?: error(t("Tivi chưa nhận TiviKit Launcher là màn Home. Bấm Đọc lại rồi thử lần nữa.", "The TV doesn't list TiviKit Launcher as a Home yet. Tap Read again and try once more."))
         chonDatHome(m)
+    }
+
+    /**
+     * Mở / đóng phần Tuỳ chỉnh. Tên lời chào và nơi xem thời tiết dùng chung với màn Home sạch; chưa chỉnh gì ở đó thì điền
+     * sẵn theo launcher trên tivi, kẻo bấm Áp dụng lại xoá mất của nó.
+     */
+    fun moTuyChinhTkl() {
+        tklMo = !tklMo
+        val k = tkl ?: return
+        if (tklMo) {
+            if (vm.tenChao.isBlank()) vm.tenChao = k.ten
+            if (vm.thanhPho == null) vm.thanhPho = k.noi
+        }
+    }
+
+    fun chonNenCoSan(asset: String) { nenTklAsset = asset; nenTklRieng = null }
+
+    /** Ảnh từ điện thoại: cắt giữa về 1920×1080 như ảnh nền riêng của Home sạch. */
+    fun chonNenDienThoai(uri: android.net.Uri) = vm.chay(t("Đang chuẩn bị ảnh…", "Preparing the picture…")) {
+        val goc = vm.io { vn.tivikit.dulieu.AnhNen.goc(vm.ctx, uri) } ?: error(t("Không đọc được ảnh này, thử ảnh khác.", "Couldn't read this picture, try another one."))
+        nenTklRieng = vm.io { vn.tivikit.dulieu.AnhNen.cat(goc, vn.tivikit.dulieu.AnhNen.Khung()) }
+            ?: error(t("Không cắt được ảnh này, thử ảnh khác.", "Couldn't crop this picture, try another one."))
+        nenTklAsset = null
+    }
+
+    /** Gửi tên lời chào, nơi xem thời tiết ("Không hiện" = bỏ) và ảnh nền đã chọn lên TiviKit Launcher. */
+    fun apDungTkl() = vm.chay(t("Đang gửi lên TiviKit Launcher…", "Sending to TiviKit Launcher…")) {
+        vm.damBaoKetNoi()
+        vm.io { vm.tv.datCauHinhTkl(TiviKitLauncher.cauHinh(vm.tenChao, NgonNgu.tiengViet, vm.thanhPho, boNoiNeuRong = true)) }
+        val asset = nenTklAsset
+        val rieng = nenTklRieng
+        if (asset != null || rieng != null) {
+            vm.thongBao = t("Đang gửi ảnh nền…", "Sending the wallpaper…")
+            val anh = rieng ?: asset?.takeIf { it != TiviKitLauncher.NEN_MAC_DINH }?.let { a -> vm.io { vm.ctx.assets.open(a).use { it.readBytes() } } }
+            if (!vm.io { vm.tv.datNenTkl(anh) }) error(t("TiviKit Launcher chưa nhận ảnh nền. Bấm Cập nhật ở thẻ rồi thử lại.",
+                "TiviKit Launcher didn't take the wallpaper. Tap Update on the card and try again."))
+            nenTklAsset = null
+            nenTklRieng = null
+        }
+        doc()
+        bao = t("Đã gửi lên TiviKit Launcher: màn Home trên tivi đổi ngay.", "Sent to TiviKit Launcher: the TV's Home changes right away.")
     }
 
     fun moThuTkl() = vm.chay(t("Đang mở TiviKit Launcher trên tivi…", "Opening TiviKit Launcher on the TV…")) {
