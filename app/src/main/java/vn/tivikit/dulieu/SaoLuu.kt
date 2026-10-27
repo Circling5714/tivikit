@@ -25,6 +25,8 @@ data class BanSaoLuu(
     var launcherDaCai: Boolean = false,
     var homeGocDaTat: String = "",
     var dnsDaDoi: Boolean = false,
+    /** Home mặc định đã đổi ở màn Quản lý launcher (27/10/2026): Khôi phục đặt lại [homeTruoc]. */
+    var homeDaDoi: Boolean = false,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("khoa", khoa); put("ten", ten); put("ip", ip); put("luc", luc)
@@ -34,6 +36,7 @@ data class BanSaoLuu(
         put("goiTruoc", JSONArray(goiTruoc))
         put("daTatBoiApp", JSONArray(daTatBoiApp.toList()))
         put("launcherDaCai", launcherDaCai); put("homeGocDaTat", homeGocDaTat); put("dnsDaDoi", dnsDaDoi)
+        put("homeDaDoi", homeDaDoi)
     }
 
     companion object {
@@ -46,7 +49,7 @@ data class BanSaoLuu(
                 truyCapTruoc = o.optString("truyCapTruoc"), getprop = o.optString("getprop"),
                 goiTruoc = list("goiTruoc"), daTatBoiApp = list("daTatBoiApp").toMutableSet(),
                 launcherDaCai = o.optBoolean("launcherDaCai"), homeGocDaTat = o.optString("homeGocDaTat"),
-                dnsDaDoi = o.optBoolean("dnsDaDoi"),
+                dnsDaDoi = o.optBoolean("dnsDaDoi"), homeDaDoi = o.optBoolean("homeDaDoi"),
             )
         }
     }

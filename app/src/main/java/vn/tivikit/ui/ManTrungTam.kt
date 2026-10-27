@@ -109,6 +109,14 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
                 }
             }
         },
+        // 27/10/2026: chọn launcher cho nút Home (Home sạch, Projectivy, Home gốc…), bật / tắt, gỡ.
+        MucChucNang(Icons.Rounded.Dashboard, MauO.tim, t("Quản lý launcher", "Launchers"),
+            t("Chọn launcher cho nút Home: Home sạch, Projectivy, Home gốc", "Pick what Home opens: clean Home, Projectivy, stock Home"), bat = !vm.laFireTv) {
+            vm.moChucNang {
+                if (vm.laFireTv) vm.loi = t("Fire TV không cho app nào thay màn Home (Amazon khoá).", "Fire TV doesn't let any app replace Home (Amazon locks it).")
+                else vm.qlLauncher.mo()
+            }
+        },
         MucChucNang(Icons.Rounded.Restore, MauO.cam, t("Khôi phục", "Restore"), t("Trả tivi về như trước khi dọn", "Put the TV back as it was")) {
             vm.moChucNang { vm.man = Man.KHOI_PHUC }
         },

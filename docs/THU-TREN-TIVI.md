@@ -30,7 +30,24 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 - **Hỏng thì:** bấm Áp dụng lần nữa; Home sạch không mở được thì Khôi phục (mục 1) rồi cài lại Home sạch.
 - Nhớ: app chọn ở "Mở khi khởi động" trên tivi phải chọn lại một lần.
 
-## 3. Home sạch 3.0: các công tắc mới
+## 3. Quản lý launcher
+
+Nên có thêm một launcher tự cài (VD Projectivy từ CH Play) để thử đổi qua lại.
+
+| Thử | Đạt khi |
+| --- | --- |
+| Quản lý launcher | Đủ launcher trên tivi, cả cái đang tắt (ghi "Đang tắt"), mỗi cái có mức ưu tiên; thẻ Nút Home ghi đúng cái bấm Home ra |
+| Bấm thử nút Home | Tivi mở Cài đặt rồi về Home; dòng "Vừa bấm thử" ghi đúng launcher hiện ra |
+| Projectivy → Đặt làm Home | Bấm Home trên remote ra Projectivy; app báo đã đặt |
+| Home gốc đang tắt → Bật lại | App hỏi trước nếu Home gốc sẽ giành Home; bật xong nút Home mở đúng như app báo |
+| Projectivy → Đặt làm Home khi Home gốc đang bật | App hỏi tắt Home gốc trước; xong thì bấm Home ra Projectivy, Khôi phục bật lại được Home gốc |
+| Đang dùng Projectivy, vào Home sạch → Áp dụng | Giao diện Home sạch đổi; nút Home vẫn mở Projectivy |
+| Google TV: Home sạch → Đặt làm Home, rồi Về Home gốc | Home sạch mở đè lên Home Google; về Home gốc thì bấm Home ra Home Google |
+| Home sạch → Đặt làm Home | Bấm Home ra Home sạch như trước |
+
+- **Hỏng thì:** Quản lý launcher → Về Home gốc; vẫn sai thì Khôi phục (mục 1).
+
+## 4. Home sạch 3.0: các công tắc mới
 
 | Thử | Đạt khi |
 | --- | --- |
@@ -44,14 +61,14 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 
 - **Hỏng thì:** tắt công tắc vừa bật, Áp dụng lại.
 
-## 4. Khoá trẻ em: giới hạn giờ xem
+## 5. Khoá trẻ em: giới hạn giờ xem
 
 - **Thử:** Khoá trẻ em → giới hạn giờ xem ngày thường và cuối tuần đều 6 phút → Lưu; xem tivi liên tục.
 - **Đạt khi:** còn 5 phút (tức sau khoảng 1 phút xem) thì tivi báo trước; hết giờ thì tivi khoá tới nửa đêm, nhập PIN
   mở được 60 phút; báo cáo thời gian xem trên điện thoại có số phút đúng.
 - **Hỏng thì:** mở bằng PIN, tắt giới hạn rồi Lưu.
 
-## 5. Quản lý app, Làm mới tivi, Kiểm tra mạng, Cài đặt nhanh
+## 6. Quản lý app, Làm mới tivi, Kiểm tra mạng, Cài đặt nhanh
 
 | Thử | Đạt khi |
 | --- | --- |
@@ -61,7 +78,7 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 | Kiểm tra mạng → Kiểm tra | Có sóng, độ trễ, nhận xét; thẻ CH Play đúng tình trạng tài khoản |
 | Cài đặt nhanh → hiệu ứng Nhanh, tự tắt 4 giờ | Cài đặt tivi hiện đúng giá trị mới; đặt lại được như cũ |
 
-## 6. Dòng lệnh ADB
+## 7. Dòng lệnh ADB
 
 | Thử | Đạt khi |
 | --- | --- |
@@ -74,7 +91,7 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 | Lệnh mẫu "Hiệu ứng chuyển màn nhanh gấp đôi" | In giá trị cũ trước khi đổi; cài đặt tivi đúng giá trị mới |
 | `logcat` chạy rồi bấm Quay lại | Lệnh dừng, không chạy ngầm trên tivi |
 
-## 7. Set App Link
+## 8. Set App Link
 
 | Thử | Đạt khi |
 | --- | --- |
@@ -84,7 +101,7 @@ Tivi đang có Home sạch cài từ TiviKit 1.1 trở về trước (bản 2.7,
 | Trang khác → gõ một tên miền (VD vimeo.com) | Thêm dòng mới, ghi đúng app nào nhận (hoặc chưa có app nào) |
 | Tivi Android 12 trở lên có YouTube gốc: chọn SmartTube cho YouTube | Link YouTube mở bằng SmartTube; app báo đã tắt tự mở link của YouTube gốc |
 
-## 8. Các tính năng còn lại
+## 9. Các tính năng còn lại
 
 | Thử | Đạt khi |
 | --- | --- |

@@ -50,6 +50,15 @@ class KichBanKhoiPhucTest {
         assertTrue(s.contains("adb shell settings put global private_dns_specifier Tivi-abc123.dns.nextdns.io"))
     }
 
+    /** Home đổi ở Quản lý launcher, tivi chưa cài Home sạch bằng app: vẫn trả Home cũ; hộp chọn ("android/…") thì không. */
+    @Test fun homeDaDoiOQuanLyLauncher() {
+        val s = KichBanKhoiPhuc.tao(sl().copy(launcherDaCai = false, homeDaDoi = true, homeTruoc = "com.google.android.tvlauncher/.MainActivity"), vi = true)
+        assertTrue(s.contains("adb shell cmd package set-home-activity --user 0 com.google.android.tvlauncher/.MainActivity"))
+        assertFalse(s.contains("enabled_accessibility_services"))
+        val hoi = KichBanKhoiPhuc.tao(sl().copy(homeDaDoi = true, homeTruoc = "android/com.android.internal.app.ResolverActivity"), vi = true)
+        assertEquals(0, hoi.lines().count { it.contains("set-home-activity") })
+    }
+
     @Test fun homeTruocLaHomeSachThiKhongDat() {
         val s = KichBanKhoiPhuc.tao(sl().copy(homeTruoc = "com.gathin.tvhome/.MainActivity"), vi = true)
         assertEquals(0, s.lines().count { it.contains("set-home-activity") })

@@ -10,10 +10,12 @@ import vn.tivikit.dulieu.KeHoach
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.KhoSaoLuu
+import vn.tivikit.dulieu.Launcher
 import vn.tivikit.dulieu.PhanApk
 import vn.tivikit.dulieu.PhimRieng
 import vn.tivikit.dulieu.ThongTinTv
 import vn.tivikit.dulieu.TrangThaiGoi
+import vn.tivikit.dulieu.tenDep
 
 /**
  * Mọi việc làm trên tivi. Thứ tự và các lớp bảo vệ lấy từ tools/disable.sh và
@@ -966,6 +968,174 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         sl.daTatBoiApp -= goc; sl.homeGocDaTat = ""; luuSaoLuu(sl)
     }
 
+    // ---------- Quản lý launcher (27/10/2026) ----------
+
+    /** Các launcher trên tivi, Home mặc định, nút Home đang mở gì (dulieu/Launcher). */
+    fun docLauncher(): Launcher.TrangThai {
+        val chu = adb.shell(Launcher.lenhDoc(pkgHome), 60).replace("\r", "")
+        // Android 9 trở xuống không liệt kê được màn HOME đang tắt: dò từng gói đang tắt (TX3 Mini: 22 gói, ~2,5 giây).
+        val tat = if (Launcher.thieuManTat(chu)) runCatching { adb.shell(Launcher.LENH_TAT_CO_HOME, 120).replace("\r", "") }.getOrNull() else null
+        return Launcher.tuChu(chu, pkgHome, HOME_SACH, tat)
+    }
+
+    /** versionName của các gói [goi], một lệnh. */
+    fun banCua(goi: Collection<String>): Map<String, String> {
+        val ds = goi.filter { TEN_GOI.matches(it) }
+        if (ds.isEmpty()) return emptyMap()
+        return sh("for p in ${ds.joinToString(" ")}; do echo \"\$p \$(dumpsys package \$p 2>/dev/null | grep -m1 -o 'versionName=[^ ]*')\"; done").lines().mapNotNull { l ->
+            val p = l.trim().split(' ')
+            p.getOrNull(1)?.removePrefix("versionName=")?.takeIf { it.isNotBlank() }?.let { p[0] to it }
+        }.toMap()
+    }
+
+    /**
+     * Launcher tự cài người dùng đang dùng làm Home (chọn ở Quản lý launcher hay tự đặt trên tivi): là Home mặc định, hoặc
+     * đang bật dịch vụ trợ năng (Projectivy "ghi đè launcher"). Đổi giao diện Home sạch thì không giành lại Home của nó:
+     * damBaoPhimHome sẽ coi nó là app giành nút Home và tắt.
+     */
+    fun launcherKhacDangDung(): String? = runCatching {
+        val tt = docLauncher()
+        tt.ds.firstOrNull { it.loai == Launcher.Loai.CAI_THEM && !it.dangTat && (it.goi == tt.goiMacDinh || it.goi in tt.troNangKhac) }?.goi
+    }.getOrNull()
+
+    /** Thử nút Home như người dùng bấm: mở Cài đặt, bấm Home thật, đợi launcher mở đè (Home sạch, Projectivy) rồi đọc gói. */
+    fun thuNutHome(): String {
+        sh("am start -a android.settings.SETTINGS >/dev/null 2>&1")
+        Thread.sleep(1500)
+        sh("input keyevent KEYCODE_HOME")
+        Thread.sleep(3000)
+        return goiDangHien()
+    }
+
+    /**
+     * Bật lại launcher [goi]. Android thấy thêm một Home cùng mức ưu tiên là quên Home mặc định và hỏi chọn ở lần bấm Home
+     * sau: đặt lại Home mặc định cũ. Launcher mức cao hơn thì thành Home luôn (màn hình đã hỏi trước), ghi vào sao lưu để
+     * Khôi phục trả Home như trước.
+     */
+    fun batLauncher(goi: String, sl: BanSaoLuu): Boolean {
+        val macDinh = homeHienTai()
+        if (!batLaiGoi(goi, sl)) return false
+        if (sl.homeGocDaTat == goi) sl.homeGocDaTat = ""
+        if (macDinh.contains('/') && !macDinh.startsWith("android/")) sh("cmd package set-home-activity --user 0 $macDinh")
+        if (homeHienTai() != macDinh) sl.homeDaDoi = true
+        luuSaoLuu(sl)
+        return true
+    }
+
+    /**
+     * Người dùng chọn launcher khác làm Home: gỡ các khoá làm Home sạch tự mở chính nó (không thì Home sạch mở đè lên
+     * launcher đó). Trả các khoá đã gỡ kèm giá trị cũ để trả lại nếu đổi Home không thành; tivi chưa có Home sạch thì rỗng.
+     */
+    private fun goKhoaGianhHome(): org.json.JSONObject {
+        val cu = org.json.JSONObject()
+        val j = docCauHinhTv() ?: return cu
+        Launcher.KHOA_GIANH_HOME.forEach { k -> if (j.has(k)) { cu.put(k, j.get(k)); j.remove(k) } }
+        if (cu.length() > 0) { ghiFileTheme("config.json", j.toString().toByteArray()); khoiDongLaiDichVuPhim() }
+        return cu
+    }
+
+    private fun traKhoaGianhHome(cu: org.json.JSONObject) {
+        if (cu.length() == 0) return
+        val j = docCauHinhTv() ?: return
+        cu.keys().forEach { k -> j.put(k, cu.get(k)) }
+        ghiFileTheme("config.json", j.toString().toByteArray())
+        khoiDongLaiDichVuPhim()
+    }
+
+    /**
+     * Kết quả đặt Home ở màn Quản lý launcher: [mo] = gói nút Home mở khi thử; [daTat] = launcher đã tắt để nhường Home;
+     * [boKhoa] = khoá Home sạch đã gỡ (mở đè Home gốc, tự về Home sạch khi bật tivi…); [lyDo] khi không được.
+     */
+    data class KetQuaDatHome(val ok: Boolean, val mo: String, val daTat: List<String> = emptyList(), val boKhoa: List<String> = emptyList(), val lyDo: String = "")
+
+    /**
+     * Đặt launcher [goi] làm Home (màn Quản lý launcher, 27/10/2026). Bật gói nếu đang tắt; tắt các launcher [nhuong]
+     * người dùng đã đồng ý (mức ưu tiên cao hơn nên Android luôn chọn chúng; tivi canh gác như lúc cài Home sạch); gỡ các
+     * khoá làm Home sạch tự mở đè; đặt Home mặc định; rồi mở Cài đặt và bấm Home thật để thử, hộp chọn Home hiện ra thì
+     * đóng và đặt lại. Không được thì trả mọi thứ như trước. Đích là Home sạch mà Home của hãng vẫn thắng (Google TV)
+     * thì cho Home sạch mở đè lên Home đó như damBaoPhimHome.
+     */
+    fun datHome(goi: String, sl: BanSaoLuu, nhuong: List<String>, bao: (String) -> Unit): KetQuaDatHome {
+        require(TEN_GOI.matches(goi)) { goi }
+        val laHomeSach = goi in HOME_SACH
+        val macDinhCu = homeHienTai()
+        val chuyenCu = docCauHinhTv()?.optString("stock_home_redirect")?.takeIf { it.isNotBlank() && it != "null" }.orEmpty()
+        val daTat = mutableListOf<String>()
+        var khoaCu = org.json.JSONObject()
+        var daGanChuyen = false
+
+        fun traLai(lyDo: String, mo: String): KetQuaDatHome {
+            bao(t("Không được, đang trả tivi như trước…", "It didn't work, putting the TV back as it was…"))
+            daTat.forEach { p -> sh("pm enable --user 0 $p"); sl.daTatBoiApp.remove(p) }
+            if (daTat.isNotEmpty()) luuSaoLuu(sl)
+            if (macDinhCu.contains('/') && !macDinhCu.startsWith("android/")) sh("cmd package set-home-activity --user 0 $macDinhCu")
+            traKhoaGianhHome(khoaCu)
+            if (daGanChuyen) { if (chuyenCu.isNotEmpty()) ganChuyenHomeCu(chuyenCu) else boChuyenHomeCu() }
+            sh("input keyevent KEYCODE_HOME")
+            boGac()
+            return KetQuaDatHome(false, mo, lyDo = lyDo)
+        }
+
+        if (dangTat(goi)) {
+            bao(t("Bật ${tenDep(goi)}…", "Enabling ${tenDep(goi)}…"))
+            sh("pm enable --user 0 $goi")
+            sl.daTatBoiApp.remove(goi)
+            if (sl.homeGocDaTat == goi) sl.homeGocDaTat = ""
+            luuSaoLuu(sl)
+        }
+        val cmp = sh("$HOME_QUERY $goi | tail -n 1").trim()
+        if (!cmp.startsWith("$goi/")) return KetQuaDatHome(false, "", lyDo = "khong-co-man")
+        for (p in nhuong) {
+            // Chốt lại dù màn hình đã lọc (Launcher.tatDuocDeNhuong): không bao giờ tắt setupwraith, Cài đặt, Home Google khi
+            // còn setupwraith (sự cố 1.1), Home bo CVTE.
+            if (!TEN_GOI.matches(p) || p == goi || p in HOME_SACH || p in KHONG_PHAI_HOME || KeHoach.laHomeCvte(p) || (p in HOME_GOC_BIET && dangBat(SETUP))) continue
+            if (!dangBat(p)) continue
+            bao(t("Tắt ${tenDep(p)} để nhường Home…", "Disabling ${tenDep(p)} so it gives up Home…"))
+            gacThem(p)
+            sh("pm disable-user --user 0 $p")
+            if (!dangBat(p)) {
+                daTat += p
+                if (p !in sl.daTatTruoc && p !in sl.daTatBoiApp) sl.daTatBoiApp += p
+                luuSaoLuu(sl)
+            }
+        }
+        if (!laHomeSach) khoaCu = goKhoaGianhHome()
+        bao(t("Đặt ${tenDep(goi)} làm Home…", "Making ${tenDep(goi)} the Home…"))
+        sh("cmd package set-home-activity --user 0 $cmp")
+        Thread.sleep(800)
+        // Hộp chọn ("android") hay không đọc được: để lượt thử bên dưới quyết.
+        val thang = homeHienTai().takeIf { it != cmp }?.substringBefore('/')?.takeIf { it.isNotBlank() && it != "android" }
+        if (thang != null) {
+            // Home của hãng mức ưu tiên cao hơn vẫn thắng (Google TV): Home sạch thì cho nó mở đè lên Home đó.
+            if (!laHomeSach || laBoMachCvte()) return traLai("chan:$thang", "")
+            bao(t("${tenDep(thang)} vẫn giữ Home: cho Home sạch mở đè lên nó…", "${tenDep(thang)} still holds Home: letting the clean Home open over it…"))
+            daGanChuyen = true
+            if (!ganChuyenHomeCu(thang)) return traLai("chan:$thang", "")
+        }
+        var mo = ""
+        repeat(3) { lan ->
+            giaHanGac()
+            sh("am start -a android.settings.SETTINGS >/dev/null 2>&1")
+            Thread.sleep(1500)
+            sh("input keyevent KEYCODE_HOME")
+            Thread.sleep(3000)
+            mo = goiDangHien()
+            if (mo == goi) {
+                boGac()
+                sl.homeDaDoi = true
+                luuSaoLuu(sl)
+                return KetQuaDatHome(true, mo, daTat, khoaCu.keys().asSequence().toList())
+            }
+            if (mo == "android") {
+                // Hộp chọn Home (vừa bật thêm một launcher cùng mức): đóng, đặt lại rồi thử lần nữa.
+                sh("input keyevent KEYCODE_BACK")
+                Thread.sleep(800)
+                sh("cmd package set-home-activity --user 0 $cmp")
+            } else if (lan == 0) bao(t("Chờ thêm rồi thử lại…", "Waiting a little, then trying again…"))
+        }
+        return traLai("mo:$mo", mo)
+    }
+
     // ---------- Canh gác Home trên tivi (24/10/2026) ----------
 
     /**
@@ -1179,6 +1349,17 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             }
             sl.launcherDaCai = !goLauncher && sl.launcherDaCai
             sl.homeGocDaTat = ""
+            sl.homeDaDoi = false
+            luuSaoLuu(sl)
+        }
+        if (sl.homeDaDoi) {
+            // Home đổi ở màn Quản lý launcher, tivi chưa từng cài Home sạch bằng app (27/10/2026): đặt lại Home như trước.
+            val goc = sl.homeTruoc
+            if (goc.contains('/') && !goc.startsWith("android/") && HOME_SACH.none { goc.startsWith("$it/") }) {
+                bao(t("Trả Home như trước…", "Restoring the previous Home…"))
+                sh("cmd package set-home-activity --user 0 $goc")
+            }
+            sl.homeDaDoi = false
             luuSaoLuu(sl)
         }
         if (sl.dnsDaDoi) {

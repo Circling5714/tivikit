@@ -207,6 +207,13 @@ val TEN_APP = mapOf(
     "com.google.android.apps.tv.launcherx" to "Màn hình Home gốc (Google TV)",
     "com.gathin.tvhome" to "Home sạch (CleanYourTV)",
     "com.ts.launcher" to "Home sạch (bản cho Xiaomi)",
+    // Launcher (màn Quản lý launcher, 27/10/2026; tên gói tự cài đã thử có trên CH Play).
+    "com.google.android.leanbacklauncher" to "Màn hình Home gốc (Android TV đời đầu)",
+    "com.mitv.tvhome" to "Màn hình Home gốc (Xiaomi)",
+    "com.spocky.projengmenu" to "Projectivy Launcher",
+    "me.efesser.flauncher" to "FLauncher",
+    "ca.dstudio.atvlauncher.pro" to "ATV Launcher Pro",
+    "eu.chainfire.tv.sideloadlauncher" to "Sideload Launcher",
     // Trình duyệt và app hay nhận link (màn Set App Link, 27/10/2026).
     "com.coccoc.trinhduyet_tv" to "Cốc Cốc",
     "com.phlox.tvwebbrowser" to "TV Bro",
@@ -232,6 +239,8 @@ private val TEN_APP_EN = mapOf(
     "com.google.android.apps.tv.launcherx" to "Stock Home (Google TV)",
     "com.gathin.tvhome" to "Clean Home (CleanYourTV)",
     "com.ts.launcher" to "Clean Home (Xiaomi build)",
+    "com.google.android.leanbacklauncher" to "Stock Home (early Android TV)",
+    "com.mitv.tvhome" to "Stock Home (Xiaomi)",
     "vn.tivikit.kenh" to "Quick channel (TiviKit)",
     "vn.tivikit.hengio" to "Timer (TiviKit)",
     "vn.tivikit.khoa" to "Kids lock (TiviKit)",

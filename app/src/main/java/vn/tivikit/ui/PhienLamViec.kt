@@ -41,9 +41,10 @@ import vn.tivikit.dulieu.MauTv
 import vn.tivikit.dulieu.MucGoi
 import vn.tivikit.dulieu.ThongTinTv
 import vn.tivikit.dulieu.TrangThaiGoi
+import vn.tivikit.dulieu.tenDep
 import java.net.Inet4Address
 
-enum class Man { CHINH, KET_NOI, THONG_TIN, CHON_GOI, DANG_TAT, HOME_SACH, XONG, KHOI_PHUC, HUONG_DAN, GIAY_PHEP, KHOA_TRE, CAI_APK, DIEU_KHIEN, QUAN_LY_APP, GUI_FILE, BO_CAI, DNS, GAN_PHIM, KENH_NHANH, HEN_GIO, LAM_MOI, MANG, CAI_DAT_NHANH, CHUYEN_MAY, LG, DONG_LENH, LIEN_KET_APP }
+enum class Man { CHINH, KET_NOI, THONG_TIN, CHON_GOI, DANG_TAT, HOME_SACH, XONG, KHOI_PHUC, HUONG_DAN, GIAY_PHEP, KHOA_TRE, CAI_APK, DIEU_KHIEN, QUAN_LY_APP, GUI_FILE, BO_CAI, DNS, GAN_PHIM, KENH_NHANH, HEN_GIO, LAM_MOI, MANG, CAI_DAT_NHANH, CHUYEN_MAY, LG, DONG_LENH, LIEN_KET_APP, LAUNCHER }
 
 /** Số app tối đa trong dock: bằng số cột lớn nhất của Home sạch (columns 1–8); dock dài hơn số cột thì tràn xuống hàng sau (22/10/2026, góp ý muốn hàng đầu nhiều app hơn). */
 const val DOCK_TOI_DA = 8
@@ -121,6 +122,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     val dongLenh by lazy { DongLenhTivi(this) }
     /** Set App Link: chọn app mở link của từng trang, VD link YouTube mở bằng SmartTube (ui/LienKetAppTivi.kt). */
     val lienKet by lazy { LienKetAppTivi(this) }
+    /** Quản lý launcher: chọn launcher cho nút Home, bật / tắt, gỡ (ui/QuanLyLauncher.kt). */
+    val qlLauncher by lazy { QuanLyLauncher(this) }
     /**
      * Tên các ô Kênh nhanh trên Home sạch (app_labels "vn.tivikit.kenh3=VTV3" trong config.json của tivi đang nối):
      * gói → tên. cauHinhHome ghép lại vào như phimRieng.
@@ -284,6 +287,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     var homeXong by mutableStateOf(false)
     /** Lần thử nút Home thật gần nhất ra Home sạch (thuPhimHome). */
     var phimHomeOk by mutableStateOf(true)
+    /** Đổi giao diện lúc nút Home đang mở launcher khác người dùng chọn (gói của nó): Home không bị đổi. */
+    var homeKhac by mutableStateOf<String?>(null)
     /** Kết quả bấm thử nút Home lần gần nhất, gửi kèm danh sách gói để chẩn đoán. */
     var phimHomeGhi = ""
     var themeChon by mutableStateOf(vn.tivikit.dulieu.THEMES.first())
@@ -743,7 +748,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Nút gán riêng / ô Kênh nhanh thuộc về tivi trước: tivi này đọc lại từ config.json của nó (napTuJson, màn Nút
         // remote, màn Kênh nhanh).
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
-        dongLenh.quen(); lienKet.quen()
+        dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
         xemManHinh.tat()
         tv.quenTivi()
         thongBao = t("Đang đọc thông tin tivi…", "Reading the TV…")
@@ -1407,6 +1412,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         if (laFireTv) error(t("Fire TV không cho app nào thay màn Home (Amazon khoá). TiviKit chỉ dọn được quảng cáo và app rác trên Fire TV.", "Fire TV does not let any app replace Home (Amazon locks it). On Fire TV TiviKit can only clean ads and junk apps."))
         val sl = saoLuu ?: io { tv.damBaoSaoLuu(thongTin!!, getprop, ip) }.also { saoLuu = it }
         nhatKy.clear()
+        homeKhac = null
         val apk = io { vn.tivikit.CapNhat.moAsset(ctx, tv.apkHome).readBytes() }
         val cauHinh = cauHinhHome()
         val anh = anhNenTheme()
@@ -1764,9 +1770,19 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         if (!dnsChanQc && dangChan) io { tv.tatDnsChanQc(saoLuu) }
         if (nutDangPhat) io { tv.choPhepDangPhat() }
         if (nutManCho) io { tv.chuanBiManCho(saoLuu) }
-        thongBao = t("Đang thử nút Home trên tivi…", "Testing the TV's Home button…")
-        val sl = saoLuu ?: thongTin?.let { tt -> runCatching { io { tv.damBaoSaoLuu(tt, getprop, ip) } }.getOrNull() }?.also { saoLuu = it }
-        thuPhimHome(sl)
+        // Người dùng đang dùng launcher khác làm Home (Quản lý launcher, 27/10/2026): chỉ đổi giao diện Home sạch, không
+        // giành lại Home — damBaoPhimHome sẽ coi launcher đó là app giành nút Home và tắt nó.
+        homeKhac = io { tv.launcherKhacDangDung() }
+        homeKhac?.let { g ->
+            // Cài đè Home sạch làm nó nhảy lên trước: TiviKit chạy ngay trên tivi thì đưa app về lại (thuPhimHome cũng làm).
+            veApp()
+            ghi(t("Nút Home đang mở ${tenDep(g)} (launcher bạn chọn) nên app không đổi Home. Muốn Home sạch làm Home: vào Quản lý launcher.",
+                "The Home button opens ${tenDep(g)} (the launcher you chose), so Home was left alone. To make the clean Home the Home, use Launchers."))
+        } ?: run {
+            thongBao = t("Đang thử nút Home trên tivi…", "Testing the TV's Home button…")
+            val sl = saoLuu ?: thongTin?.let { tt -> runCatching { io { tv.damBaoSaoLuu(tt, getprop, ip) } }.getOrNull() }?.also { saoLuu = it }
+            thuPhimHome(sl)
+        }
         vn.tivikit.Dem.gui(ctx, "home", tenTiviDem(), dock.size, "doi:${themeChon.id}")
         if (ghimMayChieu.isNotEmpty()) vn.tivikit.Dem.gui(ctx, "may-chieu", tenTiviDem(), ghimMayChieu.size, ghimMayChieu.keys.joinToString(",").take(110))
         homeXong = true
@@ -1878,7 +1894,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         veApp()
         vn.tivikit.Dem.gui(ctx, "khoi-phuc", tenTiviDem(), sl.daTatBoiApp.size)
         loiKp.forEach { ghi(t("Lỗi: $it", "Error: $it")) }
-        if (loiKp.isEmpty() && sl.daTatBoiApp.isEmpty() && !sl.launcherDaCai && !sl.dnsDaDoi) {
+        if (loiKp.isEmpty() && sl.daTatBoiApp.isEmpty() && !sl.launcherDaCai && !sl.dnsDaDoi && !sl.homeDaDoi) {
             kho.xoa(sl.khoa)
             io { tv.xoaSaoLuuTrenTv() }
             khoiPhucXong = true
@@ -1955,7 +1971,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         dsTatTv = null; chonBatLai.clear(); batLaiBao = ""
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
-        dongLenh.quen(); lienKet.quen()
+        dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
         xemManHinh.tat()
         dangDon = false; sauKetNoi = null
         taiLaiSaoLuu()

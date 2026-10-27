@@ -24,7 +24,8 @@ object KichBanKhoiPhuc {
         val goi = sl.daTatBoiApp.filter { TEN_GOI.matches(it) }
         if (goi.isNotEmpty()) chu(t("Bật lại ${goi.size} gói TiviKit đã tắt", "Re-enable the ${goi.size} packages TiviKit disabled"))
         goi.forEach { dong += "adb shell pm enable --user 0 $it" }
-        if (sl.launcherDaCai && THANH_PHAN.matches(sl.homeTruoc) && HOME_SACH.none { sl.homeTruoc.startsWith("$it/") }) {
+        if ((sl.launcherDaCai || sl.homeDaDoi) && THANH_PHAN.matches(sl.homeTruoc) && !sl.homeTruoc.startsWith("android/") &&
+            HOME_SACH.none { sl.homeTruoc.startsWith("$it/") }) {
             chu(t("Trả Home gốc", "Restore the stock Home"))
             dong += "adb shell cmd package set-home-activity --user 0 ${sl.homeTruoc}"
         }

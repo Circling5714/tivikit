@@ -136,6 +136,7 @@ fun UngDung(vm: PhienLamViec = viewModel()) {
                         Man.LG -> ManLg(vm)
                         Man.DONG_LENH -> ManDongLenh(vm)
                         Man.LIEN_KET_APP -> ManLienKetApp(vm)
+                        Man.LAUNCHER -> ManLauncher(vm)
                     }
                 }
                 if (vm.loi.isNotEmpty() || (vm.dangBan && vm.man != Man.DANG_TAT)) ThanhTrangThai(vm)
@@ -206,7 +207,7 @@ private fun quayLai(vm: PhienLamViec) {
         Man.HOME_SACH -> if (vm.moNangCao) { vm.moNangCao = false; Man.HOME_SACH } else vm.manTruocHome
         Man.XONG -> Man.HOME_SACH
         Man.HUONG_DAN, Man.GIAY_PHEP -> vm.manTruoc
-        Man.KHOA_TRE, Man.CAI_APK, Man.DIEU_KHIEN, Man.QUAN_LY_APP, Man.GUI_FILE, Man.DNS, Man.GAN_PHIM, Man.KENH_NHANH, Man.HEN_GIO, Man.LAM_MOI, Man.MANG, Man.CAI_DAT_NHANH, Man.CHUYEN_MAY, Man.LG, Man.LIEN_KET_APP -> { vm.veHub(); Man.CHINH }
+        Man.KHOA_TRE, Man.CAI_APK, Man.DIEU_KHIEN, Man.QUAN_LY_APP, Man.GUI_FILE, Man.DNS, Man.GAN_PHIM, Man.KENH_NHANH, Man.HEN_GIO, Man.LAM_MOI, Man.MANG, Man.CAI_DAT_NHANH, Man.CHUYEN_MAY, Man.LG, Man.LIEN_KET_APP, Man.LAUNCHER -> { vm.veHub(); Man.CHINH }
         // Rời Dòng lệnh thì dừng lệnh đang chạy (logcat…), không để chạy ngầm trên tivi.
         Man.DONG_LENH -> { vm.dongLenh.dung(); vm.veHub(); Man.CHINH }
         // Đang soạn bộ / chọn tivi thì về danh sách bộ; mở từ màn chính (chưa nối tivi) thì về màn chính.
@@ -1233,7 +1234,8 @@ private fun ManXong(vm: PhienLamViec) = Cuon {
             Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(52.dp), tint = Color.White)
         }
     }, t("Tivi đã sạch!", "The TV is clean!"),
-        if (vm.homeXong && vm.phimHomeOk) t("Home sạch đang chạy — bấm Home trên remote để xem.", "The clean Home is running — press Home on the remote.")
+        if (vm.homeXong && vm.homeKhac != null) t("Đã đổi giao diện Home sạch; nút Home vẫn mở ${tenDep(vm.homeKhac!!)} như bạn chọn.", "The clean Home's look is updated; Home still opens ${tenDep(vm.homeKhac!!)}, as you chose.")
+        else if (vm.homeXong && vm.phimHomeOk) t("Home sạch đang chạy — bấm Home trên remote để xem.", "The clean Home is running — press Home on the remote.")
         else if (vm.homeXong) t("Home sạch đã cài nhưng nút Home trên remote vẫn mở Home cũ (xem lời báo bên dưới).", "The clean Home is installed, but the remote's Home button still opens the old Home (see the note below).")
         else null)
     The(t("Trước khi về", "Before you leave"), Icons.Rounded.Checklist) {
@@ -1312,7 +1314,7 @@ private fun ManKhoiPhuc(vm: PhienLamViec) = Cuon {
     }
     DauTrang({ OIcon(Icons.Rounded.Restore, 72.dp) }, t("Khôi phục ${sl.ten}", "Restore ${sl.ten}"),
         t("Bật lại ${sl.daTatBoiApp.size} gói", "Re-enable ${sl.daTatBoiApp.size} packages") +
-            (if (sl.launcherDaCai) t(", trả Home gốc", ", restore the stock Home") else "") +
+            (if (sl.launcherDaCai || sl.homeDaDoi) t(", trả Home gốc", ", restore the stock Home") else "") +
             (if (sl.dnsDaDoi) t(", trả DNS", ", restore DNS") else "") + ".")
     var goHome by remember { mutableStateOf(true) }
     if (sl.launcherDaCai) The {

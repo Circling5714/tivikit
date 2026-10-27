@@ -111,7 +111,7 @@ object SaoLuuApp {
         val (cu, moi) = if (a.luc <= b.luc) a to b else b to a
         return cu.copy(ip = moi.ip.ifBlank { cu.ip }, daTatBoiApp = (cu.daTatBoiApp + moi.daTatBoiApp).toCollection(linkedSetOf()),
             launcherDaCai = cu.launcherDaCai || moi.launcherDaCai, homeGocDaTat = cu.homeGocDaTat.ifBlank { moi.homeGocDaTat },
-            dnsDaDoi = cu.dnsDaDoi || moi.dnsDaDoi)
+            dnsDaDoi = cu.dnsDaDoi || moi.dnsDaDoi, homeDaDoi = cu.homeDaDoi || moi.homeDaDoi)
     }
 
     private fun ghiAnToan(dich: File, s: String) {
