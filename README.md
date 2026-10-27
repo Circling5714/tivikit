@@ -63,7 +63,7 @@ Phần này lấy từ CleanTV 2.8.2, bản đã phát hành công khai, kèm c�
 
 ### Chăm sóc tivi
 
-- ⚠️ **Làm mới tivi**: RAM, CPU, nhiệt độ chip, bộ nhớ, thời gian tivi chạy liền; app nào đang ăn CPU và tivi quá tải vì việc gì (VD CH Play đang cập nhật dồn); một chạm đóng app nằm nền, chỉ xoá cache khi bộ nhớ gần đầy; chạy liền quá 7 ngày thì gợi ý khởi động lại.
+- ⚠️ **Làm mới tivi**: RAM, CPU bận (đo thật trong 1 giây, không theo số tải vốn cao ảo trên chip MStar / MediaTek), nhiệt độ chip, bộ nhớ, thời gian tivi chạy liền; app nào đang ăn CPU và tivi quá tải vì việc gì (VD CH Play đang cập nhật dồn); một chạm đóng app nằm nền, chỉ xoá cache khi bộ nhớ gần đầy; chạy liền quá 7 ngày thì gợi ý khởi động lại.
 - ⚠️ **Kiểm tra mạng**: sóng Wi-Fi, băng tần, độ trễ, kèm nhận xét cách sửa khi YouTube giật; rồi xem CH Play và tài khoản Google: gói Google bị tắt, giờ tivi lệch, tài khoản cần đăng nhập lại (lúc CH Play báo nhầm là lỗi Wi-Fi).
 - ⚠️ **Cài đặt nhanh**: hiệu ứng nhanh hơn, tự tắt sau 4 giờ không dùng, màn hình chờ, tiếng bấm remote.
 - ⚠️ **Quản lý app**: dung lượng, xoá cache, gỡ, lưu APK; tắt / bật lại app (VD tắt YouTube gốc khi đã dùng SmartTube); thẻ Đang chạy ngầm cho thấy RAM từng app chạy nền và chỉ ra app nên tắt (VD microG không còn app nào dùng, trình cập nhật ROM của box). Tên và ảnh app hỏi thẳng tivi bằng một lớp Java nhỏ chạy qua app_process (không cài gì lên tivi), cả danh sách một lượt; các màn khác cũng hiện tên thật thay vì đuôi tên gói.
@@ -233,7 +233,7 @@ From CleanTV 2.8.2, a publicly released app, with fixes ported up to 3.0.0; Tivi
 
 ### TV care
 
-- ⚠️ **Refresh the TV**: RAM, CPU load, chip temperature, storage and uptime; which processes use the CPU and why the TV is overloaded (e.g. the Play Store catching up on updates); close background apps in one tap, clear caches only when storage is nearly full, suggest a reboot after 7 days up.
+- ⚠️ **Refresh the TV**: RAM, CPU busy (measured over 1 second, not the load average, which is falsely high on MStar / MediaTek chips), chip temperature, storage and uptime; which processes use the CPU and why the TV is overloaded (e.g. the Play Store catching up on updates); close background apps in one tap, clear caches only when storage is nearly full, suggest a reboot after 7 days up.
 - ⚠️ **Network check**: Wi-Fi signal, band and latency, with advice when YouTube stutters; then the Play Store and Google account: disabled Google packages, a wrong clock, an account that needs signing in again (when the Play Store wrongly blames the Wi-Fi).
 - ⚠️ **Quick settings**: faster animations, auto-off after 4 idle hours, screensaver, remote click sounds.
 - ⚠️ **Manage apps**: size, clear cache, uninstall, save the APK, disable / re-enable (e.g. turn off the stock YouTube when using SmartTube); a Running in the background card shows each app's RAM and flags the ones worth disabling (e.g. microG that no app uses, the box's firmware updater). App names and pictures come straight from the TV through a small Java class run with app_process (nothing is installed), the whole list at once; other screens show real names instead of package suffixes.

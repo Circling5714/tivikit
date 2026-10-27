@@ -42,6 +42,17 @@ class AppTrenTvTest {
         assertEquals(70, tt.nhietDo)
         assertEquals(listOf("com.android.vending:background", "surfaceflinger"), tt.anCpu.map { it.ten })
         assertEquals(1_177_420L, tt.ram?.conKb)
+        // Lệnh cũ chưa có đoạn /proc/stat: không có số CPU bận, màn hiện tải như trước.
+        assertEquals(null, tt.cpuBan)
+    }
+
+    /** 27/10/2026: đoạn thứ 8 là hai dòng /proc/stat cách nhau 1 giây (Skyworth SWTV-22AE, tải 70 mà CPU bận 42%). */
+    @Test fun tinhTrangCoCpuBan() {
+        val out = "MemTotal: 1807460 kB\nMemAvailable: 601372 kB\n@@\n402.98 783.63\n@@\n@@\n70.76 48.93 22.11 2/1908 5458\n@@\n0-3\n@@\n@@\n" +
+            "Load: 70.76 / 48.93 / 22.11\n@@\ncpu  36190 5012 35896 71121 3308 0 1186 0 0 0\ncpu  36556 5016 36324 72237 3308 0 1198 0 0 0\n"
+        val tt = AppTrenTv.tuTinhTrang(out)
+        assertEquals(42, tt.cpuBan)
+        assertEquals(70.76, tt.tai!!, 0.001)
     }
 
     @Test fun danhSach() {

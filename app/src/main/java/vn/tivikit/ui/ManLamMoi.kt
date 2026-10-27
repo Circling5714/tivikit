@@ -26,6 +26,7 @@ import kotlin.math.roundToInt
 /**
  * Màn Làm mới tivi (25/10/2026): tình trạng RAM / bộ nhớ / thời gian chạy, làm mới một chạm, gợi ý khởi động lại.
  * 26/10/2026: thêm tải CPU, nhiệt độ, ai đang ăn CPU và tivi đang bận việc gì.
+ * 27/10/2026: CPU là phần trăm bận đo bằng /proc/stat trong 1 giây, không còn theo tải trung bình (cao ảo trên chip MStar).
  */
 @Composable
 internal fun ManLamMoi(vm: PhienLamViec) = Cuon {
@@ -49,8 +50,12 @@ internal fun ManLamMoi(vm: PhienLamViec) = Cuon {
             ChiSo(t("Bộ nhớ", "Storage"), bn?.let { t("Trống ${kb(it.conKb)} / ${kb(it.tongKb)}", "${kb(it.conKb)} free of ${kb(it.tongKb)}") } ?: "?",
                 bn?.let { it.dungKb.toFloat() / it.tongKb }, bn != null && LamMoi.boNhoGanDay(bn.tongKb, bn.conKb))
             ChiSo(t("Chạy liên tục", "Running for"), tt.chayGiay?.let { thoiGian(it) } ?: "?", null, chayLau)
-            tt.tai?.let { tai ->
-                val nhan = tt.soNhan
+            val nhan = tt.soNhan
+            val ban = tt.cpuBan
+            if (ban != null) ChiSo("CPU", if (nhan != null) t("Bận $ban% · $nhan nhân", "$ban% busy · $nhan cores") else t("Bận $ban%", "$ban% busy"),
+                ban / 100f, LamMoi.quaTai(ban, tt.tai, nhan))
+            // Không đọc được /proc/stat: theo tải trung bình như trước (có thể cao ảo trên tivi chip MStar / MediaTek).
+            else tt.tai?.let { tai ->
                 ChiSo("CPU", if (nhan != null) t("Tải ${so1(tai)} · $nhan nhân", "Load ${so1(tai)} · $nhan cores") else t("Tải ${so1(tai)}", "Load ${so1(tai)}"),
                     nhan?.let { (tai / (it * 2)).toFloat() }, nhan != null && LamMoi.quaTai(tai, nhan))
             }
@@ -62,7 +67,7 @@ internal fun ManLamMoi(vm: PhienLamViec) = Cuon {
     }
 
     // Quá tải: nói tivi đang bận việc gì và nên làm gì (VD CH Play cập nhật dồn sau khi đăng nhập lại: đợi rồi khởi động lại).
-    if (tt != null && tt.tai != null && tt.soNhan != null && LamMoi.quaTai(tt.tai, tt.soNhan)) {
+    if (tt != null && LamMoi.quaTai(tt.cpuBan, tt.tai, tt.soNhan)) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(NenCanhBao).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Speed, null, tint = Cam); Spacer(Modifier.width(8.dp))

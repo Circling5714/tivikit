@@ -44,6 +44,9 @@ object LamMoi {
     /** Tải trung bình 1 phút / số nhân từ chừng này trở lên là quá tải (box TX3 lúc cập nhật dồn: 12–17 trên 4 nhân). */
     const val TAI_MOI_NHAN = 1.5
 
+    /** CPU bận (phần trăm cả chip, đo /proc/stat) từ chừng này trở lên là quá tải. */
+    const val BAN_QUA_TAI = 85
+
     /** Nhiệt độ chip (°C) từ chừng này trở lên là nóng, chip bắt đầu tự giảm xung. */
     const val NONG = 80
 
@@ -58,6 +61,31 @@ object LamMoi {
 
     /** Tải trung bình 1 phút: số đầu của /proc/loadavg. */
     fun tuLoadavg(s: String): Double? = s.trim().substringBefore(' ').toDoubleOrNull()?.takeIf { it >= 0 }
+
+    /**
+     * Phần trăm CPU bận trên cả chip giữa hai dòng "cpu …" của /proc/stat (27/10/2026). Tải trung bình không đo được CPU trên
+     * tivi chip MStar / MediaTek: luồng nhân của driver video nằm chờ (trạng thái D) cũng tính vào tải — Skyworth SWTV-22AE
+     * đang phát SmartTube báo tải 70 trên 4 nhân mà CPU chỉ bận 42%. Bận = tổng − rảnh − chờ đĩa (8 cột đầu; guest đã nằm
+     * trong user). TiviKit chạy ngay trên tivi thì lệnh in thêm dòng "utime stime" của chính nó sau mỗi dòng cpu: phần đó
+     * trừ ra (TX3: vẽ màn vừa mở + vòng chờ làm số đo lên 81% trong khi tivi chỉ bận 13–24%). Không đủ hai dòng / không đổi
+     * gì thì null.
+     */
+    fun tuProcStat(s: String): Int? {
+        val ds = s.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+        val dong = ds.filter { it.startsWith("cpu ") }
+        if (dong.size < 2) return null
+        fun cot(l: String) = l.split(Regex("\\s+")).drop(1).take(8).mapNotNull { it.toLongOrNull() }
+        val a = cot(dong[0]); val b = cot(dong[dong.size - 1])
+        if (a.size < 5 || b.size != a.size) return null
+        val tong = b.sum() - a.sum()
+        val ranh = (b[3] + b[4]) - (a[3] + a[4])
+        if (tong <= 0) return null
+        val rieng = ds.filter { DONG_RIENG.matches(it) }.map { l -> l.split(' ').sumOf { it.toLong() } }
+        val tuDung = if (rieng.size == 2) (rieng[1] - rieng[0]).coerceAtLeast(0) else 0
+        return ((tong - ranh - tuDung).coerceAtLeast(0) * 100 / tong).toInt().coerceIn(0, 100)
+    }
+
+    private val DONG_RIENG = Regex("""^\d+ \d+$""")
 
     /** Số nhân từ /sys/devices/system/cpu/possible: "0-3" → 4, "0-1,4-7" → 6. */
     fun tuSoNhan(s: String): Int? = s.trim().takeIf { it.isNotEmpty() }?.split(',')?.sumOf { k ->
@@ -74,6 +102,13 @@ object LamMoi {
     }
 
     fun quaTai(tai: Double, soNhan: Int): Boolean = soNhan > 0 && tai >= soNhan * TAI_MOI_NHAN
+
+    /** Quá tải: đo được CPU bận thì theo nó; không thì theo tải trung bình như trước (máy không đọc được /proc/stat). */
+    fun quaTai(cpuBan: Int?, tai: Double?, soNhan: Int?): Boolean = when {
+        cpuBan != null -> cpuBan >= BAN_QUA_TAI
+        tai != null && soNhan != null -> quaTai(tai, soNhan)
+        else -> false
+    }
 
     fun nhom(ten: String): Nhom = when {
         ten.startsWith("dex2oat") || ten == "installd" || ten.startsWith("com.android.vending") -> Nhom.CAP_NHAT

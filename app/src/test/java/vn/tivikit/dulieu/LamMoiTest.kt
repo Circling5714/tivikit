@@ -96,4 +96,32 @@ class LamMoiTest {
         assertTrue(LamMoi.chayLau(7 * 86_400L))
         assertEquals(Triple(12L, 4L, 5L), LamMoi.tach(12 * 86_400L + 4 * 3_600 + 5 * 60 + 59))
     }
+
+    /** CPU bận đo bằng /proc/stat: Skyworth SWTV-22AE phát SmartTube, tải trung bình 70 trên 4 nhân mà CPU chỉ bận 42%. */
+    @Test fun cpuBan_tuProcStat() {
+        val a = "cpu  36190 5012 35896 71121 3308 0 1186 0 0 0"
+        val b = "cpu  36556 5016 36324 72237 3308 0 1198 0 0 0"
+        assertEquals(42, LamMoi.tuProcStat("$a\n$b\n"))
+        // Chờ đĩa (iowait) tính là rảnh; hai mẫu như nhau / thiếu dòng / sai dạng thì không có số.
+        assertEquals(50, LamMoi.tuProcStat("cpu 0 0 0 0 0 0 0 0\ncpu 50 0 0 25 25 0 0 0\n"))
+        assertEquals(null, LamMoi.tuProcStat("$a\n$a\n"))
+        assertEquals(null, LamMoi.tuProcStat(a))
+        assertEquals(null, LamMoi.tuProcStat("cpu x y z\ncpu 1 2 3\n"))
+        // Dòng cpu0..cpu3 của từng nhân không lẫn vào.
+        assertEquals(42, LamMoi.tuProcStat("$a\ncpu0 1 2 3 4 5 6 7 8\n$b\ncpu0 9 9 9 9 9 9 9 9\n"))
+        // TiviKit chạy trên chính tivi: utime / stime của nó (dòng "u s" sau mỗi dòng cpu) trừ ra khỏi phần bận.
+        // Bận 80 / 180 nhịp, trong đó TiviKit 50: tivi bận (80 − 50) / 180 = 16%.
+        assertEquals(16, LamMoi.tuProcStat("cpu 0 0 0 0 0 0 0 0\n100 20\ncpu 80 0 0 100 0 0 0 0\n130 40\n"))
+        // Thiếu một dòng riêng (tiến trình vừa thoát): không trừ.
+        assertEquals(44, LamMoi.tuProcStat("cpu 0 0 0 0 0 0 0 0\n100 20\ncpu 80 0 0 100 0 0 0 0\n"))
+    }
+
+    @Test fun quaTai_theoCpuBanTruoc() {
+        // Đo được CPU bận thì không theo tải (tải 70 trên 4 nhân là cao ảo).
+        assertFalse(LamMoi.quaTai(42, 70.0, 4))
+        assertTrue(LamMoi.quaTai(90, 2.0, 4))
+        // Không đo được: theo tải như trước.
+        assertTrue(LamMoi.quaTai(null, 12.53, 4))
+        assertFalse(LamMoi.quaTai(null, null, 4))
+    }
 }

@@ -14,11 +14,13 @@ data class BoNho(val tongKb: Long, val dungKb: Long, val conKb: Long)
 
 /**
  * Tình trạng tivi cho màn Làm mới: RAM, bộ nhớ /data, số giây từ lần khởi động gần nhất, tải CPU 1 phút, số nhân, nhiệt độ
- * chip (°C), tiến trình ăn CPU nhiều nhất (26/10/2026); null / rỗng = không đọc được.
+ * chip (°C), tiến trình ăn CPU nhiều nhất (26/10/2026), phần trăm CPU bận đo trong 1 giây (/proc/stat, 27/10/2026);
+ * null / rỗng = không đọc được.
  */
 data class TinhTrangTv(
     val ram: LamMoi.Ram?, val boNho: BoNho?, val chayGiay: Long?,
     val tai: Double? = null, val soNhan: Int? = null, val nhietDo: Int? = null, val anCpu: List<LamMoi.TienTrinh> = emptyList(),
+    val cpuBan: Int? = null,
 )
 
 /** Cỡ dữ liệu theo `dumpsys diskstats` (byte; Android tự đo mỗi ngày một lần nên có thể cũ). */
@@ -33,10 +35,14 @@ class AppTrenTv(private val adb: KetNoiAdb) {
 
     fun boNho(): BoNho? = tuDf(sh("df -k /data"))
 
-    /** RAM, bộ nhớ, thời gian chạy, tải CPU, nhiệt độ và ai đang ăn CPU, một lệnh shell (màn Làm mới tivi). */
+    /**
+     * RAM, bộ nhớ, thời gian chạy, tải CPU, nhiệt độ, ai đang ăn CPU và CPU bận trong 1 giây (hai dòng /proc/stat cách nhau
+     * 1 giây, kèm utime / stime của chính TiviKit nếu nó chạy trên tivi để trừ ra), một lệnh shell (màn Làm mới tivi).
+     */
     fun tinhTrang(): TinhTrangTv = tuTinhTrang(sh("cat /proc/meminfo; echo @@; cat /proc/uptime; echo @@; df -k /data; echo @@; " +
         "cat /proc/loadavg; echo @@; cat /sys/devices/system/cpu/possible; echo @@; cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null; " +
-        "echo @@; dumpsys cpuinfo 2>/dev/null | head -n 30"))
+        "echo @@; dumpsys cpuinfo 2>/dev/null | head -n 30; echo @@; p=\$(pidof ${vn.tivikit.BuildConfig.APPLICATION_ID} | cut -d' ' -f1); " +
+        "for i in 1 2; do head -n 1 /proc/stat; [ -n \"\$p\" ] && cut -d' ' -f14,15 /proc/\$p/stat 2>/dev/null; [ \$i = 1 ] && sleep 1; done; true"))
 
     /**
      * Đóng các app đang nằm chờ trong bộ nhớ: `am kill-all` chỉ đóng tiến trình nền an toàn để đóng — không đụng app đang
@@ -121,12 +127,13 @@ class AppTrenTv(private val adb: KetNoiAdb) {
             return BoNho(tong, dung, con)
         }
 
-        /** Kết quả lệnh của tinhTrang: meminfo, uptime, df, loadavg, số nhân, nhiệt độ, cpuinfo cách nhau bằng dòng "@@". */
+        /** Kết quả lệnh của tinhTrang: meminfo, uptime, df, loadavg, số nhân, nhiệt độ, cpuinfo, /proc/stat cách nhau bằng "@@". */
         fun tuTinhTrang(out: String): TinhTrangTv {
             val p = out.split("@@")
             fun doan(i: Int) = p.getOrElse(i) { "" }
             return TinhTrangTv(LamMoi.tuMeminfo(doan(0)), tuDf(doan(2)), LamMoi.tuUptime(doan(1)),
-                LamMoi.tuLoadavg(doan(3)), LamMoi.tuSoNhan(doan(4)), LamMoi.tuNhietDo(doan(5)), LamMoi.tuCpuinfo(doan(6)).take(6))
+                LamMoi.tuLoadavg(doan(3)), LamMoi.tuSoNhan(doan(4)), LamMoi.tuNhietDo(doan(5)), LamMoi.tuCpuinfo(doan(6)).take(6),
+                LamMoi.tuProcStat(doan(7)))
         }
 
         /** Kết quả lệnh của chayNgam: `ps -A -o RSS,NAME`, rồi `pm list packages` sau dòng "@@". */
