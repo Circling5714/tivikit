@@ -49,6 +49,15 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
                 "case \"\$a\" in *$pkgHome*) sleep 1; settings put secure enabled_accessibility_services ''; settings put secure accessibility_enabled 0; " +
                 "sleep 1; settings put secure enabled_accessibility_services \"\$a\"; settings put secure accessibility_enabled 1 ;; esac"
 
+    /**
+     * Tắt hẳn Home sạch mà không mở lại màn Home, rồi bật lại dịch vụ trợ năng của nó: force-stop làm Android gỡ dịch vụ
+     * trợ năng của gói khỏi danh sách (TX3 Mini, Android 9: HomeKeyService mất), nên đọc danh sách trước như trên.
+     */
+    private val TAT_HAN_HOME get() =
+            "a=\$(settings get secure enabled_accessibility_services); am force-stop $pkgHome; " +
+                "case \"\$a\" in *$pkgHome*) sleep 1; settings put secure enabled_accessibility_services ''; settings put secure accessibility_enabled 0; " +
+                "sleep 1; settings put secure enabled_accessibility_services \"\$a\"; settings put secure accessibility_enabled 1 ;; esac"
+
 
     private fun sh(lenh: String): String = adb.shell(lenh).replace("\r", "")
 
@@ -1170,6 +1179,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
                     boGac()
                     sl.homeDaDoi = true
                     luuSaoLuu(sl)
+                    // Launcher khác đã là Home: Home sạch chỉ còn lo nút remote / mở đè, bỏ màn Home cũ của nó khỏi RAM.
+                    if (!laHomeSach) giaiPhongHomeSach()
                     return KetQuaDatHome(true, mo, daTat, boKhoa, quaHomeSach)
                 }
                 if (mo == "android") break
@@ -1182,6 +1193,15 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             } else if (lan == 0) bao(t("Chờ thêm rồi thử lại…", "Waiting a little, then trying again…"))
         }
         return traLai("mo:$mo", mo)
+    }
+
+    /**
+     * Tắt hẳn Home sạch rồi bật lại dịch vụ phím của nó (TAT_HAN_HOME): chỉ còn dịch vụ chạy, màn Home cũ thôi nằm trong RAM.
+     * Đo trên TX3 Mini: Home sạch giữ màn Home cũ 18–32 MB, chỉ dịch vụ phím 5 MB (27/10/2026).
+     */
+    private fun giaiPhongHomeSach() {
+        if (!coGoi(pkgHome) || runCatching { goiDangHien() }.getOrDefault("") == pkgHome) return
+        runCatching { sh(TAT_HAN_HOME) }
     }
 
     /**
@@ -1754,7 +1774,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
 
     /**
      * Cài / cập nhật TiviKit Launcher (chỉ khi khác bản đi kèm), cấp quyền (TiviKitLauncher.LENH_CAP_QUYEN: tên Wi-Fi, thẻ
-     * Đang phát, app mở gần đây), biên dịch sẵn sau mỗi lần cài (mở Home nguội 1,55 → 1,1 giây trên TX3 Mini), rồi gửi
+     * Đang phát, app mở gần đây), biên dịch sẵn phần mã hay dùng sau mỗi lần cài (TiviKitLauncher.LENH_TOI_UU), rồi gửi
      * [cauHinh] (TiviKitLauncher.cauHinh: tên lời chào, nơi xem thời tiết, ngôn ngữ, dock khi mới cài).
      */
     fun caiTkl(apk: ByteArray, cauHinh: String, bao: (String) -> Unit) {
@@ -1763,7 +1783,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         sh(TiviKitLauncher.LENH_CAP_QUYEN)
         if (vuaCai) {
             bao(t("Tối ưu cho tivi yếu…", "Optimising for slow TVs…"))
-            runCatching { sh("cmd package compile -m speed -f ${TiviKitLauncher.GOI}") }
+            runCatching { sh(TiviKitLauncher.LENH_TOI_UU) }
         }
         sh(TiviKitLauncher.lenhDat(cauHinh))
     }
@@ -1844,7 +1864,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
                     // Home sạch (bấm Home là chạy lại với cấu hình mới) và khởi động lại dịch vụ phím cho nút đã gán trỏ sang ô mới.
                     val dangHien = runCatching { goiDangHien() }.getOrDefault("")
                     if (dangHien.isEmpty() || dangHien == pkgHome) sh(KHOI_DONG_LAI_HOME)
-                    else { sh("am force-stop $pkgHome"); khoiDongLaiDichVuPhim() }
+                    else sh(TAT_HAN_HOME)
                 }
             }
         }

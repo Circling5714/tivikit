@@ -41,6 +41,9 @@ class TiviKitLauncherTest {
         assertFalse(capNhat.has("dock"))
         assertFalse(capNhat.has("noi"))
         assertTrue(TiviKitLauncher.LENH_CAP_QUYEN.contains("allow_listener vn.tivikit.launcher/vn.tivikit.launcher.NgheNhac"))
+        // Biên dịch phần mã hay dùng: cài danh sách trước (ProfileInstallReceiver), rồi speed-profile, không biên dịch cả app.
+        assertTrue(TiviKitLauncher.LENH_TOI_UU.startsWith("am broadcast -a androidx.profileinstaller.action.INSTALL_PROFILE"))
+        assertTrue(TiviKitLauncher.LENH_TOI_UU.endsWith("cmd package compile -m speed-profile -f vn.tivikit.launcher"))
     }
 
     @Test

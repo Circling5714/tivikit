@@ -74,11 +74,16 @@ object AnhNen {
     /** Thu ảnh về đúng cỡ màn hình [w]×[h] (phủ kín, cắt phần thừa ở giữa) rồi làm bản kính mờ. */
     fun tao(goc: Bitmap, w: Int, h: Int): NenKinh {
         val anh = phuKin(goc, w, h)
+        // Ảnh tạm (ảnh gốc giải mã, bản thu nhỏ) trả bộ nhớ ngay thay vì chờ dọn rác: ảnh nền là phần ăn RAM nhất.
+        if (anh !== goc) goc.recycle()
         val nho = Bitmap.createScaledBitmap(anh, max(1, w / 8), max(1, h / 8), true)
-        val px = IntArray(nho.width * nho.height)
-        nho.getPixels(px, 0, nho.width, 0, 0, nho.width, nho.height)
-        lamMo(px, nho.width, nho.height, 3)
-        val mo = Bitmap.createBitmap(px, nho.width, nho.height, Bitmap.Config.ARGB_8888)
+        val nw = nho.width
+        val nh = nho.height
+        val px = IntArray(nw * nh)
+        nho.getPixels(px, 0, nw, 0, 0, nw, nh)
+        if (nho !== anh) nho.recycle()
+        lamMo(px, nw, nh, 3)
+        val mo = Bitmap.createBitmap(px, nw, nh, Bitmap.Config.ARGB_8888)
         return NenKinh(anh.asImageBitmap(), mo.asImageBitmap())
     }
 
@@ -105,6 +110,8 @@ object AnhNen {
         val sw = (src.width * tiLe).roundToInt().coerceAtLeast(w)
         val sh = (src.height * tiLe).roundToInt().coerceAtLeast(h)
         val to = Bitmap.createScaledBitmap(src, sw, sh, true)
-        return Bitmap.createBitmap(to, (sw - w) / 2, (sh - h) / 2, w, h)
+        val cat = Bitmap.createBitmap(to, (sw - w) / 2, (sh - h) / 2, w, h)
+        if (cat !== to && to !== src) to.recycle()
+        return cat
     }
 }

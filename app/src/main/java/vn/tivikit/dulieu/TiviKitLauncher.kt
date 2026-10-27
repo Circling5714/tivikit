@@ -99,6 +99,13 @@ object TiviKitLauncher {
     const val LENH_CAP_QUYEN = "pm grant $GOI android.permission.ACCESS_FINE_LOCATION 2>/dev/null; " +
         "cmd notification allow_listener $GOI/$GOI.NgheNhac 2>/dev/null; appops set $GOI GET_USAGE_STATS allow 2>/dev/null; true"
 
+    /**
+     * Biên dịch sẵn phần mã hay dùng (danh sách đi kèm APK của Compose, cài bằng ProfileInstallReceiver) thay vì cả app:
+     * trên TX3 Mini mở nguội vẫn 1,1 giây như biên dịch hết (trước đó 1,55 giây) mà phần mã chiếm RAM 5,3 thay vì 7,3 MB.
+     */
+    const val LENH_TOI_UU = "am broadcast -a androidx.profileinstaller.action.INSTALL_PROFILE " +
+        "-n $GOI/androidx.profileinstaller.ProfileInstallReceiver >/dev/null 2>&1; cmd package compile -m speed-profile -f $GOI"
+
     fun lenhDat(json: String): String {
         require(!json.contains('\'') && json.all { it.code < 0x80 }) { "json" }
         return "content call --uri content://$GOI --method dat --arg '$json'"

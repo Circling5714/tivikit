@@ -41,6 +41,9 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     private var suDung: List<String> = emptyList()
     private var goiHome: Set<String> = emptySet()
     private val dangTai = HashSet<String>()
+    /** Cỡ giải mã banner / biểu tượng theo màn hình: box 720p không cần ảnh cỡ 1080p (ít RAM hơn). */
+    private var rongBanner = 256
+    private var coBieuTuong = 96
     private var noi: ThoiTiet.Noi? = null
     /** Lần lấy thời tiết gần nhất (giờ hệ thống); 0 = chưa lấy. */
     private var lucThoiTiet = 0L
@@ -52,6 +55,10 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
 
     fun batDau() {
         tt.coDonRam = HeThong.donDuocRam()
+        // Ô lớn nhất (thư viện, phóng 1,08) rộng khoảng 140 dp trên khung 960 dp; biểu tượng tối đa khoảng 48 dp.
+        val rong = coManHinh().first
+        rongBanner = (140 * rong / 960).coerceIn(128, 256)
+        coBieuTuong = (48 * rong / 960).coerceIn(48, 96)
         // StateFlow phát giá trị hiện tại trước: lần đầu cũng đọc cấu hình ở đây.
         scope.launch { CauHinh.lanDoi.collect { apCauHinh() } }
         // Lần đầu, và mỗi lần TiviKit gửi / bỏ ảnh nền riêng: dựng lại ảnh nền và bản mờ cho kính.
@@ -229,14 +236,20 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         }
     }
 
-    /** Ảnh nền: ảnh TiviKit gửi (anh-nen.jpg), không có thì ảnh đồi chè đi kèm; đúng cỡ màn hình, tối đa 1920×1080. */
-    private fun taiNen(): NenKinh? {
+    /** Cỡ màn hình thật (nằm ngang), tối đa 1920×1080 (tivi 4K vẫn vẽ giao diện ở 1080p). */
+    private fun coManHinh(): Pair<Int, Int> {
         val dm = DisplayMetrics()
         @Suppress("DEPRECATION")
         act.windowManager.defaultDisplay.getRealMetrics(dm)
         var w = max(dm.widthPixels, dm.heightPixels)
         var h = min(dm.widthPixels, dm.heightPixels)
         if (w > 1920) { h = h * 1920 / w; w = 1920 }
+        return w to h
+    }
+
+    /** Ảnh nền: ảnh TiviKit gửi (anh-nen.jpg), không có thì ảnh đồi chè đi kèm; đúng cỡ màn hình, tối đa 1920×1080. */
+    private fun taiNen(): NenKinh? {
+        val (w, h) = coManHinh()
         val rieng = File(ctx.filesDir, "anh-nen.jpg")
         val anh = (if (rieng.isFile) AnhNen.giaiMa({ rieng.inputStream() }, w, h) else null)
             ?: AnhNen.giaiMa({ ctx.assets.open("nen/doi-che.jpg") }, w, h)
@@ -273,7 +286,7 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     override fun canAnh(goi: String) {
         if (goi in tt.anh || !dangTai.add(goi)) return
         scope.launch {
-            val a = withContext(Dispatchers.IO) { runCatching { DanhSachApp.anh(pm, goi) }.getOrNull() }
+            val a = withContext(Dispatchers.IO) { runCatching { DanhSachApp.anh(pm, goi, rongBanner, coBieuTuong) }.getOrNull() }
             dangTai.remove(goi)
             if (a != null) tt.anh[goi] = a
         }
