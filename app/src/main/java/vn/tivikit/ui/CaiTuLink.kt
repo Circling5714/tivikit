@@ -63,9 +63,9 @@ internal fun TheGoiY(vm: PhienLamViec) {
     }
 }
 
-/** Một app gợi ý; [daCai] = tên gói của nó đang có trên tivi. */
+/** Một app gợi ý; [daCai] = tên gói của nó đang có trên tivi. Dùng cả ở màn Quản lý launcher (launcher gợi ý). */
 @Composable
-private fun HangGoiY(vm: PhienLamViec, g: GoiY.App, daCai: String?) {
+internal fun HangGoiY(vm: PhienLamViec, g: GoiY.App, daCai: String?) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(The2).padding(start = 12.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

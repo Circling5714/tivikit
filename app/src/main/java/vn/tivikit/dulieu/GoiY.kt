@@ -40,6 +40,7 @@ object GoiY {
         QUOC_TE("Phim, nhạc quốc tế", "International films & music"),
         MAY_CHU("Phim từ máy chủ trong nhà", "Films from a home server"),
         GAME("Chơi game", "Games"),
+        LAUNCHER("Launcher (màn Home)", "Launchers (Home screens)"),
         TIEN_ICH("Tiện ích", "Utilities");
 
         val ten: String get() = t(vi, en)
@@ -133,6 +134,18 @@ object GoiY {
             Nguon.GitHub("Swordfish90/Lemuroid", Regex("""^lemuroid-app-free-dynamic-release\.apk$""")), Nhom.GAME, listOf("com.swordfish.lemuroid")),
         play("retroarch", "RetroArch", "Giả lập nhiều đời máy chơi game, nhiều tuỳ chỉnh.", "Emulates many consoles, with deep settings.", Nhom.GAME, "com.retroarch"),
         play("ppsspp", "PPSSPP", "Giả lập máy PSP.", "A PSP emulator.", Nhom.GAME, "org.ppsspp.ppsspp"),
+
+        // ---------- Launcher (27/10/2026, Quản lý launcher giai đoạn 3; tên gói đã thử có trên CH Play) ----------
+        // Chọn làm Home ở màn Quản lý launcher. Wolf Launcher không còn trên CH Play, FLauncher chỉ phát hành trên GitLab và
+        // CH Play: dùng CH Play. Không đưa bản Premium bẻ khoá của Projectivy.
+        play("projectivy", "Projectivy Launcher", "Launcher đẹp, tuỳ biến sâu: hàng app, kênh, ảnh nền động, phím tắt remote. Tự thay được Home của hãng (\"Ghi đè trình khởi chạy hiện tại\"); một số tính năng trả phí.",
+            "A good-looking, deeply customisable launcher: app rows, channels, live wallpapers, remote shortcuts. Can take over the maker's Home (\"Override current launcher\"); some features are paid.", Nhom.LAUNCHER, "com.spocky.projengmenu"),
+        play("flauncher", "FLauncher", "Launcher mã nguồn mở gọn nhẹ: hàng app tự sắp, ảnh nền riêng, không quảng cáo.",
+            "A light open-source launcher: app rows you arrange, your own wallpaper, no ads.", Nhom.LAUNCHER, "me.efesser.flauncher"),
+        play("atvlauncher", "ATV Launcher Pro", "Launcher dạng lưới ô, gắn được widget đồng hồ, thời tiết; trả phí.",
+            "A tile-grid launcher with clock and weather widgets; paid.", Nhom.LAUNCHER, "ca.dstudio.atvlauncher.pro"),
+        play("sideload", "Sideload Launcher", "Mở mọi app trên tivi, cả app cài ngoài không hiện trên Home (Chainfire).",
+            "Opens every app on the TV, including sideloaded ones the Home doesn't show (Chainfire).", Nhom.LAUNCHER, "eu.chainfire.tv.sideloadlauncher"),
 
         // ---------- Tiện ích ----------
         play("airscreen", "AirScreen", "Nhận AirPlay / Cast: chiếu màn hình, video từ iPhone, iPad, Mac lên tivi.",

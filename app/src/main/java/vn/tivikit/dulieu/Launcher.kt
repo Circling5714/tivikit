@@ -68,6 +68,12 @@ object Launcher {
      */
     val CAI_DAT = mapOf("com.spocky.projengmenu" to "tv.projectivy.SETTINGS")
 
+    /**
+     * Launcher gắn widget (đồng hồ, thời tiết…) mà tivi không có hộp hỏi "cho phép tạo widget": cấp sẵn bằng
+     * `appwidget grantbind` (LMATV cũng làm vậy cho ATV Launcher Pro).
+     */
+    val WIDGET = setOf("ca.dstudio.atvlauncher.pro")
+
     /** "gói/.Lớp" → "gói/gói.Lớp" để so dịch vụ trợ năng ghi theo hai kiểu. */
     fun dayDu(cmp: String): String {
         val g = cmp.substringBefore('/')

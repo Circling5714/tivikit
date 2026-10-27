@@ -46,6 +46,8 @@ Nên có thêm một launcher tự cài (VD Projectivy từ CH Play) để thử
 | Home gốc đang bật, Projectivy → Đặt làm Home → "Không tắt …: để Home sạch mở Projectivy đè lên" | Home gốc vẫn bật; bấm Home: Home gốc hiện một thoáng rồi Projectivy |
 | Google TV: Projectivy → Đặt làm Home | App cập nhật Home sạch nếu cần; bấm Home ra Home Google một thoáng rồi Projectivy; Bấm thử nút Home ghi Projectivy |
 | Projectivy → Bật trợ năng, rồi Tắt trợ năng | Cài đặt → Hỗ trợ tiếp cận: Projectivy bật rồi tắt; dịch vụ của Home sạch vẫn bật, nút remote gán riêng vẫn chạy |
+| Launcher gợi ý → FLauncher → CH Play | Trang FLauncher mở trên CH Play của tivi; cài xong bấm Đọc lại thì FLauncher có trong danh sách |
+| ATV Launcher Pro (nếu có) → Cho phép widget | Thêm widget đồng hồ trong ATV Launcher được, không báo lỗi |
 | Home sạch → Đặt làm Home | Bấm Home ra Home sạch như trước |
 
 - **Hỏng thì:** Quản lý launcher → Về Home gốc; vẫn sai thì Khôi phục (mục 1).

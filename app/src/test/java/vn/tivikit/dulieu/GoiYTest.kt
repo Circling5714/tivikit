@@ -48,6 +48,13 @@ class GoiYTest {
         assertTrue(GoiY.DS.any { it.id == "smarttube" && it.khongChinhThuc })
     }
 
+    /** Launcher gợi ý (Quản lý launcher, 27/10/2026): trang CH Play chính thức, tên gói đã thử có trên CH Play. */
+    @Test fun launcher_chiCHPlayChinhThuc() {
+        val ds = GoiY.DS.filter { it.nhom == GoiY.Nhom.LAUNCHER }
+        assertEquals(listOf("com.spocky.projengmenu", "me.efesser.flauncher", "ca.dstudio.atvlauncher.pro", "eu.chainfire.tv.sideloadlauncher"), ds.flatMap { it.goi })
+        assertTrue(ds.all { it.laCHPlay })
+    }
+
     /** Tên file thật trong bản phát hành mới nhất trên GitHub (25/10/2026). */
     @Test fun github_chonDungFile() {
         val smarttube = listOf("SmartTube_stable_32.68_arm64-v8a.apk", "SmartTube_stable_32.68_armeabi-v7a.apk", "SmartTube_stable_32.68_universal.apk", "SmartTube_stable_32.68_x86.apk")

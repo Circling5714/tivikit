@@ -234,6 +234,13 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
             "${tenDep(m.goi)}'s accessibility service is off: it stops catching remote keys and taking over Home.")
     }
 
+    fun choPhepWidget(m: Launcher.Muc) = vm.chay(t("Đang cho ${tenDep(m.goi)} gắn widget…", "Letting ${tenDep(m.goi)} add widgets…")) {
+        vm.damBaoKetNoi()
+        if (!vm.io { vm.tv.choPhepWidget(m.goi) }) error(t("Tivi không cho ${tenDep(m.goi)} gắn widget.", "The TV refused to let ${tenDep(m.goi)} add widgets."))
+        bao = t("Đã cho ${tenDep(m.goi)} gắn widget: thêm widget trong ${tenDep(m.goi)} là được, không cần hộp hỏi.",
+            "${tenDep(m.goi)} can add widgets now: add them inside ${tenDep(m.goi)}, no prompt needed.")
+    }
+
     fun moCaiDat(m: Launcher.Muc) = vm.chay(t("Đang mở cài đặt của ${tenDep(m.goi)}…", "Opening ${tenDep(m.goi)}'s settings…")) {
         vm.damBaoKetNoi()
         if (!vm.io { vm.tv.moCaiDatCua(m.goi) }) error(t("Tivi không mở được cài đặt của ${tenDep(m.goi)}.", "The TV couldn't open ${tenDep(m.goi)}'s settings."))

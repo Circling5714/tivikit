@@ -1212,6 +1212,13 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         else sh("settings put secure enabled_accessibility_services '${ds.joinToString(":")}'")
     }
 
+    /** Cho launcher [goi] gắn widget không cần hộp hỏi (Launcher.WIDGET); false nếu tivi từ chối. */
+    fun choPhepWidget(goi: String): Boolean {
+        require(TEN_GOI.matches(goi)) { goi }
+        val out = sh("appwidget grantbind --package $goi --user 0 2>&1")
+        return !Regex("Error|Exception|usage", RegexOption.IGNORE_CASE).containsMatchIn(out)
+    }
+
     /** Mở màn cài đặt riêng của launcher [goi] (Launcher.CAI_DAT); false nếu app không có hay tivi từ chối. */
     fun moCaiDatCua(goi: String): Boolean {
         val hanhDong = Launcher.CAI_DAT[goi] ?: return false

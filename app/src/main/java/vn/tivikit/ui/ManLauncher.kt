@@ -50,6 +50,14 @@ internal fun ManLauncher(vm: PhienLamViec) {
             }
             tt.ds.forEach { m -> HangLauncher(vm, ql, tt, m) }
         }
+        // Launcher gợi ý (giai đoạn 3): trang CH Play chính thức, cài bằng tài khoản Google của tivi.
+        The(t("Launcher gợi ý", "Suggested launchers"), Icons.Rounded.Recommend) {
+            Phu(t("Mở trang CH Play trên tivi để cài. Cài thêm launcher thì lần bấm Home sau tivi hỏi chọn Home: cài xong bấm Đọc lại, rồi Đặt làm Home ở dòng của launcher muốn dùng.",
+                "Opens the Play Store page on the TV to install. After a new launcher is installed the TV asks which Home to use on the next Home press: tap Read again, then Make it Home on the launcher you want."))
+            val caiDat = vm.trangThai?.caiDat.orEmpty()
+            vn.tivikit.dulieu.GoiY.DS.filter { it.nhom == vn.tivikit.dulieu.GoiY.Nhom.LAUNCHER }.forEach { g -> HangGoiY(vm, g, g.goi.firstOrNull { it in caiDat }) }
+            if (vm.baoGoiY.isNotEmpty()) Phu(vm.baoGoiY, Xanh)
+        }
         Phu(t("Launcher của hãng thường được Android ưu tiên hơn launcher tự cài (mức ưu tiên ghi ở từng hàng): muốn launcher tự cài làm Home thì phải tắt launcher của hãng; Google TV còn setupwraith thì không tắt được, Home sạch mở đè lên thay. Mọi thay đổi ghi vào bản sao lưu: Khôi phục tivi trả Home như trước khi dùng TiviKit.",
             "Android usually favours the maker's launcher over ones you install (the priority is shown on each row): for an installed launcher to be Home, the maker's must be disabled; a Google TV with setupwraith can't, so the clean Home opens over it instead. Every change goes into the backup: restoring the TV puts Home back as it was before TiviKit."))
     }
@@ -136,7 +144,7 @@ private fun HangLauncher(vm: PhienLamViec, ql: QuanLyLauncher, tt: Launcher.Tran
             }
             // Dịch vụ trợ năng của launcher (Projectivy tự thay Home của hãng bằng nó) và màn cài đặt riêng của nó.
             val troNang = ql.troNangCua(m)
-            if (!m.dangTat && (troNang.isNotEmpty() || m.goi in Launcher.CAI_DAT)) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!m.dangTat && (troNang.isNotEmpty() || m.goi in Launcher.CAI_DAT || m.goi in Launcher.WIDGET)) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 fun lam(viec: () -> Unit) { if (!vm.dangBan) viec() }
                 troNang.forEach { dv ->
                     if (ql.troNangDangBat(dv)) {
@@ -145,6 +153,7 @@ private fun HangLauncher(vm: PhienLamViec, ql: QuanLyLauncher, tt: Launcher.Tran
                     } else ChonChip(t("Bật trợ năng", "Accessibility on"), false) { lam { ql.hoi = QuanLyLauncher.Hoi.BatTroNang(m, dv) } }
                 }
                 if (m.goi in Launcher.CAI_DAT) ChonChip(t("Cài đặt của ${tenDep(m.goi)}", "${tenDep(m.goi)} settings"), false) { lam { ql.moCaiDat(m) } }
+                if (m.goi in Launcher.WIDGET) ChonChip(t("Cho phép widget", "Allow widgets"), false) { lam { ql.choPhepWidget(m) } }
             }
             if (!m.dangTat) ql.lyDoGiu(m)?.let { Phu(ql.moTaGiu(it, m)) }
             meoCua(m.goi)?.let { Phu(it) }
@@ -159,6 +168,12 @@ private fun HangLauncher(vm: PhienLamViec, ql: QuanLyLauncher, tt: Launcher.Tran
 private fun meoCua(goi: String): String? = when (goi) {
     "com.spocky.projengmenu" -> t("Projectivy tự thay Home của hãng được: bật trợ năng ở đây, rồi trong cài đặt của nó bật \"Ghi đè trình khởi chạy hiện tại\". Tivi có Home sạch thì chỉ cần Đặt làm Home ở đây: Home sạch mở Projectivy đè lên Home của hãng.",
         "Projectivy can take over the maker's Home by itself: turn its accessibility on here, then \"Override current launcher\" in its settings. With the clean Home on the TV, Make it Home here is enough: the clean Home opens Projectivy over the maker's Home.")
+    "me.efesser.flauncher" -> t("FLauncher không tự thay Home của hãng: tivi không cho tắt Home của hãng thì Đặt làm Home ở đây để Home sạch mở FLauncher đè lên.",
+        "FLauncher can't take over the maker's Home by itself: where that Home can't be disabled, Make it Home here so the clean Home opens FLauncher over it.")
+    "ca.dstudio.atvlauncher.pro" -> t("Thêm widget (đồng hồ, thời tiết) không được vì tivi không có hộp hỏi cho phép: bấm Cho phép widget ở đây một lần rồi thêm lại trong ATV Launcher.",
+        "Can't add widgets (clock, weather) because the TV has no allow prompt: tap Allow widgets here once, then add them again in ATV Launcher.")
+    "eu.chainfire.tv.sideloadlauncher" -> t("Sideload Launcher liệt kê mọi app trên tivi, cả app cài ngoài không có biểu tượng trên Home.",
+        "Sideload Launcher lists every app on the TV, including sideloaded ones with no icon on the Home.")
     else -> null
 }
 
