@@ -273,20 +273,22 @@ index 3632d74b..681ac5ae 100644
          if (live == null) return 0xFF444444;
          // Draw a private copy: changing the bounds of the drawable an ImageView shows would blank the tile.
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java b/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
-index 233f9820..a4b35a06 100644
+index 233f9820..535b56fd 100644
 --- a/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
-@@ -80,6 +80,9 @@ public class HomeKeyService extends AccessibilityService {
+@@ -80,6 +80,11 @@ public class HomeKeyService extends AccessibilityService {
      private Map<Integer, String> frontAppKeys = Collections.emptyMap();
      private Map<Integer, String> frontAppScancodes = Collections.emptyMap();
      private String frontPackage = "";
 +    /** CleanTV/VGS: wake_open_app, the Open on start app also at every power-on; homeOnWake, power_on_home_always itself. */
 +    private boolean wakeOpenApp, homeOnWake;
++    /** CleanTV/VGS: home_target {package, class}, the launcher openHome opens instead of this one; null for this one. */
++    private String[] homeTarget;
 +
      /** power_on_home_always: Home at every power-on, not only over Live TV. */
      private boolean powerOnAlways;
      /** power_on_home: re-arms after the screen turns on; null unless the key is on. */
-@@ -181,7 +184,11 @@ public class HomeKeyService extends AccessibilityService {
+@@ -181,7 +186,12 @@ public class HomeKeyService extends AccessibilityService {
          GuardKeep.stepOut(this);
      }
  
@@ -295,10 +297,26 @@ index 233f9820..a4b35a06 100644
 +
      private void loadConfig() {
 +        allAppsHome = Weather.flag(this, "all_apps_home", true);
++        homeTarget = HomeTarget.parse(HomeTarget.read(this), getPackageName());
          // Keycodes and the panel choice can also come from a theme; theme.sh restarts this service.
          Config config = Config.load(this);
          // restore_key_services: note that this helper runs, so Home can put it back after a force stop. Here, not
-@@ -213,6 +220,12 @@ public class HomeKeyService extends AccessibilityService {
+@@ -200,7 +210,13 @@ public class HomeKeyService extends AccessibilityService {
+         boolean watchFront = !frontAppKeys.isEmpty() || !frontAppScancodes.isEmpty();
+         stockHome.clear();
+         stockHomePackage = config.stockHomeRedirect;
+-        if (!config.stockHomeRedirect.isEmpty()) {
++        // CleanTV/VGS: home_target is the stock launcher itself (Back to the stock Home in TiviKit): opening it whenever
++        // it comes up would loop, and it is the Home anyway, so there is nothing to redirect.
++        if (homeTarget != null && homeTarget[0].equals(stockHomePackage)) {
++            homeTarget = null;
++            stockHomePackage = "";
++        }
++        if (!stockHomePackage.isEmpty()) {
+             Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(config.stockHomeRedirect);
+             for (ResolveInfo ri : getPackageManager().queryIntentActivities(home, PackageManager.MATCH_DISABLED_COMPONENTS)) {
+                 stockHome.add(ri.activityInfo.name);
+@@ -213,6 +229,12 @@ public class HomeKeyService extends AccessibilityService {
          powerOnLiveTv = config.powerOnHome && !config.bootToLiveTv && !config.liveTvPackage.equals(openOnStart)
                  ? config.liveTvPackage : "";
          powerOnAlways = config.powerOnHomeAlways && !config.bootToLiveTv && openOnStart.isEmpty();
@@ -311,7 +329,7 @@ index 233f9820..a4b35a06 100644
          if (!powerOnLiveTv.isEmpty() || powerOnAlways) {
              armPowerOnHome();
          } else if (screenOnReceiver != null) {
-@@ -286,7 +299,9 @@ public class HomeKeyService extends AccessibilityService {
+@@ -286,7 +308,9 @@ public class HomeKeyService extends AccessibilityService {
              redirectHomeKey(event);
              return false;
          }
@@ -322,7 +340,7 @@ index 233f9820..a4b35a06 100644
          if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
          return true;
      }
-@@ -347,7 +362,18 @@ public class HomeKeyService extends AccessibilityService {
+@@ -347,7 +371,18 @@ public class HomeKeyService extends AccessibilityService {
  
      /** power_on_home_always: Home, unless a key was pressed since the screen came on (the user has the TV). */
      private void homeAtPowerOn() {
@@ -342,6 +360,78 @@ index 233f9820..a4b35a06 100644
      }
  
      static boolean stillArmed(long now, long armedUntil) {
+@@ -413,6 +448,18 @@ public class HomeKeyService extends AccessibilityService {
+     }
+ 
+     private void openHome() {
++        // CleanTV/VGS: home_target, a launcher picked in TiviKit (Projectivy…) on a TV whose stock Home can't give way:
++        // every redirect opens it. Explicit and without ACTION_MAIN, as for stockHomeStays below, so it opens like an app
++        // and doesn't take the home task. Gone (uninstalled, disabled): this launcher, as before.
++        if (homeTarget != null) {
++            try {
++                startActivity(new Intent().setClassName(homeTarget[0], homeTarget[1]).addCategory(Intent.CATEGORY_HOME)
++                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED));
++                return;
++            } catch (ActivityNotFoundException | SecurityException gone) {
++                // fall through to this launcher
++            }
++        }
+         Intent open = stockHomeStays() ? new Intent(this, MainActivity.class)
+                 : new Intent(Intent.ACTION_MAIN).setPackage(getPackageName());
+         startActivity(open.addCategory(Intent.CATEGORY_HOME)
+diff --git a/launcher/app/src/main/java/com/gathin/tvhome/HomeTarget.java b/launcher/app/src/main/java/com/gathin/tvhome/HomeTarget.java
+new file mode 100644
+index 00000000..09efdd8b
+--- /dev/null
++++ b/launcher/app/src/main/java/com/gathin/tvhome/HomeTarget.java
+@@ -0,0 +1,47 @@
++package com.gathin.tvhome;
++
++import android.content.Context;
++
++import org.json.JSONObject;
++
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.InputStream;
++
++/**
++ * CleanTV/VGS: config.json home_target, the launcher picked for Home in TiviKit's launcher manager ("package/.Activity"),
++ * for a TV whose stock Home outranks every installed launcher and can't be disabled (Google TV with its setup app).
++ * HomeKeyService's redirects (the stock home coming up, Home pressed over it, a Xiaomi remote's ALL_APPS Home,
++ * power-on Home) then open that launcher instead of this one. Missing, malformed or this launcher: this one, as before.
++ */
++final class HomeTarget {
++    private HomeTarget() {
++    }
++
++    /** The home_target string from config.json, "" when missing or unreadable. */
++    static String read(Context ctx) {
++        File dir = Config.dir(ctx);
++        File f = dir != null ? new File(dir, Config.FILE_NAME) : null;
++        if (f == null || !f.isFile() || f.length() > 64 * 1024) return "";
++        try (InputStream in = new FileInputStream(f)) {
++            return new JSONObject(new String(Weather.readAll(in), "UTF-8")).optString("home_target", "").trim();
++        } catch (Exception e) {
++            return "";
++        }
++    }
++
++    /**
++     * {package, class} from "package/.Activity" or "package/full.Class", null when it is empty, not a component name or
++     * this launcher ([ownPackage]).
++     */
++    static String[] parse(String value, String ownPackage) {
++        if (value == null) return null;
++        int slash = value.indexOf('/');
++        if (slash <= 0 || slash != value.lastIndexOf('/') || slash == value.length() - 1) return null;
++        String pkg = value.substring(0, slash);
++        String cls = value.substring(slash + 1);
++        if (!pkg.matches("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+") || !cls.matches("\\.?[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*")) return null;
++        if (pkg.equals(ownPackage)) return null;
++        return new String[]{pkg, cls.startsWith(".") ? pkg + cls : cls};
++    }
++}
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java b/launcher/app/src/main/java/com/gathin/tvhome/LinkTiles.java
 new file mode 100644
 index 00000000..a438191b
@@ -5984,6 +6074,46 @@ index 635bced9..964c6db2 100644
 +    <string name="now_playing_none">Nothing is playing</string>
 +    <string name="screensaver">Screensaver</string>
  </resources>
+diff --git a/launcher/app/src/test/java/com/gathin/tvhome/HomeTargetTest.java b/launcher/app/src/test/java/com/gathin/tvhome/HomeTargetTest.java
+new file mode 100644
+index 00000000..9e124acb
+--- /dev/null
++++ b/launcher/app/src/test/java/com/gathin/tvhome/HomeTargetTest.java
+@@ -0,0 +1,34 @@
++package com.gathin.tvhome;
++
++import static org.junit.Assert.assertArrayEquals;
++import static org.junit.Assert.assertNull;
++
++import org.junit.Test;
++
++/** CleanTV/VGS: home_target, the launcher TiviKit picked for Home, opened by HomeKeyService's redirects. */
++public class HomeTargetTest {
++    private static final String SELF = "com.gathin.tvhome";
++
++    @Test
++    public void shortAndFullClassNames() {
++        assertArrayEquals(new String[]{"com.spocky.projengmenu", "com.spocky.projengmenu.ui.home.MainActivity"},
++                HomeTarget.parse("com.spocky.projengmenu/.ui.home.MainActivity", SELF));
++        assertArrayEquals(new String[]{"me.efesser.flauncher", "me.efesser.flauncher.MainActivity"},
++                HomeTarget.parse("me.efesser.flauncher/me.efesser.flauncher.MainActivity", SELF));
++        assertArrayEquals(new String[]{"a.b", "a.b.Outer$Inner"}, HomeTarget.parse("a.b/.Outer$Inner", SELF));
++    }
++
++    @Test
++    public void unusableValuesMeanThisLauncher() {
++        assertNull(HomeTarget.parse(null, SELF));
++        assertNull(HomeTarget.parse("", SELF));
++        assertNull(HomeTarget.parse("com.spocky.projengmenu", SELF));
++        assertNull(HomeTarget.parse("com.spocky.projengmenu/", SELF));
++        assertNull(HomeTarget.parse("/.MainActivity", SELF));
++        assertNull(HomeTarget.parse("a.b/.C/.D", SELF));
++        assertNull(HomeTarget.parse("a b.c/.Main", SELF));
++        assertNull(HomeTarget.parse("a.b/.Main Activity", SELF));
++        // This launcher itself: nothing to redirect to.
++        assertNull(HomeTarget.parse("com.gathin.tvhome/.MainActivity", SELF));
++    }
++}
 diff --git a/launcher/app/src/test/java/com/gathin/tvhome/RemoteKeysTest.java b/launcher/app/src/test/java/com/gathin/tvhome/RemoteKeysTest.java
 index 81fd1b20..8fa36f5d 100644
 --- a/launcher/app/src/test/java/com/gathin/tvhome/RemoteKeysTest.java

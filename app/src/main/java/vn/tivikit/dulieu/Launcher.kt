@@ -31,14 +31,23 @@ object Launcher {
         val batNay: List<ManHome>,
         /** Home mặc định của Android ("gói/lớp"); gói "android" = tivi đang hỏi chọn Home; "" = không đọc được. */
         val macDinh: String,
-        /** Gói nút Home mở (đoán): gói của [macDinh], hoặc Home sạch khi nó đang mở đè lên Home mặc định. */
+        /**
+         * Gói nút Home mở (đoán): gói của [macDinh], hoặc khi Home sạch đang mở đè lên Home mặc định thì Home sạch / launcher
+         * nó được báo mở thay ([dichHome]).
+         */
         val homeMo: String,
         /** stock_home_redirect của Home sạch: gói Home cũ mà Home sạch mở đè mỗi khi nó hiện ra; "" nếu không. */
         val chuyenDe: String,
+        /** home_target của Home sạch ("gói/lớp"): launcher Home sạch mở thay chính nó; "" nếu không. */
+        val dichHome: String,
         /** Khoá [KHOA_GIANH_HOME] đang bật trong config.json của Home sạch. */
         val khoaGianh: List<String>,
         /** Launcher khác Home sạch đang bật dịch vụ trợ năng: có thể tự bắt nút Home (Projectivy "ghi đè launcher"). */
         val troNangKhac: List<String>,
+        /** Dịch vụ trợ năng của từng launcher khác Home sạch ("gói/lớp" đầy đủ, [dayDu]). */
+        val troNangCua: Map<String, List<String>>,
+        /** Dịch vụ trợ năng đang chạy ("gói/lớp" đầy đủ). */
+        val troNangDangBat: Set<String>,
         /** Google TV còn bật setupwraith: Home Google không bao giờ được tắt. */
         val setupBat: Boolean,
     ) {
@@ -52,6 +61,19 @@ object Launcher {
      * Người dùng chọn launcher khác làm Home thì gỡ (ThaoTacTv.datHome), không thì Home sạch mở đè lên launcher đó.
      */
     val KHOA_GIANH_HOME = listOf("stock_home_redirect", "power_on_home_always", "power_on_home", "home_long_press_home")
+
+    /**
+     * Màn cài đặt riêng của launcher tự cài (action mở được từ ngoài): Projectivy 4.72 khai tv.projectivy.SETTINGS — nơi
+     * bật "Ghi đè trình khởi chạy hiện tại" (app_settings_launcher_override_home).
+     */
+    val CAI_DAT = mapOf("com.spocky.projengmenu" to "tv.projectivy.SETTINGS")
+
+    /** "gói/.Lớp" → "gói/gói.Lớp" để so dịch vụ trợ năng ghi theo hai kiểu. */
+    fun dayDu(cmp: String): String {
+        val g = cmp.substringBefore('/')
+        val l = cmp.substringAfter('/', "")
+        return if (l.startsWith(".")) "$g/$g$l" else cmp
+    }
 
     /** Nhận Home nhưng không phải màn Home dùng được (ThaoTacTv.KHONG_PHAI_HOME, cộng hộp chọn của hệ thống). */
     private val KHONG_PHAI = setOf(
@@ -78,6 +100,7 @@ object Launcher {
         "echo @@S", "pm list packages -s",
         "echo @@A", "settings get secure enabled_accessibility_services; settings get secure accessibility_enabled",
         "echo @@SETUP", "pm list packages -e $SETUP",
+        "echo @@TN", "cmd package query-services --brief -a android.accessibilityservice.AccessibilityService 2>/dev/null",
         // config.json không có dòng mới ở cuối: echo để dấu sau đứng riêng một dòng (thử trên Skyworth, TX3 27/10/2026).
         "echo @@CH", "(content read --uri content://$goiHomeSach.theme/config.json 2>/dev/null || cat /sdcard/Android/data/$goiHomeSach/files/config.json 2>/dev/null)",
         "echo", "echo @@HET",
@@ -162,12 +185,18 @@ object Launcher {
         val homeSachBat = muc[goiHomeSach]?.dangTat == false
         val phimHome = dichVu.any { it.startsWith("$goiHomeSach/") && it.endsWith("HomeKeyService") }
         val goiMacDinh = macDinh.substringBefore('/')
-        val homeMo = if (homeSachBat && phimHome && chuyenDe.isNotEmpty() && chuyenDe == goiMacDinh) goiHomeSach else goiMacDinh
+        val dichHome = cauHinh?.optString("home_target")?.takeIf { it.contains('/') }.orEmpty()
+        // Home sạch mở đè: mở launcher nó được báo (home_target) nếu launcher đó còn bật, không thì chính nó.
+        val dichMo = dichHome.substringBefore('/').takeIf { g -> g != goiHomeSach && muc[g]?.dangTat == false }
+        val homeMo = if (homeSachBat && phimHome && chuyenDe.isNotEmpty() && chuyenDe == goiMacDinh) dichMo ?: goiHomeSach else goiMacDinh
         val troNangKhac = dichVu.map { it.substringBefore('/') }.distinct().filter { g -> muc[g]?.let { it.loai != Loai.HOME_SACH && !it.dangTat } == true }
+        val troNangCua = phan(chu, "TN").orEmpty().lines().map { it.trim() }.filter { THANH_PHAN.matches(it) }.map { dayDu(it) }
+            .groupBy { it.substringBefore('/') }.filterKeys { g -> muc[g]?.let { it.loai != Loai.HOME_SACH } == true }
 
         return TrangThai(
             ds = muc.values.sortedWith(compareBy<Muc>({ it.loai.ordinal }, { it.dangTat }, { it.goi })),
-            batNay = bat, macDinh = macDinh, homeMo = homeMo, chuyenDe = chuyenDe, khoaGianh = khoaGianh, troNangKhac = troNangKhac,
+            batNay = bat, macDinh = macDinh, homeMo = homeMo, chuyenDe = chuyenDe, dichHome = dichHome, khoaGianh = khoaGianh,
+            troNangKhac = troNangKhac, troNangCua = troNangCua, troNangDangBat = dichVu.map { dayDu(it) }.toSet(),
             setupBat = goiTrongDs(phan(chu, "SETUP")).contains(SETUP),
         )
     }

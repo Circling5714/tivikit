@@ -43,6 +43,9 @@ Nên có thêm một launcher tự cài (VD Projectivy từ CH Play) để thử
 | Projectivy → Đặt làm Home khi Home gốc đang bật | App hỏi tắt Home gốc trước; xong thì bấm Home ra Projectivy, Khôi phục bật lại được Home gốc |
 | Đang dùng Projectivy, vào Home sạch → Áp dụng | Giao diện Home sạch đổi; nút Home vẫn mở Projectivy |
 | Google TV: Home sạch → Đặt làm Home, rồi Về Home gốc | Home sạch mở đè lên Home Google; về Home gốc thì bấm Home ra Home Google |
+| Home gốc đang bật, Projectivy → Đặt làm Home → "Không tắt …: để Home sạch mở Projectivy đè lên" | Home gốc vẫn bật; bấm Home: Home gốc hiện một thoáng rồi Projectivy |
+| Google TV: Projectivy → Đặt làm Home | App cập nhật Home sạch nếu cần; bấm Home ra Home Google một thoáng rồi Projectivy; Bấm thử nút Home ghi Projectivy |
+| Projectivy → Bật trợ năng, rồi Tắt trợ năng | Cài đặt → Hỗ trợ tiếp cận: Projectivy bật rồi tắt; dịch vụ của Home sạch vẫn bật, nút remote gán riêng vẫn chạy |
 | Home sạch → Đặt làm Home | Bấm Home ra Home sạch như trước |
 
 - **Hỏng thì:** Quản lý launcher → Về Home gốc; vẫn sai thì Khôi phục (mục 1).

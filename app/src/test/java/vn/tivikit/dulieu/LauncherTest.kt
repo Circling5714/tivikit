@@ -248,6 +248,31 @@ class LauncherTest {
         assertEquals(LyDoGiu.CON_MOT, Launcher.lyDoGiu("com.spocky.projengmenu", mot, gocBiet))
     }
 
+    /** Google TV: Home sạch mở đè launcherx; home_target báo nó mở Projectivy thay chính nó (giai đoạn 2, 27/10/2026). */
+    @Test fun homeSachMoProjectivyDeLauncherx() {
+        val coP = skyworth
+            .replace("  Activity #3:\n    priority=-1000", "  Activity #9:\n    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true\n    com.spocky.projengmenu/.ui.home.MainActivity\n  Activity #3:\n    priority=-1000")
+            .replace("\"stock_home_redirect\":", "\"home_target\":\"com.spocky.projengmenu/.ui.home.MainActivity\",\"stock_home_redirect\":")
+        val tt = Launcher.tuChu(coP, "com.gathin.tvhome", homeSach)
+        assertEquals("com.spocky.projengmenu/.ui.home.MainActivity", tt.dichHome)
+        assertEquals("com.spocky.projengmenu", tt.homeMo)
+        assertEquals(listOf(Loai.HOME_SACH, Loai.CAI_THEM, Loai.GOC), tt.ds.map { it.loai })
+        // Projectivy bị tắt (gỡ, tắt gói): Home sạch mở lại chính nó.
+        val tat = Launcher.tuChu(coP.replace("@@D\n", "@@D\npackage:com.spocky.projengmenu\n"), "com.gathin.tvhome", homeSach)
+        assertEquals("com.gathin.tvhome", tat.homeMo)
+    }
+
+    @Test fun troNangCuaLauncher() {
+        val chu = coProjectivy.replace("@@SETUP\n", "@@SETUP\n@@TN\ncom.spocky.projengmenu/.services.ProjectivyAccessibilityService\ncom.gathin.tvhome/.HomeKeyService\nvn.tivikit.hengio/.HenGioDichVu\n")
+        val tt = Launcher.tuChu(chu, "com.gathin.tvhome", homeSach)
+        val dv = "com.spocky.projengmenu/com.spocky.projengmenu.services.ProjectivyAccessibilityService"
+        // Chỉ dịch vụ của launcher khác Home sạch; tên ngắn ".services.X" đổi ra tên đầy đủ để so với danh sách đang bật.
+        assertEquals(mapOf("com.spocky.projengmenu" to listOf(dv)), tt.troNangCua)
+        assertTrue(dv in tt.troNangDangBat)
+        assertEquals("a.b/a.b.C", Launcher.dayDu("a.b/.C"))
+        assertEquals("a.b/x.y.C", Launcher.dayDu("a.b/x.y.C"))
+    }
+
     @Test fun docTatCoHomeVaLocLauncher() {
         assertEquals(mapOf("com.google.android.tvlauncher" to 2, "com.example.home" to 0),
             Launcher.docTatCoHome("com.google.android.tvlauncher mPriority=2\ncom.example.home \n\nrác/không"))

@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -64,9 +65,13 @@ private fun TheNutHome(vm: PhienLamViec, ql: QuanLyLauncher, tt: Launcher.TrangT
             tt.homeMo.isBlank() -> t("Không đọc được Home của tivi", "Couldn't read the TV's Home")
             else -> t("Mở ${tenDep(tt.homeMo)}", "Opens ${tenDep(tt.homeMo)}")
         }, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-        if (tt.homeMo != tt.goiMacDinh && tt.goiMacDinh.isNotBlank() && !tt.dangHoiChon)
-            Phu(t("Android vẫn giữ ${tenDep(tt.goiMacDinh)} làm Home mặc định (mức ưu tiên cao hơn); Home sạch tự mở đè lên mỗi khi nó hiện ra.",
-                "Android keeps ${tenDep(tt.goiMacDinh)} as the default Home (higher priority); the clean Home opens over it whenever it comes up."))
+        if (tt.homeMo != tt.goiMacDinh && tt.goiMacDinh.isNotBlank() && !tt.dangHoiChon) {
+            val goc = tenDep(tt.goiMacDinh)
+            Phu(if (tt.cua(tt.homeMo)?.loai == Loai.HOME_SACH) t("Android vẫn giữ $goc làm Home mặc định (mức ưu tiên cao hơn); Home sạch tự mở đè lên mỗi khi nó hiện ra.",
+                "Android keeps $goc as the default Home (higher priority); the clean Home opens over it whenever it comes up.")
+            else t("Android vẫn giữ $goc làm Home mặc định (mức ưu tiên cao hơn); Home sạch mở ${tenDep(tt.homeMo)} đè lên mỗi khi nó hiện ra.",
+                "Android keeps $goc as the default Home (higher priority); the clean Home opens ${tenDep(tt.homeMo)} over it whenever it comes up."))
+        }
         if (tt.dangHoiChon) Phu(t("Thường do vừa cài hay bật thêm một launcher. Chọn một launcher bên dưới, bấm Đặt làm Home.",
             "Usually because a launcher was just installed or enabled. Pick one below and tap Make it Home."))
         tt.troNangKhac.forEach { g ->
@@ -123,18 +128,41 @@ private fun HangLauncher(vm: PhienLamViec, ql: QuanLyLauncher, tt: Launcher.Tran
         if (mo) Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 fun lam(viec: () -> Unit) { if (!vm.dangBan) viec() }
-                if (!laHome) ChonChip(if (m.dangTat) t("Bật và đặt làm Home", "Enable and make Home") else t("Đặt làm Home", "Make it Home"), true) { lam { ql.chonDatHome(m) } }
+                if (ql.coTheDatHome(m)) ChonChip(if (m.dangTat) t("Bật và đặt làm Home", "Enable and make Home") else t("Đặt làm Home", "Make it Home"), true) { lam { ql.chonDatHome(m) } }
                 if (!m.dangTat && m.cmp != null) ChonChip(t("Mở thử", "Open"), false) { lam { ql.moThu(m) } }
                 if (m.dangTat) ChonChip(t("Bật lại", "Re-enable"), false) { lam { ql.chonBat(m) } }
                 else if (ql.lyDoGiu(m) == null) ChonChip(t("Tắt", "Disable"), false) { lam { ql.hoi = QuanLyLauncher.Hoi.Tat(m) } }
                 if (m.loai == Loai.CAI_THEM && !laHome && m.goi != tt.goiMacDinh) ChonChip(t("Gỡ", "Uninstall"), false) { lam { ql.hoi = QuanLyLauncher.Hoi.Go(m) } }
             }
+            // Dịch vụ trợ năng của launcher (Projectivy tự thay Home của hãng bằng nó) và màn cài đặt riêng của nó.
+            val troNang = ql.troNangCua(m)
+            if (!m.dangTat && (troNang.isNotEmpty() || m.goi in Launcher.CAI_DAT)) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                fun lam(viec: () -> Unit) { if (!vm.dangBan) viec() }
+                troNang.forEach { dv ->
+                    if (ql.troNangDangBat(dv)) {
+                        ChonChip(t("Tắt trợ năng", "Accessibility off"), false) { lam { ql.tatTroNang(m, dv) } }
+                        ChonChip(t("Làm mới trợ năng", "Restart accessibility"), false) { lam { ql.batTroNang(m, dv, lamMoi = true) } }
+                    } else ChonChip(t("Bật trợ năng", "Accessibility on"), false) { lam { ql.hoi = QuanLyLauncher.Hoi.BatTroNang(m, dv) } }
+                }
+                if (m.goi in Launcher.CAI_DAT) ChonChip(t("Cài đặt của ${tenDep(m.goi)}", "${tenDep(m.goi)} settings"), false) { lam { ql.moCaiDat(m) } }
+            }
             if (!m.dangTat) ql.lyDoGiu(m)?.let { Phu(ql.moTaGiu(it, m)) }
+            meoCua(m.goi)?.let { Phu(it) }
         }
     }
 }
 
-/** Hộp hỏi lại trước khi đổi Home, tắt, bật lại (khi nó giành Home), gỡ, bấm thử nút Home. */
+/**
+ * Mẹo riêng cho launcher tự cài (dòng chữ nhỏ dưới hàng thao tác). Tên tuỳ chọn lấy đúng từ Projectivy 4.72
+ * (app_settings_launcher_override_home, bản tiếng Việt và tiếng Anh).
+ */
+private fun meoCua(goi: String): String? = when (goi) {
+    "com.spocky.projengmenu" -> t("Projectivy tự thay Home của hãng được: bật trợ năng ở đây, rồi trong cài đặt của nó bật \"Ghi đè trình khởi chạy hiện tại\". Tivi có Home sạch thì chỉ cần Đặt làm Home ở đây: Home sạch mở Projectivy đè lên Home của hãng.",
+        "Projectivy can take over the maker's Home by itself: turn its accessibility on here, then \"Override current launcher\" in its settings. With the clean Home on the TV, Make it Home here is enough: the clean Home opens Projectivy over the maker's Home.")
+    else -> null
+}
+
+/** Hộp hỏi lại trước khi đổi Home, tắt, bật lại (khi nó giành Home), gỡ, bấm thử nút Home, bật trợ năng của launcher. */
 @Composable
 private fun HopHoiLauncher(vm: PhienLamViec, ql: QuanLyLauncher, hoi: QuanLyLauncher.Hoi) {
     val tt = ql.tt
@@ -142,15 +170,22 @@ private fun HopHoiLauncher(vm: PhienLamViec, ql: QuanLyLauncher, hoi: QuanLyLaun
         is QuanLyLauncher.Hoi.DatHome -> {
             val ten = tenDep(hoi.m.goi)
             val chan = tt?.let { Launcher.chan(hoi.m, it) }.orEmpty()
+            val goc = chan.firstOrNull()?.let { tenDep(it) }.orEmpty()
             Triple(t("Đặt $ten làm Home?", "Make $ten the Home?"),
                 t("Tivi sẽ mở Cài đặt rồi bấm Home để thử; không được thì app tự trả lại như cũ.", "The TV will open Settings and press Home to test it; if it fails, the app puts everything back.") +
                     (if (hoi.nhuong.isNotEmpty()) t("\n\nAndroid luôn ưu tiên ${hoi.nhuong.joinToString { tenDep(it) }} hơn $ten, nên app tắt ${hoi.nhuong.joinToString { tenDep(it) }} trước. Khôi phục tivi bật lại được; rớt kết nối giữa chừng thì tivi tự bật lại sau 3 phút.",
                         "\n\nAndroid always favours ${hoi.nhuong.joinToString { tenDep(it) }} over $ten, so the app disables it first. Restoring the TV turns it back on; if the connection drops midway, the TV turns it back on by itself after 3 minutes.") else "") +
-                    (if (hoi.m.loai == Loai.HOME_SACH && hoi.nhuong.isEmpty() && chan.isNotEmpty()) t("\n\n${chan.joinToString { tenDep(it) }} vẫn là Home mặc định của Android; Home sạch tự mở đè lên nó.",
-                        "\n\n${chan.joinToString { tenDep(it) }} stays Android's default Home; the clean Home opens over it.") else "") +
-                    (if (hoi.m.loai != Loai.HOME_SACH && tt?.khoaGianh?.isNotEmpty() == true) t("\n\nHome sạch vẫn ở trên tivi, nút remote gán riêng vẫn chạy, nhưng thôi tự mở đè lên Home và thôi tự mở khi bật tivi.",
-                        "\n\nThe clean Home stays on the TV and its remote buttons keep working, but it stops opening over the Home and when the TV turns on.") else ""),
-                t("Đặt làm Home", "Make it Home"))
+                    (if (hoi.m.loai == Loai.HOME_SACH && hoi.nhuong.isEmpty() && chan.isNotEmpty()) t("\n\n$goc vẫn là Home mặc định của Android; Home sạch tự mở đè lên nó.",
+                        "\n\n$goc stays Android's default Home; the clean Home opens over it.") else "") +
+                    (if (hoi.moDe) t("\n\n$goc giữ quyền Home và không tắt được. Home sạch sẽ mở $ten đè lên $goc mỗi khi nó hiện ra, như Home sạch vẫn tự mở chính nó." +
+                        if (!ql.homeSachMoi) " App cập nhật Home sạch lên bản mới trước (giữ nguyên giao diện, nút remote)." else "",
+                        "\n\n$goc keeps the Home role and can't be disabled. The clean Home will open $ten over $goc whenever it comes up, the way it opens itself now." +
+                        if (!ql.homeSachMoi) " The app first updates the clean Home (look and remote buttons are kept)." else "") else "") +
+                    (if (hoi.m.loai != Loai.HOME_SACH && !hoi.moDe && !ql.homeSachMoi && tt?.khoaGianh?.isNotEmpty() == true) t("\n\nHome sạch vẫn ở trên tivi, nút remote gán riêng vẫn chạy, nhưng thôi tự mở đè lên Home và thôi tự mở khi bật tivi.",
+                        "\n\nThe clean Home stays on the TV and its remote buttons keep working, but it stops opening over the Home and when the TV turns on.") else "") +
+                    (if (hoi.m.loai != Loai.HOME_SACH && ql.homeSachMoi && tt?.chuyenDe == hoi.m.goi) t("\n\nHome sạch thôi mở đè lên $ten; nút remote gán riêng vẫn chạy.",
+                        "\n\nThe clean Home stops opening over $ten; its remote buttons keep working.") else ""),
+                if (hoi.nhuong.isNotEmpty()) t("Tắt và đặt", "Disable and set") else t("Đặt làm Home", "Make it Home"))
         }
         is QuanLyLauncher.Hoi.Tat -> Triple(t("Tắt ${tenDep(hoi.m.goi)}?", "Disable ${tenDep(hoi.m.goi)}?"),
             t("Launcher này không chạy và không nhận nút Home nữa. Bật lại ở đây hoặc bằng Khôi phục tivi.", "This launcher stops running and no longer takes the Home button. Re-enable it here or by restoring the TV."),
@@ -167,12 +202,30 @@ private fun HopHoiLauncher(vm: PhienLamViec, ql: QuanLyLauncher, hoi: QuanLyLaun
         QuanLyLauncher.Hoi.ThuNut -> Triple(t("Bấm thử nút Home?", "Test the Home button?"),
             t("Tivi sẽ mở Cài đặt rồi bấm Home, như khi bạn bấm Home trên remote: app đang mở trên tivi sẽ bị đóng.", "The TV will open Settings and press Home, like the remote's Home button: whatever is open on the TV gets closed."),
             t("Bấm thử", "Test"))
+        is QuanLyLauncher.Hoi.BatTroNang -> Triple(t("Bật trợ năng của ${tenDep(hoi.m.goi)}?", "Turn on ${tenDep(hoi.m.goi)}'s accessibility?"),
+            t("Dịch vụ trợ năng cho ${tenDep(hoi.m.goi)} đọc được màn hình và bắt phím remote: launcher dùng nó để tự thay Home của hãng, phím tắt, khoá trẻ em. Chỉ bật cho launcher bạn tin; tắt lại ở đây lúc nào cũng được. Các dịch vụ đang bật (nút remote của Home sạch…) giữ nguyên.",
+                "An accessibility service lets ${tenDep(hoi.m.goi)} read the screen and catch remote keys: launchers use it to take over the maker's Home, for shortcuts, kids locks. Only turn it on for a launcher you trust; turn it off here any time. Services already on (the clean Home's remote buttons…) stay on."),
+            t("Bật", "Turn on"))
     }
+    val chinh = hoi is QuanLyLauncher.Hoi.ThuNut || hoi is QuanLyLauncher.Hoi.DatHome
     AlertDialog(
         onDismissRequest = { ql.hoi = null },
-        icon = { Icon(if (hoi is QuanLyLauncher.Hoi.ThuNut || hoi is QuanLyLauncher.Hoi.DatHome) Icons.Rounded.Home else Icons.Rounded.Warning, null, tint = if (hoi is QuanLyLauncher.Hoi.ThuNut || hoi is QuanLyLauncher.Hoi.DatHome) Nhan else Cam) },
+        icon = { Icon(if (chinh) Icons.Rounded.Home else Icons.Rounded.Warning, null, tint = if (chinh) Nhan else Cam) },
         title = { Text(tieuDe) },
-        text = { Text(noiDung) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(noiDung)
+                // Tắt được launcher của hãng, nhưng có Home sạch thì cũng có thể giữ nó bật (menu riêng của hãng nằm trong nó)
+                // và để Home sạch mở đè — mở launcher đã chọn, hay chính Home sạch như trên Google TV.
+                if (hoi is QuanLyLauncher.Hoi.DatHome && hoi.coTheMoDe) {
+                    val goc = hoi.nhuong.joinToString { tenDep(it) }
+                    TextButton(onClick = { ql.datHome(hoi.m, emptyList()) }, enabled = !vm.dangBan) {
+                        Text(if (hoi.m.loai == Loai.HOME_SACH) t("Không tắt $goc: để Home sạch tự mở đè lên nó", "Keep $goc on: let the clean Home open over it")
+                            else t("Không tắt $goc: để Home sạch mở ${tenDep(hoi.m.goi)} đè lên", "Keep $goc on: let the clean Home open ${tenDep(hoi.m.goi)} over it"))
+                    }
+                }
+            }
+        },
         confirmButton = {
             TextButton(onClick = {
                 when (hoi) {
@@ -181,6 +234,7 @@ private fun HopHoiLauncher(vm: PhienLamViec, ql: QuanLyLauncher, hoi: QuanLyLaun
                     is QuanLyLauncher.Hoi.BatGianh -> ql.bat(hoi.m)
                     is QuanLyLauncher.Hoi.Go -> ql.go(hoi.m)
                     QuanLyLauncher.Hoi.ThuNut -> ql.thuNut()
+                    is QuanLyLauncher.Hoi.BatTroNang -> ql.batTroNang(hoi.m, hoi.dv, lamMoi = false)
                 }
             }, enabled = !vm.dangBan) { Text(nut, fontWeight = FontWeight.SemiBold) }
         },
