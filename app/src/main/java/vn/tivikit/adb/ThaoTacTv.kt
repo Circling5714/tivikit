@@ -1799,17 +1799,24 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /**
      * Cài / cập nhật TiviKit Launcher (chỉ khi khác bản đi kèm), cấp quyền (TiviKitLauncher.LENH_CAP_QUYEN: tên Wi-Fi, thẻ
      * Đang phát, app mở gần đây), biên dịch sẵn phần mã hay dùng sau mỗi lần cài (TiviKitLauncher.LENH_TOI_UU), rồi gửi
-     * [cauHinh] (TiviKitLauncher.cauHinh: tên lời chào, nơi xem thời tiết, ngôn ngữ, dock khi mới cài).
+     * [cauHinh] (TiviKitLauncher.cauHinh: tên lời chào, nơi xem thời tiết, ngôn ngữ, dock khi mới cài). Launcher đang hiện
+     * mà cài đè làm tivi về Home của hãng (Google TV: Home sạch mở nó đè lên Home của hãng; Skyworth 27/10/2026) thì mở lại.
      */
     fun caiTkl(apk: ByteArray, cauHinh: String, bao: (String) -> Unit) {
         var vuaCai = false
-        caiAppPhu(TiviKitLauncher.GOI, apk) { vuaCai = true; bao(t("Cài TiviKit Launcher lên tivi…", "Installing TiviKit Launcher on the TV…")) }
+        var dangHien = false
+        caiAppPhu(TiviKitLauncher.GOI, apk) {
+            vuaCai = true
+            dangHien = goiDangHien() == TiviKitLauncher.GOI
+            bao(t("Cài TiviKit Launcher lên tivi…", "Installing TiviKit Launcher on the TV…"))
+        }
         sh(TiviKitLauncher.LENH_CAP_QUYEN)
         if (vuaCai) {
             bao(t("Tối ưu cho tivi yếu…", "Optimising for slow TVs…"))
             runCatching { sh(TiviKitLauncher.LENH_TOI_UU) }
         }
         sh(TiviKitLauncher.lenhDat(cauHinh))
+        if (vuaCai && dangHien && goiDangHien() != TiviKitLauncher.GOI) moThu(TiviKitLauncher.HOME)?.let { moThu(TiviKitLauncher.MAN) }
     }
 
     /**
