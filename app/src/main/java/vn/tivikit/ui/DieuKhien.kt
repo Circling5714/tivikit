@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import vn.tivikit.adb.PhimTv
 import vn.tivikit.adb.ThaoTacTv
@@ -40,6 +41,7 @@ class DieuKhien(private val vm: PhienLamViec) {
     private val choGui = java.util.concurrent.atomic.AtomicInteger()
 
     fun bam(ma: Int, giu: Boolean = false) {
+        if (ma == PhimTv.HOME && !giu) sauHome()
         // Kênh scrcpy (đang xem màn hình, hay kênh không hình của màn Điều khiển): tivi nhận ngay. Nhấn giữ vẫn đi đường cũ
         // (`--longpress`): kênh scrcpy chỉ có nhấn / nhả, không tự sinh sự kiện giữ phím.
         if (!giu && choGui.get() == 0 && (vm.xemManHinh.phim(ma) || vm.kenhDieuKhien.phim(ma))) return
@@ -70,6 +72,22 @@ class DieuKhien(private val vm: PhienLamViec) {
             ds += k.ma
         }
         return Triple(PhimTv.lenhPhim(ds), ds.size, null)
+    }
+
+    /**
+     * Home trên tivi Home gốc không nhường (Google TV): phím bơm từ đây không qua bộ lọc phím của Home sạch như phím remote
+     * thật, launcherx có lúc giành lại màn hình (28/10/2026, Skyworth). Làm như Home sạch với phím thật: phím đã đi xong
+     * chừng 300 ms thì mở launcher đã chọn (ThaoTacTv.lenhSauHome; tivi khác thì không làm gì).
+     */
+    private fun sauHome() {
+        if (!vm.daCoHomeSach) return
+        vm.viewModelScope.launch {
+            val lenh = runCatching { vm.io { vm.tv.lenhSauHome() } }.getOrNull().orEmpty()
+            if (lenh.isEmpty()) return@launch
+            while (choGui.get() > 0) delay(50)
+            delay(300)
+            runCatching { vm.io { vm.adb.shell(lenh) } }
+        }
     }
 
     /** Chạy lệnh trên tivi; rớt kết nối thì nối lại đúng tivi đó một lần rồi chạy lại. */

@@ -168,6 +168,7 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 | --- | --- |
 | Điều khiển → gõ tiếng Việt có dấu vào ô tìm kiếm YouTube | Chữ có dấu hiện đúng trên tivi |
 | Điều khiển → Xem màn hình tivi → chạm vào một ô app trên hình | App đó mở trên tivi |
+| Google TV có Home sạch mở launcher đã chọn đè Home gốc: Điều khiển → nút Home vài lần | Lần nào cũng về đúng launcher đã chọn, không kẹt ở Home Google TV |
 | Gửi ảnh, video → chọn một ảnh | Ảnh nằm trong Download/TiviKit trên tivi và mở xem được |
 | Bộ cài đặt mẫu → tạo bộ có 1 app + DNS → Cài cho tivi này | App được cài, DNS đặt đúng |
 | Sao lưu & chuyển máy → Lưu ra file → Nhập trên điện thoại khác | Tivi đã dọn, bộ cài đặt hiện đủ trên máy mới |

@@ -644,6 +644,21 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         return runCatching { org.json.JSONObject(s) }.getOrNull()
     }
 
+    /**
+     * Lệnh mở launcher mà Home sạch mở đè Home gốc (home_target, không có thì chính Home sạch), y như Home sạch làm 250 ms
+     * sau phím Home thật; "" nếu tivi không có Home gốc phải mở đè (stock_home_redirect). Phím Home bơm từ remote trên
+     * điện thoại (`input` / scrcpy) không qua bộ lọc phím của Home sạch, chỉ còn mở đè theo cửa sổ: Google TV mở lại
+     * launcherx ngay sau đó thì kẹt ở Home gốc (28/10/2026, Skyworth).
+     */
+    fun lenhSauHome(): String {
+        val j = docCauHinhTv() ?: return ""
+        val goc = j.optString("stock_home_redirect").trim().takeIf { TEN_GOI.matches(it) } ?: return ""
+        val dich = j.optString("home_target").trim().takeIf { Regex("[A-Za-z0-9_.]+/[A-Za-z0-9_.]+").matches(it) } ?: cmpHome
+        val mo = "am start -n $dich -c android.intent.category.HOME -f 0x10200000 >/dev/null 2>&1"
+        // launcherx có lúc tự mở lại ngay sau lần mở đè: 1 giây sau còn thấy Home gốc thì mở thêm lần nữa.
+        return "$mo; sleep 1; dumpsys window | grep -m1 mCurrentFocus | grep -q '$goc/' && $mo; true"
+    }
+
     /** Gói của màn đang hiện trên tivi (đọc cửa sổ đang giữ tiêu điểm — chạy được từ Android 8 tới 14). */
     fun goiDangHien(): String {
         val ten = Regex("""([A-Za-z0-9_.]+)/[A-Za-z0-9_.$]+""")
