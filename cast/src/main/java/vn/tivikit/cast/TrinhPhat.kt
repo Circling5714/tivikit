@@ -42,6 +42,14 @@ class TrinhPhat(private val ctx: Context) {
 
     /** Trạng thái phát đổi ngoài lệnh của điện thoại (remote tivi, video hết): báo lại điện thoại. */
     var baoDoi: (() -> Unit)? = null
+    /** Cho SmartTube rời màn hình để về nghe nền (dịch vụ trợ năng làm): mở lại launcher [goi], null = bấm Home. */
+    var veHome: ((goi: String?) -> Unit)? = null
+    /** App đang ở trên màn hình (dịch vụ trợ năng báo); null = chưa biết. */
+    @Volatile private var goiTren: String? = null
+    @Volatile private var mocTren = 0L
+    /** Launcher (gói có màn HOME) hiện gần nhất: nơi trả về khi màn bảo vệ đang che lúc video tới. */
+    @Volatile private var launcherCuoi: String? = null
+    private val laHomeDaBiet = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
     private var theo: MediaController? = null
     private var ttTheo = KHONG
     private val goiLai = object : MediaController.Callback() {
@@ -99,6 +107,53 @@ class TrinhPhat(private val ctx: Context) {
         baoDoi?.invoke()
     }
 
+    fun doiTren(goi: String) {
+        if (goi == goiTren) return
+        goiTren = goi
+        mocTren = SystemClock.elapsedRealtime()
+        if (laHome(goi)) launcherCuoi = goi
+    }
+
+    private fun laHome(goi: String): Boolean = laHomeDaBiet.getOrPut(goi) {
+        runCatching {
+            ctx.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(goi), 0).isNotEmpty()
+        }.getOrDefault(false)
+    }
+
+    private fun tieuDe(p: MediaController?): String? = p?.metadata?.description?.title?.toString()
+
+    /** SmartTube đang phát mà không ở trên màn hình: người xem đã bấm Home để nghe nền. */
+    private fun dangNgheNen(): Boolean {
+        val tren = goiTren ?: return false
+        if (tren in GOI_SMARTTUBE) return false
+        val st = phien()?.playbackState?.state
+        return if (st != null) st == PlaybackState.STATE_PLAYING || st == PlaybackState.STATE_BUFFERING
+        else videoId != null && am.isMusicActive
+    }
+
+    /**
+     * Video mới tới lúc SmartTube đang phát nền: SmartTube phải lên màn hình để mở video, chờ video mới phát (có phiên media
+     * thì chờ tên bài đổi khỏi [tieuDeCu]) rồi cho SmartTube rời màn hình như người xem bấm Home (cách nghe nền của SmartTube
+     * chạy lúc đó), về launcher [ve]. Quá 12 giây thì cứ về.
+     */
+    private fun choVeNen(ve: String?, tieuDeCu: String?) {
+        val het = SystemClock.elapsedRealtime() + 12_000
+        tay.postDelayed(object : Runnable {
+            override fun run() {
+                val bay = SystemClock.elapsedRealtime()
+                val tren = goiTren in GOI_SMARTTUBE
+                val p = phien()
+                val daPhat = if (p != null) p.playbackState?.state == PlaybackState.STATE_PLAYING && (tieuDeCu == null || tieuDe(p) != tieuDeCu)
+                    else am.isMusicActive && bay - mocTren > 2_500
+                when {
+                    tren && daPhat && bay - mocTren > 1_000 -> veHome?.invoke(ve)
+                    bay > het -> if (tren) veHome?.invoke(ve)
+                    else -> tay.postDelayed(this, 500)
+                }
+            }
+        }, 1_000)
+    }
+
     private fun goiSmartTube(): String? =
         GOI_SMARTTUBE.firstOrNull { p -> runCatching { ctx.packageManager.getPackageInfo(p, 0) }.isSuccess }
 
@@ -150,9 +205,15 @@ class TrinhPhat(private val ctx: Context) {
         trangThai = PHAT
         cpn = UUID.randomUUID().toString().replace("-", "").take(16)
         ttTheo = PHAT
+        val nen = dangNgheNen()
+        // Đang nghe nền: về lại launcher đang hiện (màn bảo vệ đang che thì launcher hiện gần nhất), cùng tên bài đang phát.
+        val ve = goiTren?.takeIf { laHome(it) } ?: launcherCuoi
+        val tieuDeCu = if (nen) tieuDe(phien()) else null
         // SmartTube tạo / đổi phiên media khi bắt đầu phát.
         tay.postDelayed({ theoDoi() }, 3_000)
-        return mo(id, tu)
+        val ok = mo(id, tu)
+        if (ok && nen) choVeNen(ve, tieuDeCu)
+        return ok
     }
 
     fun tiep(): Boolean = synchronized(this) { ds.getOrNull(chiSo + 1)?.also { chiSo++ } }?.let { phat(it, 0.0) } ?: false

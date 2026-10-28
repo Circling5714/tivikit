@@ -6,9 +6,9 @@ import android.service.notification.NotificationListenerService
 import android.view.accessibility.AccessibilityEvent
 
 /**
- * Dịch vụ trợ năng của Cast SmartTube: không nghe sự kiện, không đọc màn hình, không lọc phím. Giữ máy nhận (DIAL + kênh
- * Lounge) chạy suốt từ lúc tivi bật, và để Android cho mở SmartTube khi app đang chạy nền. Người dùng thấy và tắt được
- * trong Cài đặt → Trợ năng.
+ * Dịch vụ trợ năng của Cast SmartTube: chỉ nghe đổi cửa sổ (tên app đang hiện), không đọc nội dung màn hình, không lọc
+ * phím. Giữ máy nhận (DIAL + kênh Lounge) chạy suốt từ lúc tivi bật, để Android cho mở SmartTube khi app đang chạy nền, và
+ * bấm Home cho SmartTube về nghe nền khi video mới tới lúc đang nghe nền. Người dùng thấy và tắt được trong Cài đặt → Trợ năng.
  */
 class CastDichVu : AccessibilityService() {
     var may: MayThu? = null; private set
@@ -19,7 +19,19 @@ class CastDichVu : AccessibilityService() {
         if (may == null) may = MayThu(this).also { it.batDau() }
     }
 
-    override fun onAccessibilityEvent(e: AccessibilityEvent?) {}
+    /** Bàn phím ảo đang dùng: cửa sổ của nó không phải app đang xem. */
+    private val boGo: String? by lazy {
+        runCatching { android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.DEFAULT_INPUT_METHOD) }
+            .getOrNull()?.substringBefore('/')
+    }
+
+    /** Chỉ lấy tên gói của cửa sổ vừa lên (biết SmartTube có đang ở trên màn hình không), không đọc nội dung. */
+    override fun onAccessibilityEvent(e: AccessibilityEvent?) {
+        if (e?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val goi = e.packageName?.toString() ?: return
+        if (goi == packageName || goi == "android" || goi == "com.android.systemui" || goi == boGo) return
+        may?.doiTren(goi)
+    }
     override fun onInterrupt() {}
 
     override fun onUnbind(intent: Intent?): Boolean {

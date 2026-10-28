@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Không nghe sự kiện, không đọc nội dung màn hình, không lọc phím: chỉ để máy nhận chạy suốt và được mở SmartTube. -->
+<!-- Chỉ nghe đổi cửa sổ (tên app đang hiện), không đọc nội dung màn hình, không lọc phím: máy nhận chạy suốt, được mở
+     SmartTube, biết SmartTube đang nghe nền hay đang hiện. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="false"
-    android:notificationTimeout="1000"
+    android:notificationTimeout="100"
     android:description="@string/mo_ta" />

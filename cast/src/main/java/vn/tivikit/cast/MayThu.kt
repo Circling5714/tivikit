@@ -1,6 +1,8 @@
 package vn.tivikit.cast
 
+import android.accessibilityservice.AccessibilityService
 import android.content.Context
+import android.content.Intent
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.Settings
@@ -27,6 +29,9 @@ class MayThu(private val ctx: Context) {
     val soDienThoai: Int get() = dienThoai.size
     val dangPhat: String? get() = tp.videoId
 
+    /** App vừa lên màn hình (dịch vụ trợ năng báo). */
+    fun doiTren(goi: String) = tp.doiTren(goi)
+
     /** Tên hiện trong nút Cast của app YouTube. */
     fun tenHien(): String = kho.ten ?: "SmartTube · ${tenTivi()}"
 
@@ -45,6 +50,7 @@ class MayThu(private val ctx: Context) {
                 .createMulticastLock("tivikit-cast").apply { setReferenceCounted(false); acquire() }
         }.getOrNull()
         tp.baoDoi = { lounge.gui(listOf("onStateChange" to tp.onStateChange())) }
+        tp.veHome = ::veLai
         tp.batTheoDoi()
         // Mở cổng, nối mạng ngoài luồng chính.
         thread(isDaemon = true) {
@@ -52,6 +58,24 @@ class MayThu(private val ctx: Context) {
             lounge.batDau()
             kho.ghi("bật máy nhận, cổng ${dial.cong}")
         }
+    }
+
+    /**
+     * Cho SmartTube về nghe nền: mở lại [launcher] (SmartTube rời màn hình như khi bấm Home, cách nghe nền của nó chạy),
+     * không biết launcher thì bấm Home. Không bấm Home khi biết launcher: trên Google TV Home bơm (không qua bộ lọc phím của
+     * Home sạch) có lúc kẹt ở launcherx thay vì launcher người dùng chọn (28/10/2026, Skyworth).
+     */
+    private fun veLai(launcher: String?) {
+        val man = launcher?.let { g ->
+            runCatching {
+                ctx.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(g), 0)
+                    .firstOrNull()?.activityInfo?.name
+            }.getOrNull()?.let { Intent().setClassName(g, it) }
+        }
+        if (man != null && runCatching {
+                ctx.startActivity(man.addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))
+            }.isSuccess) return
+        (ctx as? AccessibilityService)?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
     }
 
     fun dung() {

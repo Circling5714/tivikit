@@ -21,6 +21,11 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="www.youtube.com" />
         </intent>
+        <!-- Launcher đang dùng: SmartTube đang nghe nền thì video mới xong lại về đúng launcher đó. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
     </queries>
 
     <!-- Không có màn mở trong danh sách app: bật / đặt tên ở TiviKit trên điện thoại. -->
