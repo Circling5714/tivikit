@@ -89,6 +89,11 @@ class DongLenhTest {
     @Test fun caiDat() {
         assertEquals(listOf("proxy"), ma("settings put global http_proxy 10.0.0.2:8080"))
         assertEquals(listOf("tro-nang"), ma("settings put secure enabled_accessibility_services a.b/.Dv"))
+        // Có lệnh đọc cùng dòng nhưng ghi thẳng giá trị khác: vẫn là ghi đè.
+        assertEquals(listOf("tro-nang"), ma("settings get secure enabled_accessibility_services; settings put secure enabled_accessibility_services a.b/.Dv"))
+        // cmd settings là cùng một lệnh.
+        assertTrue(DongLenh.kiemTra("cmd settings put global adb_enabled 0").any { it.ma == "adb-tat" })
+        assertEquals(listOf("global" to "adb_enabled"), DongLenh.caiDatDoi("cmd settings put global adb_enabled 0"))
         assertEquals(listOf("chua-cai-dat"), ma("settings put secure user_setup_complete 0"))
         assertEquals(listOf("co-chu"), ma("settings put system font_scale 3"))
         assertEquals(listOf("settings-reset"), ma("settings reset global trusted_defaults"))
@@ -154,7 +159,7 @@ class DongLenhTest {
     }
 
     @Test fun bocLenh() {
-        assertEquals("cd '/sdcard/My '\\''Files' 2>/dev/null; sh -c 'echo \"__TK1_P\$\$\"\necho '\\''a'\\''\n__r=\$?; echo; echo \"__TK1_D\$PWD\"; exit \$__r' 2>&1; echo; echo \"__TK1_X\$?\"",
+        assertEquals("cd '/sdcard/My '\\''Files' 2>/dev/null; sh -c 'echo \"__TK1_P\$\$\"\necho '\\''a'\\''\n__r=\$?; echo; echo \"__TK1_D\$PWD\"; exit \$__r' 2>&1; __x=\$?; echo; echo \"__TK1_X\$__x\"",
             DongLenh.boc("echo 'a'", "/sdcard/My 'Files", "__TK1_"))
     }
 

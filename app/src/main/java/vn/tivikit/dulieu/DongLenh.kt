@@ -551,8 +551,10 @@ object DongLenh {
     fun kiemTra(lenh: String, canGiu: (String) -> Boolean = { false }): List<CanhBao> {
         val ra = LinkedHashMap<String, CanhBao>()
         val them: (CanhBao) -> Unit = { ra.putIfAbsent(it.ma, it) }
-        // Lệnh mẫu bật dịch vụ trợ năng đọc danh sách cũ rồi ghép thêm: không phải ghi đè.
-        val docTroNang = lenh.contains("get secure enabled_accessibility_services")
+        // Lệnh mẫu bật dịch vụ trợ năng đọc danh sách cũ rồi ghép thêm ("$s:…"): không phải ghi đè. Chỉ đọc mà không ghép,
+        // ghi thẳng giá trị khác, thì vẫn là ghi đè (28/10/2026: settings get …; settings put … a.b/.S lọt qua).
+        val docTroNang = lenh.contains("get secure enabled_accessibility_services") &&
+            Regex("""put secure enabled_accessibility_services\s+"?\$""").containsMatchIn(lenh)
         for (c in cacLenh(lenh)) xet(c, canGiu, docTroNang, them)
         return ra.values.sortedByDescending { it.mucDo }
     }
@@ -573,6 +575,11 @@ object DongLenh {
                 "overlay" -> if (a.getOrNull(1) == "disable") them(CB_OVERLAY)
                 "role" -> if (a.getOrNull(1) in setOf("add-role-holder", "remove-role-holder", "clear-role-holders")) them(CB_ROLE)
                 "device_config" -> if (a.getOrNull(1) in setOf("put", "delete", "reset")) them(CB_DEVICE_CONFIG)
+                // `settings`, `appops`, `ime` chỉ là vỏ của các lệnh cmd này: cùng luật (28/10/2026: cmd settings put global
+                // adb_enabled 0 chạy không hỏi).
+                "settings" -> xetSettings(boUser(a.drop(1)), docTroNang, them)
+                "appops" -> xetAppops(a.drop(1), them)
+                "input_method" -> if (a.getOrNull(1) == "ime") xetIme(a.drop(2), them)
             }
             "am" -> if (a.getOrNull(0) == "monitor") them(CB_LIEN_TUC)
             "settings" -> xetSettings(boUser(a), docTroNang, them)
@@ -639,8 +646,8 @@ object DongLenh {
             "ip" -> if (a.any { it == "down" || it == "del" || it == "delete" || it == "flush" }) them(CB_TAT_MANG)
             "iptables", "ip6tables" -> if (a.any { it in SUA_TUONG_LUA }) them(CB_TUONG_LUA)
             "input" -> if (a.getOrNull(0) == "keyevent" && a.drop(1).any { it in PHIM_NGU }) them(CB_NGU)
-            "ime" -> if (a.getOrNull(0) in setOf("set", "disable", "reset")) them(CB_BAN_PHIM)
-            "appops" -> if (a.getOrNull(0) == "reset" || (a.getOrNull(0) == "set" && a.lastOrNull() in setOf("deny", "ignore", "errored"))) them(CB_APPOPS)
+            "ime" -> xetIme(a, them)
+            "appops" -> xetAppops(a, them)
             "content" -> if (a.getOrNull(0) in setOf("insert", "update", "delete")) them(CB_CONTENT)
             "monkey" -> a.lastOrNull()?.toIntOrNull()?.takeIf { it > 1 }?.let { n ->
                 them(CanhBao("monkey", MucDo.CAN_THAN, "Monkey sẽ bấm ngẫu nhiên $n lần: có thể bấm lung tung vào cài đặt, xoá dữ liệu, mua hàng. Để mở app chỉ cần 1.",
@@ -704,6 +711,14 @@ object DongLenh {
         return ra
     }
 
+    private fun xetIme(a: List<String>, them: (CanhBao) -> Unit) {
+        if (a.getOrNull(0) in setOf("set", "disable", "reset")) them(CB_BAN_PHIM)
+    }
+
+    private fun xetAppops(a: List<String>, them: (CanhBao) -> Unit) {
+        if (a.getOrNull(0) == "reset" || (a.getOrNull(0) == "set" && a.lastOrNull() in setOf("deny", "ignore", "errored"))) them(CB_APPOPS)
+    }
+
     private fun xetSettings(a: List<String>, docTroNang: Boolean, them: (CanhBao) -> Unit) {
         val lenh = a.getOrNull(0) ?: return
         if (lenh == "reset") { them(CB_SETTINGS_RESET); return }
@@ -718,7 +733,7 @@ object DongLenh {
             "http_proxy", "global_http_proxy_host", "global_http_proxy_port" -> if (lenh == "put" && gt != ":0") them(CB_PROXY)
             "private_dns_mode", "private_dns_specifier" -> them(CB_DNS)
             "enabled_accessibility_services" -> if (!docTroNang) them(CB_TRO_NANG)
-            "accessibility_enabled" -> if (tat && !docTroNang) them(CB_TRO_NANG)
+            "accessibility_enabled" -> if (tat) them(CB_TRO_NANG)
             "device_provisioned", "user_setup_complete" -> if (tat) them(CB_CHUA_CAI_DAT)
             "default_input_method", "enabled_input_methods" -> them(CB_BAN_PHIM)
             "package_verifier_enable", "verifier_verify_adb_installs" -> if (gt == "0") them(CB_PLAY_PROTECT)
@@ -959,8 +974,14 @@ object DongLenh {
     fun goiGo(lenh: String): List<String> = goiCua(lenh) { l, a -> l == "uninstall" && "--user" in a }
 
     /** Cài đặt [lenh] ghi / xoá (settings put|delete <bảng> <khoá>): in giá trị cũ ra trước khi chạy. */
-    fun caiDatDoi(lenh: String): List<Pair<String, String>> = cacLenh(lenh).filter { it.ten == "settings" }.mapNotNull { c ->
-        val a = boUser(c.doi)
+    fun caiDatDoi(lenh: String): List<Pair<String, String>> = cacLenh(lenh).mapNotNull { c ->
+        when {
+            c.ten == "settings" -> c.doi
+            c.ten == "cmd" && c.doi.firstOrNull() == "settings" -> c.doi.drop(1)
+            else -> null
+        }
+    }.mapNotNull { doi ->
+        val a = boUser(doi)
         val khoa = a.getOrNull(2)
         if (a.getOrNull(0) in setOf("put", "delete") && a.getOrNull(1) in setOf("global", "secure", "system") && khoa != null && KHOA_CAI_DAT.matches(khoa)) a[1] to khoa else null
     }.distinct()
@@ -974,7 +995,8 @@ object DongLenh {
      */
     fun boc(lenh: String, thuMuc: String, dau: String): String {
         val trong = "echo \"${dau}P\$\$\"\n$lenh\n__r=\$?; echo; echo \"${dau}D\$PWD\"; exit \$__r"
-        return "cd ${nhay(thuMuc)} 2>/dev/null; sh -c ${nhay(trong)} 2>&1; echo; echo \"${dau}X\$?\""
+        // Giữ mã thoát của sh -c trước khi echo (28/10/2026: trước đây in $? của echo, mã thoát luôn 0).
+        return "cd ${nhay(thuMuc)} 2>/dev/null; sh -c ${nhay(trong)} 2>&1; __x=\$?; echo; echo \"${dau}X\$__x\""
     }
 
     /**
