@@ -83,6 +83,19 @@ object KhoaApp {
     /** Bỏ hẹn khoá đã hết. */
     fun conHan(hen: List<HenKhoa>, ms: Long): List<HenKhoa> = hen.filter { it.den > ms }
 
+    /** Bỏ app [goi] khỏi các hẹn khoá (hẹn chỉ còn app đó thì bỏ hẳn): bảng phụ huynh trên tivi. */
+    fun boHenApp(hen: List<HenKhoa>, goi: String): List<HenKhoa> = hen.map { it.copy(goi = it.goi - goi) }.filter { it.goi.isNotEmpty() }
+
+    /** [gio] giờ sáng hôm sau [ms] — hay sáng nay nếu [ms] còn trước giờ đó (tạm tắt khoá lúc 1 giờ sáng là tới 6 giờ sáng nay). */
+    fun sangMai(ms: Long, gio: Int = 6): Long {
+        val c = Calendar.getInstance().apply {
+            timeInMillis = ms
+            set(Calendar.HOUR_OF_DAY, gio); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        if (c.timeInMillis <= ms) c.add(Calendar.DAY_OF_MONTH, 1)
+        return c.timeInMillis
+    }
+
     // ---------- JSON ----------
 
     private val TEN_GOI = Regex("""^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$""")

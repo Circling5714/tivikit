@@ -81,6 +81,15 @@ class KhoaAppTest {
         assertEquals(setOf(ST), KhoaApp.dsGoi(JSONArray(listOf(ST, "khong hop le"))))
     }
 
+    @Test fun boHenApp_vaSangMai() {
+        val hen = listOf(HenKhoa(setOf(ST, YT), 1, 2), HenKhoa(setOf(ST), 3, 4))
+        assertEquals(listOf(HenKhoa(setOf(YT), 1, 2)), KhoaApp.boHenApp(hen, ST))
+        fun gioNgay(ms: Long) = Calendar.getInstance().apply { timeInMillis = ms }.let { it.get(Calendar.DAY_OF_MONTH) to it.get(Calendar.HOUR_OF_DAY) }
+        assertEquals(29 to 6, gioNgay(KhoaApp.sangMai(luc(2026, 10, 28, 21, 0).timeInMillis)))   // tối nay → 6 giờ sáng mai
+        assertEquals(28 to 6, gioNgay(KhoaApp.sangMai(luc(2026, 10, 28, 1, 30).timeInMillis)))   // 1 giờ 30 sáng → 6 giờ sáng nay
+        assertEquals(29 to 6, gioNgay(KhoaApp.sangMai(luc(2026, 10, 28, 6, 0).timeInMillis)))    // đúng 6 giờ → sáng mai
+    }
+
     @Test fun nuaDem() {
         val nd = Calendar.getInstance().apply { timeInMillis = KhoaApp.nuaDem(luc(2026, 10, 28, 23, 59).timeInMillis) }
         assertEquals(29, nd.get(Calendar.DAY_OF_MONTH)); assertEquals(0, nd.get(Calendar.HOUR_OF_DAY)); assertEquals(0, nd.get(Calendar.MINUTE))

@@ -107,6 +107,9 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
   5 phút thì tivi báo ở góc, tới giờ thì tivi che app lại.
 - **Thử bảo vệ Cài đặt:** lúc khoá bật, mở Cài đặt trên tivi → hiện "Cài đặt cần mã của bố mẹ"; gõ mã thì Cài đặt mở,
   10 phút sau mới hỏi lại. Gỡ app khoá từ Cài đặt / trình quản lý file cũng hỏi mã.
+- **Thử bảng phụ huynh (không dùng điện thoại):** trên tivi mở ô Khoá trẻ em trong danh sách app → gõ mã → bảng phụ
+  huynh: Khoá một app… → chọn app → Khoá ngay (góc màn hình báo, mở app đó thì bị che); trên màn khoá, đi xuống nút
+  Phụ huynh → gõ mã → Mở tivi 30 phút thì tivi mở tới đúng giờ; Back trong bảng lùi một bước.
 - **Thử giới hạn:** giới hạn giờ xem ngày thường và cuối tuần đều 6 phút → Lưu; xem tivi liên tục. Còn 5 phút (tức
   sau khoảng 1 phút xem) thì tivi báo trước; hết giờ thì tivi khoá tới nửa đêm, nhập mã mở được 60 phút; báo cáo
   thời gian xem trên điện thoại có số phút đúng.

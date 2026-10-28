@@ -146,7 +146,7 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
         if (khung.isEmpty() && luatApp.isEmpty() && phutThuong == 0 && phutCuoiTuan == 0) { bat = true; khung += Khung("21:00", "06:00", (1..7).toSet()) }
         // App để chọn: app mở được trên tivi, cộng app đã có trong luật (có thể đã tắt hay không có biểu tượng).
         if (vm.trangThai == null) vm.trangThai = vm.io { vm.tv.docTrangThai() }
-        dsApp = (vm.appChoDock() + luatApp.flatMap { it.goi }).distinct()
+        dsApp = (vm.appChoDock() + luatApp.flatMap { it.goi }).distinct() - vn.tivikit.adb.ThaoTacTv.PKG_KHOA
         vm.man = Man.KHOA_TRE
         null
     }

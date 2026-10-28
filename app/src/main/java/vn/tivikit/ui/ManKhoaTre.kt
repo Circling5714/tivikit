@@ -59,6 +59,8 @@ internal fun ManKhoaTre(vm: PhienLamViec) = Cuon {
             "During the lock periods, or once the day's time is used up, the TV shows a lock screen over everything (HDMI and YouTube too) and blocks the remote. A code from the parent's authenticator app unlocks it for ${k.MO_TAM} minutes. It stays locked after a restart."))
         Phu(t("Khoá bật thì giờ tivi luôn tự động theo mạng: ai tắt giờ tự động để chỉnh giờ né khoá, app bật lại ngay. Mở Cài đặt hay gỡ / cài app trên tivi cũng phải nhập mã, nên trẻ không xoá dữ liệu hay gỡ được app khoá.",
             "While the lock is on, the TV keeps its clock automatic: turning automatic time off to dodge the lock gets switched back at once. Opening Settings or installing / removing apps on the TV asks for the code too, so a child can't clear or remove the lock app."))
+        Phu(t("Không cầm điện thoại: trên tivi mở ô Khoá trẻ em trong danh sách app (hay nút Phụ huynh dưới bàn phím số của màn khoá), nhập mã là có bảng phụ huynh để mở tivi thêm, khoá / mở từng app, hẹn giờ khoá. Muốn mở nhanh thì gán ô đó vào một nút ở mục Nút remote.",
+            "No phone at hand: on the TV open the Kids lock tile in the app list (or the Parent button under the lock screen's keypad); a code opens the parent panel to unlock the TV for longer, lock or open single apps and set lock timers. Map that tile to a remote button under Remote buttons for quick access."))
     }
     k.trenTv?.let { j ->
         TheTrenTv(k, j)

@@ -44,6 +44,8 @@ import java.util.concurrent.ConcurrentHashMap
  * Khoá theo app (28/10/2026): app có luật khoá (KhoaApp) mà lên màn hình thì về Home, che lại hỏi mã của riêng app đó;
  * Back thì ra ngoài. Khoá đang bật thì Cài đặt, hộp gỡ / cài app và hộp cho phép gỡ lỗi ADB cũng phải nhập mã — trẻ
  * không xoá dữ liệu, buộc dừng hay gỡ được app khoá.
+ * Bảng phụ huynh (28/10/2026, BangPhuHuynh): nút Phụ huynh dưới bàn phím số hay ô "Khoá trẻ em" trong danh sách app (PhuHuynh)
+ * → nhập mã → bảng việc nhanh bằng remote, khi bố mẹ không cầm điện thoại.
  */
 class KhoaDichVu : AccessibilityService() {
     companion object {
@@ -64,7 +66,9 @@ class KhoaDichVu : AccessibilityService() {
         /** Nhập mã ở Cài đặt / hộp gỡ app / hộp cho phép ADB thì mở chừng này. */
         private const val MO_CAI_DAT_MS = 10 * 60_000L
         private const val HE_THONG = "com.android.systemui"
-        private val PHIM = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓")
+        private val PHIM = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓", PHU_HUYNH)
+        /** Ô cuối, dưới bàn phím số: mở bảng phụ huynh (nhập mã trước). */
+        private const val PHU_HUYNH = "⚙  Phụ huynh"
 
         /** Số giây tivi được xem ngày [ngay], tính cả phần chưa ghi. */
         fun giayDaXem(kho: Kho, ngay: String): Long = kho.giayXem(ngay) + if (ngay == ngayCho) msCho / 1000 else 0
@@ -82,9 +86,13 @@ class KhoaDichVu : AccessibilityService() {
     private data class CheApp(val goi: String, val khoa: KhoaApp.Khoa) : Che
     private data class CheBaoVe(val goi: String, val loai: BaoVe) : Che
     private enum class BaoVe { CAI_DAT, GO_APP, ADB }
+    /** Nhập mã để mở bảng phụ huynh; [cheTruoc] = lớp đang che lúc bấm Phụ huynh (Back thì về đó). */
+    private object CheMaPh : Che
+    private var cheTruoc: Che? = null
+    private val bangPh by lazy { BangPhuHuynh(this) }
 
-    private val tay = Handler(Looper.getMainLooper())
-    private lateinit var kho: Kho
+    internal val tay = Handler(Looper.getMainLooper())
+    internal lateinit var kho: Kho
     private var lop: View? = null
     private var che: Che? = null
     private lateinit var tvBieuTuong: TextView
@@ -104,7 +112,7 @@ class KhoaDichVu : AccessibilityService() {
     private var lanBaoQuen = 0L
     private var focus: AudioFocusRequest? = null
     private val vi get() = Locale.getDefault().language == "vi"
-    private fun t(v: String, e: String) = if (vi) v else e
+    internal fun t(v: String, e: String) = if (vi) v else e
 
     private val nhip = object : Runnable {
         override fun run() { capNhat(); tay.postDelayed(this, NHIP_MS) }
@@ -177,7 +185,7 @@ class KhoaDichVu : AccessibilityService() {
         val bay = Calendar.getInstance()
         val daXem = giayDaXem(kho, Luat.ngay(bay))
         val ly = Luat.lyDo(c, bay, daXem, kho.moTamDen)
-        if (ly != null && che != CheTivi) hienKhoa(CheTivi)
+        if (ly != null && che != CheTivi && che != CheMaPh) hienKhoa(CheTivi)
         if (ly == null && che == CheTivi) anKhoa()
         if (ly != null) {
             anBaoTruoc(); daBaoTruoc = false
@@ -245,7 +253,7 @@ class KhoaDichVu : AccessibilityService() {
     private var ganNhatDaKhoa = false
     /** App đã được báo "còn N phút" trong đợt này. */
     private var daBaoApp: String? = null
-    private val anCheApp = Runnable { if (che is CheApp || che is CheBaoVe) roiDi() }
+    private val anCheApp = Runnable { if (che == CheMaPh) veLai() else if (che is CheApp || che is CheBaoVe) roiDi() }
 
     /** Home, Cài đặt và trình gỡ / cài app của chính tivi này (tên gói khác nhau tuỳ hãng). */
     private fun napGoiHeThong() = runCatching {
@@ -290,7 +298,7 @@ class KhoaDichVu : AccessibilityService() {
 
     /** App đang ở trên cùng có cần che không (khi cả tivi không khoá): cần thì che lại, hỏi mã. */
     private fun kiemTraApp(c: CauHinh, bay: Calendar) {
-        if (che == CheTivi) return
+        if (che == CheTivi || che == CheMaPh || bangPh.dangMo) return
         val goi = appTren ?: return
         val moi: Che = baoVe(c, goi, lopTren, bay.timeInMillis)?.let { CheBaoVe(goi, it) }
             ?: KhoaApp.khoa(c, kho.hen, goi, bay, giayDung(kho, Luat.ngay(bay)), kho.moApp[goi] ?: 0)?.let { CheApp(goi, it) }
@@ -322,7 +330,7 @@ class KhoaDichVu : AccessibilityService() {
         }
     }
 
-    private fun tenApp(goi: String): String = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(goi, 0)).toString() }.getOrDefault(goi)
+    internal fun tenApp(goi: String): String = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(goi, 0)).toString() }.getOrDefault(goi)
 
     private fun gio(ms: Long) = Calendar.getInstance().apply { timeInMillis = ms }.let { Luat.chuGio(it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE)) }
 
@@ -379,6 +387,74 @@ class KhoaDichVu : AccessibilityService() {
     private fun roiDi() {
         performGlobalAction(if ((che as? CheBaoVe)?.loai == BaoVe.ADB) GLOBAL_ACTION_BACK else GLOBAL_ACTION_HOME)
         anKhoa()
+    }
+
+    // ---------- Bảng phụ huynh (28/10/2026) ----------
+
+    /** Ô "Khoá trẻ em" trong danh sách app của tivi (PhuHuynh): hỏi mã rồi mở bảng phụ huynh. */
+    fun moBangPhuHuynh() = tay.post {
+        if (!::kho.isInitialized) return@post
+        val c = kho.cauHinh
+        if (c == null || !c.coMa) {
+            bao(t("Khoá trẻ em chưa có mã: cài bằng TiviKit trên điện thoại trước.", "The Kids lock has no code yet: set it up with TiviKit on a phone first."), 10_000)
+            return@post
+        }
+        if (bangPh.dangMo || che == CheMaPh) return@post
+        cheTruoc = che
+        hienKhoa(CheMaPh)
+    }
+
+    /** Thôi nhập mã mở bảng (Back, để yên): về lớp che trước đó nếu còn cần, không thì bỏ che. */
+    private fun veLai() {
+        val truoc = cheTruoc
+        cheTruoc = null
+        if (truoc != null && truoc != CheMaPh) hienKhoa(truoc) else anKhoa()
+        capNhat()
+    }
+
+    /** Bảng phụ huynh vừa đóng: xét lại khoá ngay (che lại nếu còn trong giờ khoá), báo việc vừa làm ở góc. */
+    internal fun sauBang(baoChu: String?) {
+        capNhat()
+        if (baoChu != null && che == null) bao(baoChu, 15_000)
+    }
+
+    /** App đang khoá lúc này (theo luật / hẹn khoá, trừ app bố mẹ đã mở riêng), theo tên. */
+    internal fun appDangKhoa(): List<String> {
+        val c = kho.cauHinh ?: return emptyList()
+        val bay = Calendar.getInstance()
+        val hen = kho.hen; val moApp = kho.moApp; val dung = giayDung(kho, Luat.ngay(bay))
+        return KhoaApp.goiCo(c, hen).filter { KhoaApp.khoa(c, hen, it, bay, dung, moApp[it] ?: 0) != null }.sortedBy { tenApp(it).lowercase() }
+    }
+
+    /** App mở được trên tivi để khoá (trừ Home, Cài đặt, chính app này): (gói, tên), theo tên. */
+    internal fun dsAppMo(): List<Pair<String, String>> = runCatching {
+        val pm = packageManager
+        (pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0) +
+            pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0))
+            .map { it.activityInfo.packageName }.distinct()
+            .filter { it != packageName && it !in homes && it !in caiDat }
+            .map { it to tenApp(it) }.sortedBy { it.second.lowercase() }
+    }.getOrDefault(emptyList())
+
+    /** Dòng tóm tắt đầu bảng: hôm nay xem bao lâu, giới hạn, đang mở tạm tới đâu. */
+    internal fun tomTat(): String {
+        val c = kho.cauHinh
+        val bay = Calendar.getInstance()
+        val phut = (giayDaXem(kho, Luat.ngay(bay)) / 60).toInt()
+        val gh = c?.let { Luat.gioiHanPhut(it, Luat.thu(bay)) } ?: 0
+        return t("Hôm nay đã xem ", "Watched today: ") + Luat.chuThoiGian(phut, vi) +
+            (if (gh > 0) t(" / giới hạn ", " / limit ") + Luat.chuThoiGian(gh, vi) else "") +
+            (kho.moTamDen.takeIf { it > bay.timeInMillis }?.let { t(" · đang mở tới ${gio(it)}", " · unlocked until ${gio(it)}") } ?: "") +
+            (if (c?.bat != true) t(" · khoá đang tắt", " · the lock is off") else "")
+    }
+
+    private fun veCheMaPh(bay: Calendar) {
+        tvBieuTuong.text = "🔑"
+        tvTieuDe.text = t("Bảng phụ huynh", "Parent panel")
+        tvPhu.text = t("Nhập mã của bố mẹ để mở bảng: mở tivi thêm, khoá hay mở từng app, hẹn giờ khoá. Bấm Back để thôi.",
+            "Enter a parent's code to open the panel: unlock the TV for longer, lock or open single apps, set lock timers. Press Back to cancel.")
+        veChan2Dong(bay)
+        veChan()
     }
 
     // ---------- Đếm thời gian xem (25/10/2026) ----------
@@ -450,9 +526,9 @@ class KhoaDichVu : AccessibilityService() {
 
     // ---------- Lớp khoá ----------
 
-    private fun dp(v: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()
+    internal fun dp(v: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()
 
-    private fun chu(s: String, sp: Float, mau: Int = Color.WHITE, dam: Boolean = false) = TextView(this).apply {
+    internal fun chu(s: String, sp: Float, mau: Int = Color.WHITE, dam: Boolean = false) = TextView(this).apply {
         text = s; setTextSize(TypedValue.COMPLEX_UNIT_SP, sp); setTextColor(mau); gravity = Gravity.CENTER
         if (dam) typeface = Typeface.DEFAULT_BOLD
     }
@@ -460,10 +536,12 @@ class KhoaDichVu : AccessibilityService() {
     /** Che màn hình (hay đổi thứ đang che) theo [moi]: cả tivi thì về Home và tắt tiếng; một app thì về Home và dừng phát. */
     private fun hienKhoa(moi: Che) {
         val cu = che
+        if (lop == null && bangPh.dangMo) return // bảng phụ huynh đang mở: đóng bảng thì xét lại (sauBang)
         if (lop == null && !taoLop()) return
         if (cu == CheTivi && moi != CheTivi) imTieng(false)
         if (cu is CheApp && moi !is CheApp) thaFocus()
         if (cu != moi) { nhap = ""; choSai = false; chon = 4; tvBao.text = ""; vePin(); veChon() }
+        oPhim.getOrNull(PHIM.lastIndex)?.visibility = if (moi == CheMaPh) View.GONE else View.VISIBLE
         che = moi; dangKhoa = moi == CheTivi
         tay.removeCallbacks(anCheApp)
         when (moi) {
@@ -479,28 +557,33 @@ class KhoaDichVu : AccessibilityService() {
                 veCheBaoVe(moi, Calendar.getInstance())
                 tay.postDelayed(anCheApp, CHE_APP_MS)
             }
+            CheMaPh -> { veCheMaPh(Calendar.getInstance()); tay.postDelayed(anCheApp, CHE_APP_MS) }
         }
     }
 
     private fun taoLop(): Boolean {
         val cot = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
         // Gọn cho vừa màn 540dp (720p và 1080p đều vậy) cả khi có dòng báo quên mã hai dòng (28/10/2026).
-        tvBieuTuong = chu("🔒", 36f); cot.addView(tvBieuTuong)
-        tvTieuDe = chu(t("Tivi đang nghỉ", "The TV is resting"), 34f, dam = true).apply { setPadding(0, dp(4), 0, dp(4)) }; cot.addView(tvTieuDe)
+        tvBieuTuong = chu("🔒", 32f); cot.addView(tvBieuTuong)
+        tvTieuDe = chu(t("Tivi đang nghỉ", "The TV is resting"), 34f, dam = true).apply { setPadding(0, dp(2), 0, dp(2)) }; cot.addView(tvTieuDe)
         tvPhu = chu("", 18f, Color.parseColor("#C9C3FF")); cot.addView(tvPhu, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-        tvCham = chu("", 34f).apply { letterSpacing = 0.4f; setPadding(0, dp(10), 0, dp(6)) }; cot.addView(tvCham)
+        tvCham = chu("", 34f).apply { letterSpacing = 0.4f; setPadding(0, dp(6), 0, dp(4)) }; cot.addView(tvCham)
         val luoi = GridLayout(this).apply { columnCount = 3 }
         oPhim.clear()
         PHIM.forEach { k ->
-            val o = chu(k, 24f, dam = true).apply {
-                layoutParams = GridLayout.LayoutParams().apply { width = dp(72); height = dp(46); setMargins(dp(4), dp(4), dp(4), dp(4)) }
+            val o = if (k == PHU_HUYNH) chu(t(k, "⚙  Parent"), 17f, dam = true).apply {
+                layoutParams = GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(0, 3)).apply {
+                    width = dp(232); height = dp(40); setMargins(dp(4), dp(8), dp(4), dp(4))
+                }
+            } else chu(k, 24f, dam = true).apply {
+                layoutParams = GridLayout.LayoutParams().apply { width = dp(72); height = dp(44); setMargins(dp(4), dp(4), dp(4), dp(4)) }
             }
             oPhim += o; luoi.addView(o)
         }
         cot.addView(luoi, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER_HORIZONTAL })
         tvBao = chu("", 16f, Color.parseColor("#FF8FA3")).apply { setPadding(0, dp(8), 0, 0) }; cot.addView(tvBao)
         tvQuen = chu("", 14f, Color.parseColor("#FFB86B")).apply { setPadding(0, dp(8), 0, 0); visibility = View.GONE }; cot.addView(tvQuen)
-        tvGio = chu("", 13f, Color.parseColor("#8A84B8")).apply { setPadding(0, dp(12), 0, 0) }; cot.addView(tvGio)
+        tvGio = chu("", 13f, Color.parseColor("#8A84B8")).apply { setPadding(0, dp(8), 0, 0) }; cot.addView(tvGio)
         val nen = FrameLayout(this).apply {
             setBackgroundColor(Color.parseColor("#FF0A0718"))
             addView(cot, FrameLayout.LayoutParams(dp(640), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
@@ -573,6 +656,10 @@ class KhoaDichVu : AccessibilityService() {
     // ---------- Phím remote ----------
 
     override fun onKeyEvent(e: KeyEvent): Boolean {
+        if (bangPh.dangMo) {
+            if (e.action == KeyEvent.ACTION_DOWN) tay.post { bangPh.phim(e.keyCode) }
+            return true
+        }
         if (lop == null) return false
         if (e.action == KeyEvent.ACTION_DOWN) tay.post { xuLy(e.keyCode) }
         return true // đang khoá: nuốt mọi phím, kể cả Home, Back, nút app, giọng nói
@@ -580,18 +667,19 @@ class KhoaDichVu : AccessibilityService() {
 
     private fun xuLy(k: Int) {
         if (lop == null) return
-        // Lớp che app / Cài đặt: Back, Home là ra ngoài; để yên thì tự đóng sau CHE_APP_MS.
+        // Lớp che app / Cài đặt: Back, Home là ra ngoài; nhập mã mở bảng thì Back là thôi; để yên thì tự đóng sau CHE_APP_MS.
         if (che != CheTivi) {
-            if (k == KeyEvent.KEYCODE_BACK || k == KeyEvent.KEYCODE_HOME) { roiDi(); return }
+            if (k == KeyEvent.KEYCODE_BACK || k == KeyEvent.KEYCODE_HOME) { if (che == CheMaPh) veLai() else roiDi(); return }
             tay.removeCallbacks(anCheApp); tay.postDelayed(anCheApp, CHE_APP_MS)
         }
+        val ph = che != CheMaPh // có ô Phụ huynh (số 12, dưới bàn phím số)
         when (k) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> go(('0' + (k - KeyEvent.KEYCODE_0)).toString())
             in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> go(('0' + (k - KeyEvent.KEYCODE_NUMPAD_0)).toString())
-            KeyEvent.KEYCODE_DPAD_LEFT -> { if (chon % 3 > 0) chon--; veChon() }
-            KeyEvent.KEYCODE_DPAD_RIGHT -> { if (chon % 3 < 2) chon++; veChon() }
-            KeyEvent.KEYCODE_DPAD_UP -> { if (chon >= 3) chon -= 3; veChon() }
-            KeyEvent.KEYCODE_DPAD_DOWN -> { if (chon < 9) chon += 3; veChon() }
+            KeyEvent.KEYCODE_DPAD_LEFT -> { if (chon < 12 && chon % 3 > 0) chon--; veChon() }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> { if (chon < 12 && chon % 3 < 2) chon++; veChon() }
+            KeyEvent.KEYCODE_DPAD_UP -> { if (chon == 12) chon = 10 else if (chon >= 3) chon -= 3; veChon() }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { if (chon < 9) chon += 3 else if (chon < 12 && ph) chon = 12; veChon() }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> bam(PHIM[chon])
             KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_BACK -> bam("⌫")
         }
@@ -601,6 +689,8 @@ class KhoaDichVu : AccessibilityService() {
         // Xoá lùi sau khi 6 số vừa gõ sai: tính luôn một lần sai, không thì xoá số cuối gõ lại là dò được mã không giới hạn.
         "⌫" -> if (choSai) thu() else { nhap = nhap.dropLast(1); vePin() }
         "✓" -> thu()
+        // Ô Phụ huynh: nhập mã để mở bảng phụ huynh thay vì mở khoá.
+        PHU_HUYNH -> { cheTruoc = che; hienKhoa(CheMaPh) }
         else -> go(nhan)
     }
 
@@ -641,9 +731,10 @@ class KhoaDichVu : AccessibilityService() {
             CheTivi -> kho.moTamDen = bay + c.moTamPhut * 60_000L
             is CheApp -> kho.moRiengApp(ch.goi, bay + c.moTamPhut * 60_000L)
             is CheBaoVe -> kho.moCaiDatDen = bay + MO_CAI_DAT_MS
-            null -> {}
+            CheMaPh, null -> {}
         }
         anKhoa()
+        if (ch == CheMaPh) { cheTruoc = null; bangPh.mo(); return }
         runCatching {
             when {
                 ch is CheApp -> packageManager.getLaunchIntentForPackage(ch.goi) ?: packageManager.getLeanbackLaunchIntentForPackage(ch.goi)

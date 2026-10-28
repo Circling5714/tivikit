@@ -10,7 +10,21 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <application android:label="@string/ten_app" android:allowBackup="false" android:supportsRtl="true">
+    <application android:label="@string/ten_app" android:icon="@drawable/ic_khoa" android:banner="@drawable/banner_khoa"
+        android:allowBackup="false" android:supportsRtl="true">
+        <!-- Bảng phụ huynh (28/10/2026): ô "Khoá trẻ em" trong danh sách app của tivi; hỏi mã rồi mới mở bảng. -->
+        <activity
+            android:name=".PhuHuynh"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
         <service
             android:name=".KhoaDichVu"
             android:exported="true"
