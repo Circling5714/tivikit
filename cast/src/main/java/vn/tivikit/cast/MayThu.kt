@@ -79,6 +79,8 @@ class MayThu(private val ctx: Context) {
         tp.baoDoi = { lounge.gui(listOf("onStateChange" to tp.onStateChange())) }
         tp.veHome = ::veLai
         tp.batTheoDoi()
+        // Lên bản 2.0 (có danh sách điện thoại): máy đã từng cast theo nhật ký cũ coi như được phép, khỏi hỏi lại cả nhà.
+        if (kho.tenMayCu == null) kho.tenMayCu = if (kho.dienThoai.isEmpty()) DanhBa.tenTuNhatKy(kho.nhatKy) else emptySet()
         // Lần trước thấy máy DIAL của hãng chen trước: im lặng ngay từ đầu (lượt dò dưới đây xem lại).
         dial.im = kho.biChe
         if (kho.biChe) biChe = true
@@ -211,13 +213,22 @@ class MayThu(private val ctx: Context) {
         }
     }
 
-    /** Một điện thoại nối vào ([d]: id, name, user… của remoteConnected / loungeStatus): ghi vào danh sách. */
+    /**
+     * Một điện thoại nối vào ([d]: id, name, user… của remoteConnected / loungeStatus): ghi vào danh sách. Máy mới mà đã từng
+     * cast trước bản 2.0 (Kho.tenMayCu) thì được phép luôn.
+     */
     private fun ghiNoi(d: JSONObject) {
         val id = d.optString("id").takeIf { it.isNotEmpty() } ?: return
         val ten = d.optString("name").ifEmpty { d.optString("clientName") }
         dienThoai[id] = ten
         ganNhat = id
-        kho.doiDienThoai { DanhBa.noi(it, id, ten, d.optString("user"), System.currentTimeMillis()) }
+        val bay = System.currentTimeMillis()
+        val cu = kho.tenMayCu.orEmpty()
+        kho.doiDienThoai { ds ->
+            val moi = ds.none { it.id == id }
+            val sau = DanhBa.noi(ds, id, ten, d.optString("user"), bay)
+            if (moi && ten in cu) { kho.tenMayCu = cu - ten; DanhBa.lam(sau, id, DanhBa.Lam.CHO_PHEP, bay) } else sau
+        }
     }
 
     /**

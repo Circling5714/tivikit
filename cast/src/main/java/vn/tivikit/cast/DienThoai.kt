@@ -123,6 +123,16 @@ object DanhBa {
     fun duocDieuKhien(ds: List<DienThoai>, dangNoi: Collection<String>, bay: Long): Boolean =
         dangNoi.isEmpty() || dangNoi.any { id -> ds.firstOrNull { it.id == id }?.xet(bay) == DienThoai.Xet.PHAT }
 
+    /**
+     * Tên các máy đã từng cast trước bản có danh sách (nhật ký cũ ghi "điện thoại nối: <tên>"): lên bản mới, máy đó nối lần
+     * đầu thì coi như được phép, khỏi hỏi lại cả nhà.
+     */
+    fun tenTuNhatKy(nhatKy: JSONArray): Set<String> = (0 until nhatKy.length())
+        .mapNotNull { nhatKy.optJSONObject(it)?.optString("viec")?.takeIf { v -> v.startsWith(NOI) }?.removePrefix(NOI)?.trim() }
+        .filter { it.isNotEmpty() }.toSet()
+
+    private const val NOI = "điện thoại nối: "
+
     /** Giữ tối đa [TOI_DA] máy: máy bị chặn trước, rồi máy dùng gần nhất. */
     private fun gon(ds: List<DienThoai>): List<DienThoai> = if (ds.size <= TOI_DA) ds
         else ds.sortedWith(compareByDescending<DienThoai> { it.trangThai == DienThoai.TrangThai.CHAN }.thenByDescending { it.lanCuoi })

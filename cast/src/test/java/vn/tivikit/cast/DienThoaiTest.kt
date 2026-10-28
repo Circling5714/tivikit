@@ -71,6 +71,12 @@ class DienThoaiTest {
         assertTrue(DanhBa.duocDieuKhien(ds, listOf("a"), luc(9)))
     }
 
+    @Test fun tenTuNhatKy_mayDaCastTruocBan20() {
+        val nk = org.json.JSONArray("""[{"luc":1,"viec":"bật máy nhận, cổng 8095"},{"luc":2,"viec":"điện thoại nối: iCM16prm"},
+            {"luc":3,"viec":"mở video abc"},{"luc":4,"viec":"điện thoại nối: iCM16prm"},{"luc":5,"viec":"điện thoại nối: "}]""")
+        assertEquals(setOf("iCM16prm"), DanhBa.tenTuNhatKy(nk))
+    }
+
     @Test fun gon_giuMayBiChan() {
         var ds = DanhBa.lam(DanhBa.noi(emptyList(), "chan", "X", "", 1), "chan", DanhBa.Lam.CHAN, 1)
         for (i in 1..DanhBa.TOI_DA + 5) ds = DanhBa.noi(ds, "m$i", "M$i", "", 10L + i)

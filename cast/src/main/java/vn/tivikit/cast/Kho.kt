@@ -41,6 +41,14 @@ class Kho(ctx: Context) {
     /** Đổi danh sách điện thoại một lần (đọc, đổi, ghi liền nhau). */
     @Synchronized fun doiDienThoai(f: (List<DienThoai>) -> List<DienThoai>): List<DienThoai> = f(dienThoai).also { dienThoai = it }
 
+    /**
+     * Tên máy đã từng cast trước bản 2.0 (DanhBa.tenTuNhatKy, lấy một lần lúc lên bản 2.0); null = chưa lấy. Máy có tên này
+     * nối lần đầu thì được phép luôn, rồi bỏ tên khỏi đây.
+     */
+    var tenMayCu: Set<String>?
+        get() = p.getStringSet("ten_may_cu", null)
+        set(v) { p.edit().putStringSet("ten_may_cu", v).apply() }
+
     /** Đang nhận cast (tắt thì tivi bỏ qua mọi video điện thoại gửi, vẫn giữ liên kết). */
     var nhanCast: Boolean
         get() = p.getBoolean("nhan_cast", true)
