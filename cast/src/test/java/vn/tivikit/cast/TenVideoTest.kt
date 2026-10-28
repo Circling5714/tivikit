@@ -14,6 +14,14 @@ class TenVideoTest {
         assertNull(TenVideo.tuJson("Unauthorized"))
     }
 
+    @Test fun tuPlayer() {
+        val j = """{"videoDetails":{"title":"200 Romantic Piano Melodies","author":"Beautiful Piano"}}"""
+        assertEquals("200 Romantic Piano Melodies" to "Beautiful Piano", TenVideo.tuPlayer(j))
+        // Mã video không có: YouTube trả {}.
+        assertNull(TenVideo.tuPlayer("{}"))
+        assertNull(TenVideo.tuPlayer("""{"videoDetails":{"title":" "}}"""))
+    }
+
     @Test fun maSai_khongTra() {
         assertNull(TenVideo.lay(""))
         assertNull(TenVideo.lay("khong-phai-ma-video"))

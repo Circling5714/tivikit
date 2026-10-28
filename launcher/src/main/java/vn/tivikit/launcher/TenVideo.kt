@@ -8,10 +8,11 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
 /**
- * Tên và kênh của một video YouTube, tra bằng oEmbed của YouTube (không cần khoá API; tên gốc của video, không phải tên
- * YouTube dịch). SmartTube mở video từ đường link (video cast sang) thì phiên phát chỉ có mã video, không có tên bài: nó
- * ghi phiên lúc chưa tải xong tên và không ghi lại (28/10/2026, Skyworth). Tra nền, nhớ trong bộ nhớ; tra hỏng thì 10 phút
- * sau mới thử lại. App Cast SmartTube có bản giống hệt (cast/TenVideo.kt).
+ * Tên và kênh của một video YouTube, tra bằng oEmbed của YouTube, hỏng thì bằng API player của trang web YouTube (không
+ * cần khoá API; tên gốc của video, không phải tên YouTube dịch). SmartTube mở video từ đường link (video cast sang) thì
+ * phiên phát chỉ có mã video, không có tên bài: nó ghi phiên lúc chưa tải xong tên và không ghi lại (28/10/2026,
+ * Skyworth). Tra nền, nhớ trong bộ nhớ; tra hỏng thì 10 phút sau mới thử lại. App Cast SmartTube có bản giống hệt
+ * (cast/TenVideo.kt).
  */
 object TenVideo {
     val GOI_SMARTTUBE = setOf("org.smarttube.stable", "org.smarttube.beta", "com.liskovsoft.smarttubetv", "com.liskovsoft.smarttubetv.beta")
@@ -45,13 +46,45 @@ object TenVideo {
         return ten to j.optString("author_name").trim()
     }
 
-    private fun tra(id: String): Pair<String, String>? {
+    /** JSON của API player (chỉ xin videoDetails) → (tên, kênh); null nếu không có tên. */
+    fun tuPlayer(s: String): Pair<String, String>? {
+        val v = runCatching { JSONObject(s).getJSONObject("videoDetails") }.getOrNull() ?: return null
+        val ten = v.optString("title").trim().takeIf { it.isNotEmpty() } ?: return null
+        return ten to v.optString("author").trim()
+    }
+
+    private fun tra(id: String): Pair<String, String>? = traOembed(id) ?: traPlayer(id)
+
+    private fun traOembed(id: String): Pair<String, String>? {
         val link = URLEncoder.encode("https://www.youtube.com/watch?v=$id", "UTF-8")
         val c = URL("https://www.youtube.com/oembed?format=json&url=$link").openConnection() as HttpURLConnection
         return try {
             c.connectTimeout = 8_000
             c.readTimeout = 8_000
             if (c.responseCode != 200) null else tuJson(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    /**
+     * Video tắt quyền nhúng (hay gặp ở video nhạc) thì oEmbed trả 401 (28/10/2026, Skyworth: nghe nền mất tên bài). API
+     * player của trang web YouTube vẫn có tên: chỉ xin tên và kênh (X-Goog-FieldMask, trả chừng 150 byte).
+     */
+    private fun traPlayer(id: String): Pair<String, String>? {
+        val c = URL("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
+            .openConnection() as HttpURLConnection
+        return try {
+            c.connectTimeout = 8_000
+            c.readTimeout = 8_000
+            c.requestMethod = "POST"
+            c.doOutput = true
+            c.setRequestProperty("Content-Type", "application/json")
+            c.setRequestProperty("X-Goog-FieldMask", "videoDetails(title,author)")
+            val khach = JSONObject().put("clientName", "WEB").put("clientVersion", "2.20261001.00.00")
+            val than = JSONObject().put("videoId", id).put("context", JSONObject().put("client", khach))
+            c.outputStream.use { it.write(than.toString().toByteArray(Charsets.UTF_8)) }
+            if (c.responseCode != 200) null else tuPlayer(c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
         } finally {
             c.disconnect()
         }
