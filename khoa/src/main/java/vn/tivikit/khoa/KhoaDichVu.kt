@@ -191,7 +191,7 @@ class KhoaDichVu : AccessibilityService() {
         val c = kho.cauHinh
         val bay = Calendar.getInstance()
         val daXem = giayDaXem(kho, Luat.ngay(bay))
-        val ly = Luat.lyDo(c, bay, daXem, kho.moTamDen)
+        val ly = Luat.lyDo(c, bay, daXem, kho.moTamDen, kho.khoaTay)
         if (ly != null && che != CheTivi && che != CheMaPh && che != CheXacNhan) hienKhoa(CheTivi)
         if (ly == null && che == CheTivi) anKhoa()
         if (ly != null) {
@@ -216,6 +216,10 @@ class KhoaDichVu : AccessibilityService() {
             tvTieuDe.text = t("Hết giờ xem hôm nay", "TV time is up for today")
             tvPhu.text = t("Hôm nay đã xem đủ ${Luat.chuThoiGian(gh, true)}. Mai xem tiếp nhé! Bố mẹ nhập mã để mở thêm ${c.moTamPhut} phút.",
                 "That's ${Luat.chuThoiGian(gh, false)} of TV today. More tomorrow! A parent's code adds ${c.moTamPhut} minutes.")
+        } else if (ly == Luat.LyDo.BO_ME_KHOA) {
+            tvBieuTuong.text = "🔒"
+            tvTieuDe.text = t("Bố mẹ đã khoá tivi", "A parent locked the TV")
+            tvPhu.text = t("Tivi khoá tới khi bố mẹ nhập mã.", "The TV stays locked until a parent enters the code.")
         } else if (ly == Luat.LyDo.GIO_SAI) {
             tvBieuTuong.text = "🕓"
             tvTieuDe.text = t("Tivi chưa có giờ đúng", "The TV doesn't know the time yet")
@@ -409,6 +413,18 @@ class KhoaDichVu : AccessibilityService() {
     private fun roiDi() {
         performGlobalAction(if ((che as? CheBaoVe)?.loai == BaoVe.ADB) GLOBAL_ACTION_BACK else GLOBAL_ACTION_HOME)
         anKhoa()
+    }
+
+    /**
+     * Khoá tivi ngay (KhoaNgay: menu ⏻ của TiviKit Launcher, 28/10/2026): thôi mở tạm, che lại tới khi bố mẹ nhập mã. false
+     * nếu tivi chưa có mã (khoá rồi không ai mở được).
+     */
+    fun khoaNgay(): Boolean {
+        if (!::kho.isInitialized || kho.cauHinh?.coMa != true) return false
+        kho.khoaTay = true
+        kho.moTamDen = 0
+        capNhat()
+        return true
     }
 
     // ---------- Bảng phụ huynh (28/10/2026) ----------
@@ -784,7 +800,7 @@ class KhoaDichVu : AccessibilityService() {
         demGio() // quãng vừa khoá không tính là xem
         nhap = ""; choSai = false
         when (ch) {
-            CheTivi -> kho.moTamDen = bay + c.moTamPhut * 60_000L
+            CheTivi -> { kho.khoaTay = false; kho.moTamDen = bay + c.moTamPhut * 60_000L }
             is CheApp -> kho.moRiengApp(ch.goi, bay + c.moTamPhut * 60_000L)
             is CheBaoVe -> kho.moCaiDatDen = bay + MO_CAI_DAT_MS
             CheMaPh, CheXacNhan, null -> {}

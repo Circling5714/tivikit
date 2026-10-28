@@ -95,15 +95,19 @@ internal fun ManKhoaTre(vm: PhienLamViec) = Cuon {
 private fun TheTrenTv(k: KhoaTreTivi, j: JSONObject) = The(t("Trên tivi", "On the TV"), Icons.Rounded.Lock) {
     val bat = j.optBoolean("bat"); val chay = j.optBoolean("dichVuChay"); val dangKhoa = j.optBoolean("dangKhoa")
     val moDen = j.optLong("moTamDen")
+    // Khoá trẻ em ngay trên TiviKit Launcher (khoa 1.7): khoá tới khi nhập mã, cả khi khoá đang tắt.
+    val khoaTay = dangKhoa && j.optString("lyDo") == "bo-me-khoa"
     val gio = { ms: Long -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms)) }
-    Phu(if (!bat) t("Khoá đang tắt.", "The lock is off.")
+    Phu(if (khoaTay) t("Tivi đang khoá: có người bấm Khoá trẻ em ngay trên tivi. Nhập mã trên tivi, hoặc Mở tạm ở đây.",
+            "The TV is locked: someone chose Lock now on the TV. Enter the code on the TV, or Unlock here.")
+        else if (!bat) t("Khoá đang tắt.", "The lock is off.")
         else if (!chay) t("Khoá đang bật nhưng dịch vụ chưa chạy (tắt tivi bật lại).", "On, but the service isn't running (restart the TV).")
         else if (dangKhoa && j.optString("lyDo") == "het-gio") t("Tivi đang khoá: đã xem hết giờ hôm nay.", "The TV is locked: today's time is used up.")
         else if (dangKhoa && j.optString("lyDo") == "gio-sai") t("Tivi đang khoá: giờ tivi chưa đúng (chưa lấy được giờ từ mạng).", "The TV is locked: its clock isn't right yet (no network time).")
         else if (dangKhoa) t("Tivi đang khoá.", "The TV is locked now.")
         else if (moDen > System.currentTimeMillis()) t("Đang mở tạm tới ${gio(moDen)}.", "Unlocked until ${gio(moDen)}.")
-        else t("Khoá đang bật, ngoài giờ khoá.", "On, outside the lock periods."), if (bat && chay) Xanh else ChuPhu)
-    if (bat) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        else t("Khoá đang bật, ngoài giờ khoá.", "On, outside the lock periods."), if ((bat || khoaTay) && chay) Xanh else ChuPhu)
+    if (bat || khoaTay) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ChonChip(t("Mở tạm ${k.MO_TAM} phút", "Unlock ${k.MO_TAM} min"), false) { k.moTam(k.MO_TAM) }
         ChonChip(t("Khoá lại ngay", "Lock now"), false) { k.moTam(0) }
     }

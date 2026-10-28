@@ -17,6 +17,8 @@ class Kho(ctx: Context) {
     /** Phiên của TiviKit (dạng băm) và hạn của nó, xem XacThuc. */
     var phien: String? get() = p.getString("phien", null); set(v) = p.edit().putString("phien", v).apply()
     var phienHet: Long get() = p.getLong("phien_het", 0); set(v) = p.edit().putLong("phien_het", v).apply()
+    /** Bố mẹ khoá tivi ngay (KhoaNgay, menu ⏻ của TiviKit Launcher): khoá tới khi nhập mã, kể cả khi tivi khởi động lại. */
+    var khoaTay: Boolean get() = p.getBoolean("khoa_tay", false); set(v) = p.edit().putBoolean("khoa_tay", v).apply()
     /** Lúc TiviKit báo quên mã (0 = không có). */
     var yeuCauGo: Long get() = p.getLong("yeu_cau_go", 0); set(v) = p.edit().putLong("yeu_cau_go", v).apply()
     val cauHinh: CauHinh? get() = Luat.docJson(json)?.copy(coMa = p.contains("ma_mo"))

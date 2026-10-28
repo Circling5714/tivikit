@@ -107,8 +107,11 @@ object Luat {
         else -> if (vi) "$phut phút" else "$phut min"
     }
 
-    /** Vì sao tivi khoá: hết giờ xem hôm nay (ưu tiên: khung giờ khoá có hết thì vẫn khoá tới hết ngày) hay trong khung giờ khoá. */
-    enum class LyDo { HET_GIO, GIO_KHOA, GIO_SAI }
+    /**
+     * Vì sao tivi khoá: hết giờ xem hôm nay (ưu tiên: khung giờ khoá có hết thì vẫn khoá tới hết ngày), trong khung giờ khoá,
+     * giờ tivi sai, hay bố mẹ bấm Khoá trẻ em ngay trên TiviKit Launcher (KhoaNgay, 28/10/2026: khoá tới khi nhập mã).
+     */
+    enum class LyDo { HET_GIO, GIO_KHOA, GIO_SAI, BO_ME_KHOA }
 
     /** Năm bản khoá này ra đời: giờ tivi sớm hơn thì chắc chắn sai. */
     const val NAM_TOI_THIEU = 2026
@@ -121,10 +124,13 @@ object Luat {
 
     /**
      * Lúc [luc] có khoá không, vì sao; null = không khoá (kể cả đang mở tạm bằng mã tới [moTamDen]). Giờ tivi sai thì khoá
-     * tới khi có giờ đúng (tự mở khi tivi lấy được giờ từ mạng; bố mẹ nhập mã để mở ngay).
+     * tới khi có giờ đúng (tự mở khi tivi lấy được giờ từ mạng; bố mẹ nhập mã để mở ngay). [khoaTay]: bố mẹ vừa khoá ngay
+     * (Kho.khoaTay), khoá cả khi khoá đang tắt hay đang mở tạm, miễn tivi có mã để mở.
      */
-    fun lyDo(c: CauHinh?, luc: Calendar, giayDaXem: Long, moTamDen: Long): LyDo? = when {
-        c == null || luc.timeInMillis < moTamDen -> null
+    fun lyDo(c: CauHinh?, luc: Calendar, giayDaXem: Long, moTamDen: Long, khoaTay: Boolean = false): LyDo? = when {
+        c == null -> null
+        khoaTay && c.coMa -> LyDo.BO_ME_KHOA
+        luc.timeInMillis < moTamDen -> null
         c.bat && c.coMa && gioSai(luc) -> LyDo.GIO_SAI
         hetGioXem(c, thu(luc), giayDaXem) -> LyDo.HET_GIO
         trongGio(c, luc) -> LyDo.GIO_KHOA

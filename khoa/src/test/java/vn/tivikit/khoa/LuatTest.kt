@@ -128,5 +128,18 @@ class LuatTest {
         assertNull(Luat.lyDo(c, sai, 0, sai.timeInMillis + 60_000))
         assertNull(Luat.lyDo(c.copy(bat = false), sai, 0, 0))
     }
+
+    /** Bố mẹ khoá ngay trên TiviKit Launcher: khoá cả khi đang mở tạm hay khoá đang tắt, miễn có mã để mở (28/10/2026). */
+    @Test fun khoaTay_khoaToiKhiNhapMa() {
+        val c = CauHinh(bat = true, coMa = true, khung = emptyList(), moTamPhut = 60)
+        val bay = luc(2026, 10, 28, 20, 0)
+        assertNull(Luat.lyDo(c, bay, 0, 0))
+        assertEquals(Luat.LyDo.BO_ME_KHOA, Luat.lyDo(c, bay, 0, 0, khoaTay = true))
+        assertEquals(Luat.LyDo.BO_ME_KHOA, Luat.lyDo(c, bay, 0, bay.timeInMillis + 60_000, khoaTay = true))
+        assertEquals(Luat.LyDo.BO_ME_KHOA, Luat.lyDo(c.copy(bat = false), bay, 0, 0, khoaTay = true))
+        assertNull(Luat.lyDo(c.copy(coMa = false), bay, 0, 0, khoaTay = true))
+        // Báo trước "sắp khoá" không tính khoá ngay (đang không khoá thì không có khoá ngay).
+        assertNull(Luat.sapKhoa(c, bay, 0, 0))
+    }
 }
 

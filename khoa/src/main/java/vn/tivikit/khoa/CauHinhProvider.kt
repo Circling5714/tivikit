@@ -15,7 +15,8 @@ import java.util.Calendar
  *   content call --uri content://vn.tivikit.khoa --method xac-thuc --arg <mã OTP 6 số / mã dự phòng 8 số>   (→ phien)
  *   content call --uri content://vn.tivikit.khoa --method dat --arg '<json>'
  *       (kèm "phien" khi tivi đã có mã; cài / đổi mã thì thêm "otp": mã gốc base32, "duPhong": {muoi, bam: [...]})
- *   content call --uri content://vn.tivikit.khoa --method mo-tam --arg '{"phut":60,"phien":…}'   (0 = khoá lại ngay)
+ *   content call --uri content://vn.tivikit.khoa --method mo-tam --arg '{"phut":60,"phien":…}'   (0 = khoá lại ngay; mở tạm
+ *       cũng bỏ khoá ngay bố mẹ bấm trên tivi, KhoaNgay)
  *   content call --uri content://vn.tivikit.khoa --method hen-khoa --arg '{"phien":…,"goi":[…],"sauPhut":30}'
  *       (khoá các app đó từ 30 phút nữa tới hết ngày; {"phien":…,"bo":0} bỏ hẹn thứ 0)
  *   content call --uri content://vn.tivikit.khoa --method quen-ma        (24 giờ sau đổi được không cần mã, xem XacThuc)
@@ -43,7 +44,7 @@ class CauHinhProvider : ContentProvider() {
                 kho.json = moi.toString()
                 if (ma != null) { kho.maMo = ma; kho.yeuCauGo = 0 }
                 kho.sai = 0; kho.chanDen = 0
-                if (!c.bat) kho.moTamDen = 0
+                if (!c.bat) { kho.moTamDen = 0; kho.khoaTay = false }
                 kq.putString("ok", "1")
             }
             "xac-thuc" -> {
@@ -61,6 +62,8 @@ class CauHinhProvider : ContentProvider() {
                 if (!XacThuc.duocDoi(kho, o?.optString("phien"))) return loi("can-ma")
                 val phut = o?.optInt("phut", 60) ?: arg?.toIntOrNull() ?: 60
                 kho.moTamDen = if (phut <= 0) 0 else System.currentTimeMillis() + phut * 60_000L
+                // Bố mẹ mở tạm từ điện thoại: bỏ luôn khoá ngay trên tivi.
+                if (phut > 0) kho.khoaTay = false
                 kq.putString("ok", "1")
             }
             "hen-khoa" -> {
@@ -99,7 +102,9 @@ class CauHinhProvider : ContentProvider() {
                 val daXem = KhoaDichVu.giayDaXem(kho, Luat.ngay(lich))
                 o.put("giayHomNay", daXem)
                 o.put("gioiHanHomNay", c?.let { Luat.gioiHanPhut(it, Luat.thu(lich)) } ?: 0)
-                o.put("lyDo", when (Luat.lyDo(c, lich, daXem, kho.moTamDen)) { Luat.LyDo.HET_GIO -> "het-gio"; Luat.LyDo.GIO_KHOA -> "gio-khoa"; Luat.LyDo.GIO_SAI -> "gio-sai"; null -> "" })
+                o.put("lyDo", when (Luat.lyDo(c, lich, daXem, kho.moTamDen, kho.khoaTay)) {
+                    Luat.LyDo.HET_GIO -> "het-gio"; Luat.LyDo.GIO_KHOA -> "gio-khoa"; Luat.LyDo.GIO_SAI -> "gio-sai"; Luat.LyDo.BO_ME_KHOA -> "bo-me-khoa"; null -> ""
+                })
                 // Khoá theo app (28/10/2026): hẹn khoá còn hạn, phút đã dùng hôm nay của từng luật, app đang khoá lúc này.
                 val hen = kho.hen
                 val dung = KhoaDichVu.giayDung(kho, Luat.ngay(lich))

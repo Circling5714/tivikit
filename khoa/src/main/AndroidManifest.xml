@@ -31,6 +31,13 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Khoá trẻ em ngay từ menu ⏻ của TiviKit Launcher (KhoaNgay): chỉ nhận app ký cùng khoá. -->
+        <activity
+            android:name=".KhoaNgay"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <service
             android:name=".KhoaDichVu"
             android:exported="true"
