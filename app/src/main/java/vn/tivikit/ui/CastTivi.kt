@@ -105,12 +105,20 @@ class CastTivi(private val vm: PhienLamViec) {
     var chonMay by mutableStateOf<CastSmartTube.May?>(null)
     var hoiHuy by mutableStateOf(false)
 
+    /**
+     * Sau một việc với điện thoại: chỉ đọc lại trạng thái app Cast (docLai còn đọc danh sách app tìm SmartTube, mất chừng
+     * 10 giây trên TX3).
+     */
+    private suspend fun docTrangThai() {
+        trangThai = vm.io { vm.tv.docCast() }?.let { CastSmartTube.trangThai(it) }
+    }
+
     /** Cho phép / khách / chặn / xoá một điện thoại (app Cast 2.0 trên tivi). */
     fun lamMay(m: CastSmartTube.May, lam: CastSmartTube.Lam) = vm.chay(t("Đang đổi trên tivi…", "Updating the TV…")) {
         chonMay = null
         vm.damBaoKetNoi()
         if (!vm.io { vm.tv.lamDienThoaiCast(m.id, lam) }) error(t("Tivi không nhận lệnh. Bấm Làm mới rồi thử lại.", "The TV didn't take it. Tap Refresh and try again."))
-        docLai()
+        docTrangThai()
         val ten = m.tenHien.ifEmpty { t("Điện thoại", "Phone") }
         bao = when (lam) {
             CastSmartTube.Lam.CHO_PHEP -> t("$ten được cast lên tivi.", "$ten can cast to the TV.")
@@ -125,7 +133,7 @@ class CastTivi(private val vm: PhienLamViec) {
     fun doiNhanCast(bat: Boolean) = vm.chay(t("Đang đổi trên tivi…", "Updating the TV…")) {
         vm.damBaoKetNoi()
         vm.io { vm.tv.datNhanCast(bat) }
-        docLai()
+        docTrangThai()
         bao = if (bat) t("Tivi nhận cast lại như thường.", "The TV takes casts again.")
             else t("Tivi tạm ngừng nhận cast: video điện thoại gửi sang bị bỏ qua, liên kết vẫn giữ.", "Casting is paused: videos sent from phones are ignored; links are kept.")
     }
@@ -136,7 +144,7 @@ class CastTivi(private val vm: PhienLamViec) {
         vm.damBaoKetNoi()
         if (!vm.io { vm.tv.huyLienKetCast() }) error(t("Dịch vụ Cast trên tivi đang tắt.", "The Cast service on the TV is off."))
         maTv = ""; maTvLuc = 0L
-        docLai()
+        docTrangThai()
         bao = t("Đã huỷ mọi liên kết. Điện thoại muốn cast lại thì nhập mã TV mới (đợi vài giây cho tivi nối lại YouTube rồi Lấy mã TV).",
             "All phones are unlinked. Phones need a new TV code to cast again (wait a few seconds for the TV to reconnect, then Get a TV code).")
     }
