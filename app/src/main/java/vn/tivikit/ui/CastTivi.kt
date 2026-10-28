@@ -101,6 +101,46 @@ class CastTivi(private val vm: PhienLamViec) {
             "Couldn't get a code: the Cast service on the TV hasn't reached YouTube yet. Wait a few seconds and try again.")
     }
 
+    /** Điện thoại đang chọn để làm việc (hộp hỏi), và hỏi lại trước khi huỷ mọi liên kết. */
+    var chonMay by mutableStateOf<CastSmartTube.May?>(null)
+    var hoiHuy by mutableStateOf(false)
+
+    /** Cho phép / khách / chặn / xoá một điện thoại (app Cast 2.0 trên tivi). */
+    fun lamMay(m: CastSmartTube.May, lam: CastSmartTube.Lam) = vm.chay(t("Đang đổi trên tivi…", "Updating the TV…")) {
+        chonMay = null
+        vm.damBaoKetNoi()
+        if (!vm.io { vm.tv.lamDienThoaiCast(m.id, lam) }) error(t("Tivi không nhận lệnh. Bấm Làm mới rồi thử lại.", "The TV didn't take it. Tap Refresh and try again."))
+        docLai()
+        val ten = m.tenHien.ifEmpty { t("Điện thoại", "Phone") }
+        bao = when (lam) {
+            CastSmartTube.Lam.CHO_PHEP -> t("$ten được cast lên tivi.", "$ten can cast to the TV.")
+            CastSmartTube.Lam.HOM_NAY -> t("$ten được cast tới hết hôm nay.", "$ten can cast until the end of today.")
+            CastSmartTube.Lam.MOT_NGAY -> t("$ten được cast trong 24 giờ.", "$ten can cast for 24 hours.")
+            CastSmartTube.Lam.CHAN -> t("Đã chặn $ten: tivi bỏ qua video máy đó gửi.", "$ten is blocked: the TV ignores what it sends.")
+            CastSmartTube.Lam.XOA -> t("Đã xoá $ten khỏi danh sách: lần sau máy đó cast thì tivi hỏi lại.", "$ten is removed: the TV asks again next time it casts.")
+        }
+    }
+
+    /** Bật / tạm ngừng nhận cast. */
+    fun doiNhanCast(bat: Boolean) = vm.chay(t("Đang đổi trên tivi…", "Updating the TV…")) {
+        vm.damBaoKetNoi()
+        vm.io { vm.tv.datNhanCast(bat) }
+        docLai()
+        bao = if (bat) t("Tivi nhận cast lại như thường.", "The TV takes casts again.")
+            else t("Tivi tạm ngừng nhận cast: video điện thoại gửi sang bị bỏ qua, liên kết vẫn giữ.", "Casting is paused: videos sent from phones are ignored; links are kept.")
+    }
+
+    /** Huỷ mọi liên kết: mọi điện thoại (kể cả máy này) mất tivi, phải nhập mã TV mới. */
+    fun huyLienKet() = vm.chay(t("Đang huỷ mọi liên kết…", "Unlinking all phones…")) {
+        hoiHuy = false
+        vm.damBaoKetNoi()
+        if (!vm.io { vm.tv.huyLienKetCast() }) error(t("Dịch vụ Cast trên tivi đang tắt.", "The Cast service on the TV is off."))
+        maTv = ""; maTvLuc = 0L
+        docLai()
+        bao = t("Đã huỷ mọi liên kết. Điện thoại muốn cast lại thì nhập mã TV mới (đợi vài giây cho tivi nối lại YouTube rồi Lấy mã TV).",
+            "All phones are unlinked. Phones need a new TV code to cast again (wait a few seconds for the TV to reconnect, then Get a TV code).")
+    }
+
     fun go() = vm.chay(t("Đang gỡ Cast SmartTube…", "Removing Cast to SmartTube…")) {
         vm.damBaoKetNoi()
         vm.io { vm.tv.goCast() }
@@ -108,5 +148,5 @@ class CastTivi(private val vm: PhienLamViec) {
         bao = t("Đã gỡ Cast SmartTube khỏi tivi.", "Cast to SmartTube is removed from the TV.")
     }
 
-    fun quen() { trangThai = null; daCai = false; coSmartTube = true; ten = ""; bao = ""; maTv = ""; maTvLuc = 0L }
+    fun quen() { trangThai = null; daCai = false; coSmartTube = true; ten = ""; bao = ""; maTv = ""; maTvLuc = 0L; chonMay = null; hoiHuy = false }
 }

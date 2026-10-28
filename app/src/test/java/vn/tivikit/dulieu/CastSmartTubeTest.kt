@@ -36,6 +36,35 @@ class CastSmartTubeTest {
         assertTrue(CastSmartTube.trangThai(JSONObject("""{"dichVuChay":true,"biChe":true}""")).biChe)
     }
 
+    @Test fun trangThai_dienThoai_app20() {
+        val j = JSONObject("""{"dichVuChay":true,"ten":"Premium YTB","nhanCast":false,"dangNoi":["a"],
+            "dienThoai":[{"id":"a","ten":"iCM16prm","taiKhoan":"Cao Minh","trangThai":"CHO_PHEP","hetHan":0,"lanDau":1,"lanCuoi":2},
+                         {"id":"tk:Khách","ten":"","taiKhoan":"Khách","trangThai":"CHO_PHEP","hetHan":5,"lanDau":3,"lanCuoi":4},
+                         {"id":"c","ten":"iPhone","taiKhoan":"","trangThai":"CHAN","hetHan":0,"lanDau":3,"lanCuoi":4}]}""")
+        val tt = CastSmartTube.trangThai(j)
+        assertTrue(tt.coQuanLy)
+        assertFalse(tt.nhanCast)
+        assertEquals(setOf("a"), tt.dangNoi)
+        assertEquals("Cao Minh · iCM16prm", tt.dsMay[0].tenHien)
+        assertTrue(tt.dsMay[1].quaHan(6))
+        assertFalse(tt.dsMay[1].quaHan(4))
+        assertTrue(tt.dsMay[2].biChan)
+        // App Cast bản cũ (chưa có danh sách): không có phần quản lý, vẫn nhận cast.
+        val cu = CastSmartTube.trangThai(JSONObject("""{"dichVuChay":true}"""))
+        assertFalse(cu.coQuanLy)
+        assertTrue(cu.nhanCast)
+    }
+
+    @Test fun lenhDienThoai_chiAscii() {
+        val l = CastSmartTube.lenhDienThoai("tk:Khách 'A'", CastSmartTube.Lam.MOT_NGAY)
+        assertTrue(l.startsWith("content call --uri content://vn.tivikit.cast --method dien-thoai --arg '"))
+        assertTrue(l.all { it.code < 0x80 })
+        val json = JSONObject(l.substringAfter("--arg '").removeSuffix("'"))
+        assertEquals("tk:Khách 'A'", json.getString("id"))
+        assertEquals("24h", json.getString("lam"))
+        assertEquals("content call --uri content://vn.tivikit.cast --method dat --arg '{\"nhanCast\":false}'", CastSmartTube.lenhNhanCast(false))
+    }
+
     @Test fun maTv() {
         assertEquals("123456789012", CastSmartTube.maTv("Result: Bundle[{ma=123456789012}]"))
         assertEquals("", CastSmartTube.maTv("Result: Bundle[{ma=}]"))

@@ -1812,6 +1812,15 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      */
     fun baiCast(): org.json.JSONObject? = docQua(CastSmartTube.GOI, "dang-phat")
 
+    /** Làm [lam] với điện thoại [id] trong danh sách của app Cast (cho phép, khách, chặn, xoá); false nếu tivi không nhận. */
+    fun lamDienThoaiCast(id: String, lam: CastSmartTube.Lam): Boolean = sh(CastSmartTube.lenhDienThoai(id, lam)).contains("ok=1")
+
+    /** Bật / tạm ngừng nhận cast. */
+    fun datNhanCast(bat: Boolean): Boolean = sh(CastSmartTube.lenhNhanCast(bat)).contains("ok=1")
+
+    /** Huỷ mọi liên kết điện thoại của app Cast; false nếu dịch vụ Cast đang tắt. */
+    fun huyLienKetCast(): Boolean = sh(CastSmartTube.LENH_HUY_LIEN_KET).contains("ok=1")
+
     /** Gỡ app Cast SmartTube: bỏ dịch vụ trợ năng và quyền nghe thông báo rồi gỡ. */
     fun goCast() {
         if (!castDaCai()) return
