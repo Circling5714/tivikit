@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Mở video thì bật màn hình (tắt màn bảo vệ, tivi đang chờ thì bật); Android 14+ cần TURN_SCREEN_ON, TiviKit cấp qua ADB. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Wi-Fi bỏ gói multicast cho đỡ tốn pin nếu không có app giữ khoá: cần để nghe điện thoại tìm tivi (SSDP). -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- Android 11+: thấy SmartTube (các bản) và app mở được link YouTube. -->
+    <queries>
+        <package android:name="org.smarttube.stable" />
+        <package android:name="org.smarttube.beta" />
+        <package android:name="com.liskovsoft.smarttubetv" />
+        <package android:name="com.liskovsoft.smarttubetv.beta" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="www.youtube.com" />
+        </intent>
+    </queries>
+
+    <!-- Không có màn mở trong danh sách app: bật / đặt tên ở TiviKit trên điện thoại. -->
+    <application
+        android:label="@string/ten_app"
+        android:icon="@drawable/ic_cast"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <!-- Giữ máy nhận chạy suốt và để Android cho mở SmartTube khi app đang chạy nền. -->
+        <service
+            android:name=".CastDichVu"
+            android:exported="true"
+            android:label="@string/ten_app"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/cast_tro_nang" />
+        </service>
+        <!-- Chỉ để đọc / điều khiển phiên media của SmartTube (tua, vị trí thật); TiviKit bật qua ADB nếu tivi cho. -->
+        <service
+            android:name=".NgheThongBao"
+            android:exported="true"
+            android:label="@string/ten_app"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+        <!-- Trạng thái / tên chỉ đọc, đặt được từ ADB (TiviKit). -->
+        <provider
+            android:name=".CauHinhProvider"
+            android:authorities="${applicationId}"
+            android:exported="true" />
+    </application>
+</manifest>

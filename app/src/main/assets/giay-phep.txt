@@ -62,9 +62,14 @@ TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the followi
 15. QR Code generator (bản Java 1.8.0) — vẽ mã QR lúc cài mã OTP cho Khoá trẻ em / draws the QR code when setting up
     the Kids lock OTP code
     Project Nayuki — https://www.nayuki.io/page/qr-code-generator-library — MIT License (văn bản ở mục A / text in section A)
+16. Cách nói chuyện với YouTube cho Cast SmartTube (kênh Lounge, ghép đôi qua DIAL; mã của TiviKit tự viết) theo /
+    YouTube cast receiver protocol details for Cast to SmartTube (Lounge channel, DIAL pairing; TiviKit's own code) from:
+    yt-cast-receiver — Patrick Kan — https://github.com/patrickkfkan/yt-cast-receiver — MIT License
 
 Tên các hãng tivi chỉ dùng để nói tivi nào chạy được; TiviKit không liên quan tới các hãng đó.
 TV brand names are only used to describe compatibility; TiviKit is not affiliated with them.
+YouTube là nhãn hiệu của Google LLC; Cast SmartTube không phải sản phẩm của Google. / YouTube is a trademark of Google
+LLC; Cast to SmartTube is not a Google product.
 VTV, VTVgo và logo các kênh thuộc Đài Truyền hình Việt Nam; TiviKit không đóng sẵn logo nào, ô kênh dùng ảnh của VTVgo
 tải lúc bạn chọn. / VTV, VTVgo and the channel logos belong to Vietnam Television; TiviKit bundles none of them, the
 channel tiles use VTVgo's own pictures fetched when you pick them.

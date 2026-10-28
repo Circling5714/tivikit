@@ -66,10 +66,11 @@ class QuanLyApp(private val vm: PhienLamViec) {
 
     /**
      * Gói của chính app này (Home sạch, Khoá trẻ em — cả bản trước khi đổi tên gói, đang chờ cài mã OTP — Kênh nhanh,
-     * Hẹn giờ, bộ gõ tiếng Việt, TiviKit khi chạy trên tivi): không gỡ / xoá dữ liệu ở đây.
+     * Hẹn giờ, bộ gõ tiếng Việt, Cast SmartTube, TiviKit khi chạy trên tivi): không gỡ / xoá dữ liệu ở đây.
      */
     fun baoVe(a: App) = a.tv.pkg in ThaoTacTv.HOME_SACH || laKhoa(a) ||
         vn.tivikit.dulieu.KenhNhanh.laGoiKenh(a.tv.pkg) || a.tv.pkg == vn.tivikit.dulieu.HenGio.GOI || a.tv.pkg == vn.tivikit.dulieu.GoChu.GOI ||
+        a.tv.pkg == vn.tivikit.dulieu.CastSmartTube.GOI ||
         a.tv.pkg == vm.ctx.packageName
 
     /** App Khoá trẻ em (bản mới hay bản trước khi đổi tên gói): cũng không buộc dừng ở đây (28/10/2026). */

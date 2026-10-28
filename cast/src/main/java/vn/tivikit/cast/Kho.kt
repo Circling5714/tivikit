@@ -1,0 +1,40 @@
+package vn.tivikit.cast
+
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
+
+/** Trạng thái lưu trên tivi: mã thiết bị DIAL, screen YouTube, tên tự đặt, nhật ký vài việc gần nhất. */
+class Kho(ctx: Context) {
+    private val p = ctx.applicationContext.getSharedPreferences("cast", Context.MODE_PRIVATE)
+
+    private fun maCo(khoa: String): String =
+        p.getString(khoa, null) ?: UUID.randomUUID().toString().also { p.edit().putString(khoa, it).apply() }
+
+    /** UUID của thiết bị DIAL (UDN): giữ nguyên để điện thoại nhận ra đúng tivi cũ. */
+    val uuid: String get() = maCo("uuid")
+
+    /** Mã thiết bị của screen bên YouTube (tham số id của kênh Lounge). */
+    val maThietBi: String get() = maCo("ma_thiet_bi")
+
+    /** Screen YouTube cấp (generate_screen_id); null = chưa có, xin mới. */
+    var screenId: String?
+        get() = p.getString("screen_id", null)
+        set(v) { p.edit().putString("screen_id", v).apply() }
+
+    /** Tên hiện trong nút Cast do TiviKit đặt; null = tự đặt theo tên tivi. */
+    var ten: String?
+        get() = p.getString("ten", null)
+        set(v) { p.edit().putString("ten", v).apply() }
+
+    /** 30 dòng gần nhất {luc, viec}: TiviKit đọc để biết điện thoại nào đã nối, video nào đã mở. */
+    val nhatKy: JSONArray get() = runCatching { JSONArray(p.getString("nhat_ky", "[]")) }.getOrDefault(JSONArray())
+
+    @Synchronized fun ghi(viec: String) {
+        val a = nhatKy
+        a.put(JSONObject().put("luc", System.currentTimeMillis()).put("viec", viec))
+        val bot = JSONArray(); for (i in maxOf(0, a.length() - 30) until a.length()) bot.put(a.get(i))
+        p.edit().putString("nhat_ky", bot.toString()).apply()
+    }
+}

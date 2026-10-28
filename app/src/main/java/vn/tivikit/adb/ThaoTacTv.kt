@@ -2,6 +2,7 @@ package vn.tivikit.adb
 
 import vn.tivikit.t
 import vn.tivikit.dulieu.BanSaoLuu
+import vn.tivikit.dulieu.CastSmartTube
 import vn.tivikit.dulieu.DnsRieng
 import vn.tivikit.dulieu.GoChu
 import vn.tivikit.dulieu.GoiCu
@@ -1416,6 +1417,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (khoaDaCai()) { bao(t("Gỡ Khoá trẻ em…", "Removing the Kids lock…")); runCatching { tatKhoa(go = true) } }
         oKenhDaCai().takeIf { it.isNotEmpty() }?.let { ds -> bao(t("Gỡ Kênh nhanh…", "Removing Quick channel…")); ds.forEach { runCatching { goKenh(it) } } }
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
+        if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { sh("pm uninstall ${TiviKitLauncher.GOI}") } }
@@ -1487,6 +1489,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (khoaDaCai()) { bao(t("Gỡ Khoá trẻ em…", "Removing the Kids lock…")); runCatching { tatKhoa(go = true) } }
         oKenhDaCai().takeIf { it.isNotEmpty() }?.let { ds -> bao(t("Gỡ Kênh nhanh…", "Removing Quick channel…")); ds.forEach { runCatching { goKenh(it) } } }
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
+        if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { sh("pm uninstall ${TiviKitLauncher.GOI}") } }
@@ -1755,6 +1758,39 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (!henGioDaCai()) return
         boTroNang(HenGio.DICH_VU); boTroNang("${HenGio.GOI}/${GoiCu.LOP_HEN_GIO_CU}")
         sh("pm uninstall ${HenGio.GOI}")
+    }
+
+    // ---------- Cast SmartTube (app vn.tivikit.cast, 28/10/2026) ----------
+
+    fun castDaCai(): Boolean = coGoi(CastSmartTube.GOI)
+
+    /** Trạng thái app Cast SmartTube (dịch vụ chạy, đã nối YouTube, điện thoại đang nối…); null nếu chưa cài. */
+    fun docCast(): org.json.JSONObject? = if (!castDaCai()) null else docQua(CastSmartTube.GOI)
+
+    /** Có SmartTube trên tivi (bản nào cũng được). */
+    fun coSmartTube(): Boolean = goiDaCai().any { it in CastSmartTube.SMARTTUBE }
+
+    /**
+     * Cài / cập nhật app Cast SmartTube, cho nó bật màn hình (Android 14+), đọc phiên media của SmartTube (tivi ít RAM không
+     * cho thì thôi: vẫn chạy, chỉ không đồng bộ được khi bấm remote tivi), đặt [ten] (null = giữ), bật dịch vụ trợ năng.
+     */
+    fun caiCast(apk: ByteArray, ten: String?, bao: (String) -> Unit) {
+        caiAppPhu(CastSmartTube.GOI, apk) { bao(t("Cài app Cast SmartTube lên tivi…", "Installing Cast to SmartTube on the TV…")) }
+        sh("cmd appops set ${CastSmartTube.GOI} TURN_SCREEN_ON allow 2>/dev/null; cmd notification allow_listener ${CastSmartTube.NGHE} 2>/dev/null; true")
+        if (ten != null) sh(CastSmartTube.lenhDatTen(ten))
+        bao(t("Bật dịch vụ Cast…", "Turning the Cast service on…"))
+        val dv = CastSmartTube.DICH_VU
+        sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$dv*) ;; null|'') settings put secure enabled_accessibility_services $dv ;; *) settings put secure enabled_accessibility_services \"\$s:$dv\" ;; esac; settings put secure accessibility_enabled 1")
+    }
+
+    /** Đổi tên hiện trong nút Cast ("" = tên mặc định); điện thoại thấy tên mới ở lần tìm sau. */
+    fun datTenCast(ten: String) { sh(CastSmartTube.lenhDatTen(ten)) }
+
+    /** Gỡ app Cast SmartTube: bỏ dịch vụ trợ năng và quyền nghe thông báo rồi gỡ. */
+    fun goCast() {
+        if (!castDaCai()) return
+        boTroNang(CastSmartTube.DICH_VU)
+        sh("cmd notification disallow_listener ${CastSmartTube.NGHE} 2>/dev/null; pm uninstall ${CastSmartTube.GOI}")
     }
 
     // ---------- Gõ tiếng Việt (app vn.tivikit.go, 25/10/2026) ----------
@@ -2152,7 +2188,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
          * phát, thời tiết). Cách tv-remote giữ app của nó trên box RAM thấp (họ đo trên box FPT Play, Android 14): thêm vào danh
          * sách bỏ qua tối ưu pin (Doze), xếp nhóm "đang dùng" (App Standby), cho chạy nền.
          */
-        val GIU_SONG: Set<String> get() = HOME_SACH + setOf(PKG_KHOA, vn.tivikit.dulieu.HenGio.GOI, TiviKitLauncher.GOI)
+        val GIU_SONG: Set<String> get() = HOME_SACH + setOf(PKG_KHOA, vn.tivikit.dulieu.HenGio.GOI, TiviKitLauncher.GOI, CastSmartTube.GOI)
 
         /**
          * Lệnh giữ [goi] chạy nền (xem GIU_SONG). Mỗi lệnh im lặng khi lỗi (Android 8 chưa có set-standby-bucket, gói vừa gỡ):

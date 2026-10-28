@@ -149,6 +149,19 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 | Trang khác → gõ một tên miền (VD vimeo.com) | Thêm dòng mới, ghi đúng app nào nhận (hoặc chưa có app nào) |
 | Tivi Android 12 trở lên có YouTube gốc: chọn SmartTube cho YouTube | Link YouTube mở bằng SmartTube; app báo đã tắt tự mở link của YouTube gốc |
 
+## 9b. Cast SmartTube
+
+| Thử | Đạt khi |
+| --- | --- |
+| Tiện ích → Cast SmartTube → Bật Cast SmartTube | Trong chừng 20 giây hiện "Dịch vụ Cast đang chạy" và "Đã nối YouTube" |
+| iPhone / điện thoại Android cùng Wi-Fi: YouTube → nút Cast | Có dòng "SmartTube · <tên tivi>" (hay tên đã đặt) |
+| Chọn tivi đó rồi bấm một video | Tivi mở video bằng SmartTube, đúng giây đang xem trên điện thoại |
+| Tạm dừng, phát tiếp, tua trên điện thoại | SmartTube làm theo |
+| Tạm dừng bằng remote tivi (tivi không phải loại ít RAM) | Điện thoại cũng hiện đang dừng |
+| Tivi đang ở màn bảo vệ rồi gửi video | Màn bảo vệ tắt, video lên |
+| Đổi tên → Lưu tên, mở lại YouTube trên điện thoại | Nút Cast hiện tên mới |
+| Gỡ Cast SmartTube | Nút Cast trên điện thoại không còn tivi đó |
+
 ## 10. Các tính năng còn lại
 
 | Thử | Đạt khi |

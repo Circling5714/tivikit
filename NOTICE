@@ -68,6 +68,10 @@ TiviKit includes or builds on the following third-party work.
 17. QR Code generator library, Java 1.8.0 (Project Nayuki) — MIT License. Draws the QR code
     when setting up the Kids lock OTP code. https://www.nayuki.io/page/qr-code-generator-library
     Copyright (c) Project Nayuki. Permission notice: the MIT License text in LICENSE.
+18. YouTube cast receiver protocol details (Lounge channel parameters, DIAL pairing) from
+    yt-cast-receiver by Patrick Kan — MIT License. https://github.com/patrickkfkan/yt-cast-receiver
+    No code is copied: the cast/ module is TiviKit's own Kotlin implementation of the DIAL 1.7
+    specification and these protocol details. YouTube is a trademark of Google LLC.
 
 The full licence texts shown inside the app are in app/src/main/assets/giay-phep.txt.
 

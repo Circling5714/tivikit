@@ -79,6 +79,7 @@ jobs:
           scripts/dung-khoa.sh
           scripts/dung-kenh.sh
           scripts/dung-hen-gio.sh
+          scripts/dung-cast.sh
           scripts/dung-go.sh
           scripts/dung-tivikit-launcher.sh
           scripts/dung-tren-tv.sh
