@@ -46,6 +46,7 @@ object HenGio {
         val ke = Lich.keTiep(kho.lich, kho.motLan(), luc - 1, ZoneId.systemDefault())
         kho.xongMotLan(luc)
         if (ke == null || ke.luc != luc) return
+        if (Lich.daLo(luc, System.currentTimeMillis())) { ke.viec.forEach { kho.ghi(it.loai, "lo-gio") }; return }
         val dangBat = ctx.getSystemService(PowerManager::class.java)?.isInteractive == true
         for (v in ke.viec) when (v.loai) {
             Viec.BAT -> if (!dangBat) {

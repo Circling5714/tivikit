@@ -26,6 +26,15 @@ object Lich {
     /** Tắt tivi: báo trước 60 giây (có nút Hoãn) để tivi tắt đúng giờ đã đặt. */
     const val BAO_TRUOC_MS = 60_000L
     const val TOI_DA = 30
+    /** Báo thức tới trễ hơn chừng này thì việc coi như đã lỡ: bỏ, không chạy bù. */
+    const val TRE_TOI_DA_MS = 10 * 60_000L
+
+    /**
+     * Báo thức hẹn lúc [luc] mà tới [bay] mới chạy là đã lỡ: tivi ngủ sâu tới lúc bấm nguồn mới thức, hay hộp không pin giữ
+     * giờ bật lên với giờ cũ, hẹn theo giờ đó, rồi lấy được giờ mạng thì báo thức thành quá hạn và chạy ngay (TX3 28/10/2026:
+     * mở Kênh nhanh ngay sau khi khởi động; lịch tắt thì tivi vừa bật đã báo tắt).
+     */
+    fun daLo(luc: Long, bay: Long): Boolean = bay - luc > TRE_TOI_DA_MS
 
     private val TEN_GOI = Regex("""^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$""")
 

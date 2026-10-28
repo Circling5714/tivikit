@@ -1,6 +1,7 @@
 package vn.tivikit.hengio
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -55,6 +56,15 @@ class LichTest {
         val k = Lich.keTiep(listOf(bat), listOf(tu + 120_000 to thu, tu - 1 to thu), tu, vn)!!
         assertEquals(tu + 120_000, k.luc)
         assertEquals(listOf(thu), k.viec)
+    }
+
+    @Test fun baoThucTre_boKhongChayBu() {
+        val hen = luc(2026, 10, 28, 8, 39)
+        assertFalse(Lich.daLo(hen, hen + 5_000))
+        assertFalse(Lich.daLo(hen, hen + 9 * 60_000L))
+        assertTrue(Lich.daLo(hen, hen + 11 * 60_000L))
+        // Hộp không pin giữ giờ (TX3): bật lên còn giờ 2021, hẹn theo giờ đó; lấy được giờ mạng thì báo thức thành quá hạn.
+        assertTrue(Lich.daLo(luc(2021, 1, 21, 8, 39), luc(2026, 10, 28, 8, 44)))
     }
 
     @Test fun json_khuHoiVaTuChoi() {
