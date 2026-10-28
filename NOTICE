@@ -72,6 +72,10 @@ TiviKit includes or builds on the following third-party work.
     yt-cast-receiver by Patrick Kan — MIT License. https://github.com/patrickkfkan/yt-cast-receiver
     No code is copied: the cast/ module is TiviKit's own Kotlin implementation of the DIAL 1.7
     specification and these protocol details. YouTube is a trademark of Google LLC.
+19. The Dhammapada (Kinh Pháp Cú, 423 verses) in the Vietnamese lục bát verse version by
+    Tâm Minh Ngô Tằng Giao (2003), as published on niemphat.vn
+    (https://www.niemphat.vn/tim-hieu-kinh-phap-cu): TiviKit Launcher's daily verse
+    (launcher/src/main/assets/phap-cu.txt). The translator keeps all rights to the translation.
 
 The full licence texts shown inside the app are in app/src/main/assets/giay-phep.txt.
 
