@@ -171,8 +171,9 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 | Chặn một máy (trên tivi hay ở TiviKit), máy đó cast | Tivi bỏ qua video và cả lệnh tạm dừng / tua của máy đó, báo nhỏ trên tivi |
 | Tắt "Nhận cast", cast từ máy đã được phép | Tivi bỏ qua, báo đang tạm ngừng; bật lại thì cast được |
 | Huỷ mọi liên kết (trên tivi hay ở TiviKit), nhập mã TV mới vào điện thoại rồi cast | Mọi điện thoại mất tivi; lúc tivi nối lại thì màn ghi "Đang lấy mã…" chứ không hiện mã cũ, TiviKit tự xin mã mới; nhập mã mới thì cast tới tivi, tivi hỏi lại như máy lạ |
+| Rút mạng tivi giữa chừng (hay router khởi động lại) rồi cắm lại | Điện thoại đã liên kết bằng mã TV vẫn thấy tivi, không phải nhập mã mới |
 | Tivi có Khoá trẻ em đang bật: chặn / cho phép / huỷ liên kết / đổi tên trên tivi | Hiện lớp "Cần mã của bố mẹ"; đúng mã thì làm, Back thì không đổi gì; xem mã TV thì không hỏi |
-| Gỡ Cast SmartTube | Nút Cast trên điện thoại không còn tivi đó |
+| Gỡ Cast SmartTube | Hỏi chắc trước; gỡ xong nút Cast trên điện thoại không còn tivi đó |
 
 ## 10. Các tính năng còn lại
 
