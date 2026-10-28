@@ -99,6 +99,7 @@ private fun TheTrenTv(k: KhoaTreTivi, j: JSONObject) = The(t("Trên tivi", "On t
     Phu(if (!bat) t("Khoá đang tắt.", "The lock is off.")
         else if (!chay) t("Khoá đang bật nhưng dịch vụ chưa chạy (tắt tivi bật lại).", "On, but the service isn't running (restart the TV).")
         else if (dangKhoa && j.optString("lyDo") == "het-gio") t("Tivi đang khoá: đã xem hết giờ hôm nay.", "The TV is locked: today's time is used up.")
+        else if (dangKhoa && j.optString("lyDo") == "gio-sai") t("Tivi đang khoá: giờ tivi chưa đúng (chưa lấy được giờ từ mạng).", "The TV is locked: its clock isn't right yet (no network time).")
         else if (dangKhoa) t("Tivi đang khoá.", "The TV is locked now.")
         else if (moDen > System.currentTimeMillis()) t("Đang mở tạm tới ${gio(moDen)}.", "Unlocked until ${gio(moDen)}.")
         else t("Khoá đang bật, ngoài giờ khoá.", "On, outside the lock periods."), if (bat && chay) Xanh else ChuPhu)
@@ -150,8 +151,7 @@ private fun TheGioKhoa(k: KhoaTreTivi) = The(t("Giờ khoá", "Lock periods"), I
         (1..7).forEach { d -> ChonChip(t(TEN_THU[d - 1], TEN_THU_EN[d - 1]), d in ngay) { ngay = if (d in ngay) ngay - d else ngay + d } }
     }
     NutPhu(t("Thêm khung này", "Add this period"), Icons.Rounded.Add) {
-        fun chuan(s: String) = s.trim().replace('.', ':').replace('h', ':').let { if (Regex("^[0-9]:").containsMatchIn(it)) "0$it" else it }.let { if (Regex("^[0-9]{2}$").matches(it)) "$it:00" else it }
-        k.khung += KhoaTreTivi.Khung(chuan(tu), chuan(den), ngay); tu = ""; den = ""
+        if (k.themKhung(tu, den, ngay)) { tu = ""; den = "" }
     }
     Phu(t("Khung qua đêm (21:00–06:00) tính theo ngày bắt đầu: chọn T2 là khoá từ tối thứ Hai tới sáng thứ Ba.", "Overnight periods count from the starting day."))
 }
@@ -252,7 +252,7 @@ private fun TheHenKhoa(vm: PhienLamViec) = The(t("Hẹn giờ khoá app", "App l
                     else t("Khoá lúc ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(tu))}, tới hết hôm nay", "Locks at ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(tu))}, until the end of today"),
                     fontSize = 12.sp, color = ChuPhu)
             }
-            IconButton(onClick = { if (!vm.dangBan) k.boHen(i) }) { Icon(Icons.Rounded.Close, t("Bỏ hẹn", "Remove")) }
+            IconButton(onClick = { if (!vm.dangBan) k.boHen(tu, goi.toSet()) }) { Icon(Icons.Rounded.Close, t("Bỏ hẹn", "Remove")) }
         }
     }
     ChonApp(k.dsApp, k.videoTrenTv, k.chonHen) { k.chonHen = it }

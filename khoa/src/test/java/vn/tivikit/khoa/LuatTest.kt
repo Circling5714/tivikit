@@ -118,4 +118,15 @@ class LuatTest {
         assertEquals("1 giờ 30 phút", Luat.chuThoiGian(90, true)); assertEquals("2 giờ", Luat.chuThoiGian(120, true))
         assertEquals("45 phút", Luat.chuThoiGian(45, true)); assertEquals("1 h 30 min", Luat.chuThoiGian(90, false))
     }
+
+    /** Giờ tivi sai (hộp không pin giữ giờ vừa mất điện): khoá tới khi có giờ đúng, mở tạm bằng mã vẫn được (28/10/2026). */
+    @Test fun gioSai_khoaToiKhiCoGio() {
+        val c = CauHinh(bat = true, coMa = true, khung = emptyList(), moTamPhut = 60)
+        assertEquals(Luat.LyDo.GIO_SAI, Luat.lyDo(c, luc(2021, 1, 1, 10, 0), 0, 0))
+        assertNull(Luat.lyDo(c, luc(2026, 10, 28, 10, 0), 0, 0))
+        val sai = luc(2021, 1, 1, 10, 0)
+        assertNull(Luat.lyDo(c, sai, 0, sai.timeInMillis + 60_000))
+        assertNull(Luat.lyDo(c.copy(bat = false), sai, 0, 0))
+    }
 }
+

@@ -99,7 +99,7 @@ class CauHinhProvider : ContentProvider() {
                 val daXem = KhoaDichVu.giayDaXem(kho, Luat.ngay(lich))
                 o.put("giayHomNay", daXem)
                 o.put("gioiHanHomNay", c?.let { Luat.gioiHanPhut(it, Luat.thu(lich)) } ?: 0)
-                o.put("lyDo", when (Luat.lyDo(c, lich, daXem, kho.moTamDen)) { Luat.LyDo.HET_GIO -> "het-gio"; Luat.LyDo.GIO_KHOA -> "gio-khoa"; null -> "" })
+                o.put("lyDo", when (Luat.lyDo(c, lich, daXem, kho.moTamDen)) { Luat.LyDo.HET_GIO -> "het-gio"; Luat.LyDo.GIO_KHOA -> "gio-khoa"; Luat.LyDo.GIO_SAI -> "gio-sai"; null -> "" })
                 // Khoá theo app (28/10/2026): hẹn khoá còn hạn, phút đã dùng hôm nay của từng luật, app đang khoá lúc này.
                 val hen = kho.hen
                 val dung = KhoaDichVu.giayDung(kho, Luat.ngay(lich))

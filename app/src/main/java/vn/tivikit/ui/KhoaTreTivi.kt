@@ -326,6 +326,18 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
 
     private fun idMoi() = java.lang.Long.toString(System.currentTimeMillis(), 36)
 
+    /** Thêm khung giờ khoá từ ô tự đặt (chưa lưu lên tivi); sai giờ hay chưa chọn ngày thì báo ngay, không thêm dòng hỏng. */
+    fun themKhung(tu: String, den: String, ngay: Set<Int>): Boolean {
+        val a = chuanGio(tu); val b = chuanGio(den)
+        if (!GIO.matches(a) || !GIO.matches(b)) {
+            vm.loi = t("Nhập giờ dạng 21:00 (hay 21h) cho cả Từ và Đến.", "Enter times like 21:00 (or 21h) for both From and To.")
+            return false
+        }
+        if (ngay.isEmpty()) { vm.loi = t("Chọn ít nhất một ngày.", "Pick at least one day."); return false }
+        khung += Khung(a, b, ngay)
+        return true
+    }
+
     /** "8h" → "08:00", "20.30" → "20:30" (như ô tự đặt khung giờ khoá). */
     fun chuanGio(s: String) = s.trim().replace('.', ':').replace('h', ':').removeSuffix(":")
         .let { if (Regex("^[0-9]:").containsMatchIn(it) || Regex("^[0-9]$").matches(it)) "0$it" else it }
@@ -347,12 +359,29 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
     }
 
     /** Bỏ hẹn khoá thứ [i] (theo danh sách tivi trả về). */
-    fun boHen(i: Int): Unit = vm.chay(t("Đang bỏ hẹn khoá…", "Removing the timer…")) {
-        val p = if (coOtp && !goDuoc) phienHoac { boHen(i) } ?: return@chay else null
+    /**
+     * Bỏ hẹn khoá [tu] của các app [goi]. Tivi bỏ theo vị trí trong danh sách, mà danh sách tự bớt hẹn đã hết hạn (bảng phụ
+     * huynh trên tivi cũng sửa được): đọc lại rồi tìm đúng hẹn đó, không gửi vị trí theo màn hình cũ (28/10/2026: bỏ nhầm hẹn
+     * khác).
+     */
+    fun boHen(tu: Long, goi: Set<String>): Unit = vm.chay(t("Đang bỏ hẹn khoá…", "Removing the timer…")) {
+        val p = if (coOtp && !goDuoc) phienHoac { boHen(tu, goi) } ?: return@chay else null
+        val ds = vm.io { vm.tv.docKhoa() }?.optJSONArray("hen")
+        val i = ds?.let { a ->
+            (0 until a.length()).firstOrNull { n ->
+                val h = a.optJSONObject(n)
+                h != null && h.optLong("tu") == tu && h.optJSONArray("goi")?.let { g -> (0 until g.length()).map { g.optString(it) }.toSet() } == goi
+            }
+        }
+        if (i == null) {
+            trenTv = vm.io { vm.tv.docKhoa() }
+            bao = t("Hẹn khoá này đã hết hoặc đã được bỏ.", "That timer has already ended or been removed.")
+            return@chay
+        }
         val j = JSONObject().put("bo", i)
         if (p != null) j.put("phien", p)
         try { vm.io { vm.tv.henKhoaApp(j.toString()) } }
-        catch (e: vn.tivikit.adb.ThaoTacTv.CanMaException) { boPhien(); phienHoac { boHen(i) }; return@chay }
+        catch (e: vn.tivikit.adb.ThaoTacTv.CanMaException) { boPhien(); phienHoac { boHen(tu, goi) }; return@chay }
         trenTv = vm.io { vm.tv.docKhoa() }
         bao = t("Đã bỏ hẹn khoá.", "Timer removed.")
     }

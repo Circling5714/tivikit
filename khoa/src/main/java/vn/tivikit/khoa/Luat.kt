@@ -108,11 +108,24 @@ object Luat {
     }
 
     /** Vì sao tivi khoá: hết giờ xem hôm nay (ưu tiên: khung giờ khoá có hết thì vẫn khoá tới hết ngày) hay trong khung giờ khoá. */
-    enum class LyDo { HET_GIO, GIO_KHOA }
+    enum class LyDo { HET_GIO, GIO_KHOA, GIO_SAI }
 
-    /** Lúc [luc] có khoá không, vì sao; null = không khoá (kể cả đang mở tạm bằng mã tới [moTamDen]). */
+    /** Năm bản khoá này ra đời: giờ tivi sớm hơn thì chắc chắn sai. */
+    const val NAM_TOI_THIEU = 2026
+
+    /**
+     * Giờ tivi chưa đúng: hộp không có pin giữ giờ (TX3) vừa mất điện, khởi động với ngày cũ, chưa lấy được giờ từ mạng.
+     * Lúc đó lịch khoá và giới hạn ngày tính theo ngày sai (28/10/2026).
+     */
+    fun gioSai(luc: Calendar): Boolean = luc.get(Calendar.YEAR) < NAM_TOI_THIEU
+
+    /**
+     * Lúc [luc] có khoá không, vì sao; null = không khoá (kể cả đang mở tạm bằng mã tới [moTamDen]). Giờ tivi sai thì khoá
+     * tới khi có giờ đúng (tự mở khi tivi lấy được giờ từ mạng; bố mẹ nhập mã để mở ngay).
+     */
     fun lyDo(c: CauHinh?, luc: Calendar, giayDaXem: Long, moTamDen: Long): LyDo? = when {
         c == null || luc.timeInMillis < moTamDen -> null
+        c.bat && c.coMa && gioSai(luc) -> LyDo.GIO_SAI
         hetGioXem(c, thu(luc), giayDaXem) -> LyDo.HET_GIO
         trongGio(c, luc) -> LyDo.GIO_KHOA
         else -> null

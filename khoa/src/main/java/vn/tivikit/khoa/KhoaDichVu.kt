@@ -216,6 +216,11 @@ class KhoaDichVu : AccessibilityService() {
             tvTieuDe.text = t("Hết giờ xem hôm nay", "TV time is up for today")
             tvPhu.text = t("Hôm nay đã xem đủ ${Luat.chuThoiGian(gh, true)}. Mai xem tiếp nhé! Bố mẹ nhập mã để mở thêm ${c.moTamPhut} phút.",
                 "That's ${Luat.chuThoiGian(gh, false)} of TV today. More tomorrow! A parent's code adds ${c.moTamPhut} minutes.")
+        } else if (ly == Luat.LyDo.GIO_SAI) {
+            tvBieuTuong.text = "🕓"
+            tvTieuDe.text = t("Tivi chưa có giờ đúng", "The TV doesn't know the time yet")
+            tvPhu.text = t("Tivi vừa bật lại và chưa lấy được giờ từ mạng, nên tạm khoá. Có mạng và giờ đúng là tự mở. Bố mẹ nhập mã để mở ${c.moTamPhut} phút.",
+                "The TV just restarted and hasn't got the time from the network yet, so it's locked for now. It unlocks once it's online with the right time. A parent's code unlocks it for ${c.moTamPhut} minutes.")
         } else {
             val het = Luat.hetKhoaLuc(c, bay)?.let { Luat.chuGio(it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE)) }
             tvBieuTuong.text = "🔒"
