@@ -222,7 +222,9 @@ private fun DongHo(tt: TrangThaiHome) {
 @Composable
 private fun HangNut(tt: TrangThaiHome, modifier: Modifier) {
     val viet = NgonNgu.tiengViet
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+    // Menu ⏻ mở: cả hàng mờ đi, nhường chỗ cho viên kính nở ra từ nút ⏻ (LopKinh.MenuNguon); đóng thì hiện lại.
+    val hien by animateFloatAsState(if (tt.menuNguon) 0f else 1f, tween(if (tt.menuNguon) 120 else 220), label = "hang-nut")
+    Row(modifier.graphicsLayer { alpha = hien }, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
         if (tt.coDonRam) NutTron(Icons.Rounded.RocketLaunch, if (tt.dangDon) t("Đang dọn…", "Cleaning…") else t("Dọn RAM", "Free RAM")) { tt.hd.donRam() }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val m = tt.mang

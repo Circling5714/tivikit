@@ -2,6 +2,8 @@ package vn.tivikit.launcher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -53,7 +55,8 @@ import java.time.YearMonth
 
 /*
  * Các lớp kính đè lên màn Home (28/10/2026): bảng lịch âm dương (OK ở đồng hồ), thẻ và cả câu kinh mỗi ngày, menu ⏻.
- * Cùng một kiểu: nền tối dần, tấm kính mờ bật ra bằng lò xo, Back để đóng (lựa chọn về lại ô đã mở nó).
+ * Bảng lịch và cả câu: nền tối dần, tấm kính mờ bật ra bằng lò xo; menu ⏻: nút ⏻ nở thành viên kính ngay tại chỗ. Back
+ * để đóng (lựa chọn về lại ô đã mở nó).
  */
 
 /** Đỏ / cam / xanh của iOS cho biểu tượng menu ⏻. */
@@ -85,49 +88,86 @@ private fun LopPhu(toi: Float, canh: Alignment = Alignment.Center, goc: Transfor
 
 private class MucNguon(val hinh: ImageVector, val mau: Color, val ten: String, val lam: () -> Unit)
 
+/** Cỡ trong viên kính ⏻ (dp): nút bằng nút tròn hàng trên (NutTron), khoảng cách giữa các nút, lề trong. */
+private const val O_NGUON = 40
+private const val GIAN_NGUON = 8
+private const val LE_NGUON = 5
+
 /**
- * Menu ⏻ (bật ra dưới nút ở góc phải): hàng nút tròn chỉ có biểu tượng như Trung tâm điều khiển của iPhone — tắt tivi,
- * khởi động lại, khoá trẻ em ngay (khi tivi có app Khoá trẻ em); tên nút đang chọn hiện nhỏ bên dưới. ◀ ▶ để chọn. Dịch
- * vụ Nút nguồn chưa chạy thì bấm sẽ báo cần cập nhật launcher (DieuKhien.baoNguon).
+ * Menu ⏻ kiểu thanh công cụ Liquid Glass của macOS Tahoe (anh chọn mẫu "viên kính nở ra", 28/10/2026): bấm ⏻ thì hàng nút
+ * góc phải mờ đi (GiaoDien.HangNut), nút ⏻ nở sang trái thành viên kính [khoá trẻ em ngay] [khởi động lại] [tắt tivi], ⏻
+ * vẫn ở đúng chỗ cũ. Nút đang chọn là giọt kính sáng, tên nó hiện trong bong bóng kính nhỏ bên dưới. ◀ ▶ để chọn, Back
+ * thu viên kính lại; không làm tối màn hình. Mục khoá trẻ em chỉ có khi tivi có app Khoá trẻ em.
  */
 @Composable
 internal fun MenuNguon(tt: TrangThaiHome) {
-    val dau = remember { FocusRequester() }
-    var dangChon by remember { mutableStateOf(0) }
-    BackHandler { tt.menuNguon = false; tt.traChon = TrangThaiHome.NGUON }
-    LaunchedEffect(Unit) { runCatching { dau.requestFocus() } }
     val muc = buildList {
-        add(MucNguon(Icons.Rounded.PowerSettingsNew, DoIos, t("Tắt tivi", "Turn off")) { tt.hd.tatTivi() })
-        add(MucNguon(Icons.Rounded.RestartAlt, CamIos, t("Khởi động lại", "Restart")) { tt.hd.khoiDongLai() })
         if (tt.coKhoa) add(MucNguon(Icons.Rounded.Lock, XanhIos, t("Khoá trẻ em ngay", "Kids lock now")) { tt.hd.khoaTreEm() })
+        add(MucNguon(Icons.Rounded.RestartAlt, CamIos, t("Khởi động lại", "Restart")) { tt.hd.khoiDongLai() })
+        add(MucNguon(Icons.Rounded.PowerSettingsNew, DoIos, t("Tắt tivi", "Turn off")) { tt.hd.tatTivi() })
     }
-    LopPhu(toi = 0.28f, canh = Alignment.TopEnd, goc = TransformOrigin(1f, 0f), modifier = Modifier.padding(top = 84.dp, end = 46.dp)) {
-        Column(Modifier.kinh(LocalNen.current, RoundedCornerShape(24.dp), toi = 0.30f, sang = 0.12f)
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                muc.forEachIndexed { i, m -> NutMenuNguon(m, if (i == 0) dau else null) { if (it) dangChon = i } }
+    val n = muc.size
+    // Ảnh xem trước (Paparazzi) chụp khung hình đầu: nở sẵn.
+    val xemTruoc = LocalInspectionMode.current
+    val mo = remember { Animatable(if (xemTruoc) 1f else 0f) }
+    var dong by remember { mutableStateOf(false) }
+    var dangChon by remember { mutableIntStateOf(n - 1) }
+    val dau = remember { FocusRequester() }
+    BackHandler { dong = true }
+    LaunchedEffect(dong) {
+        if (!dong) {
+            runCatching { dau.requestFocus() }
+            mo.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = 420f))
+        } else {
+            mo.animateTo(0f, tween(150))
+            tt.menuNguon = false
+            tt.traChon = TrangThaiHome.NGUON
+        }
+    }
+    val day = n * O_NGUON + (n - 1) * GIAN_NGUON + 2 * LE_NGUON
+    val gon = O_NGUON + 2 * LE_NGUON
+    val vien = RoundedCornerShape(50)
+    Box(Modifier.fillMaxSize()) {
+        // Mép phải viên kính giữ đúng chỗ nút ⏻ (HangNut: top 34, end 46, nút 40 dp), bề ngang nở dần sang trái.
+        Box(Modifier.align(Alignment.TopEnd).padding(top = (34 - LE_NGUON).dp, end = (46 - LE_NGUON).dp)
+            .width((gon + (day - gon) * mo.value).coerceAtLeast(gon.toFloat()).dp).height(gon.dp)
+            .kinh(LocalNen.current, vien, toi = 0.20f, sang = 0.12f, vien = 0.65f).anhKinh(vien, 0.22f).clip(vien)) {
+            Row(Modifier.align(Alignment.CenterEnd).wrapContentWidth(Alignment.End, unbounded = true).padding(horizontal = LE_NGUON.dp),
+                horizontalArrangement = Arrangement.spacedBy(GIAN_NGUON.dp)) {
+                muc.forEachIndexed { i, m ->
+                    val la = i == n - 1
+                    GiotNguon(m, if (la) dau else null, Modifier.graphicsLayer { alpha = if (la) 1f else mo.value.coerceIn(0f, 1f) }) { if (it) dangChon = i }
+                }
             }
-            Spacer(Modifier.height(7.dp))
-            Nhan(muc.getOrNull(dangChon)?.ten.orEmpty(), 12.sp, FontWeight.Medium, Color.White.copy(alpha = 0.92f), bong = false)
+        }
+        // Bong bóng tên dưới nút đang chọn, trượt theo khi đổi nút.
+        val giua = LE_NGUON + dangChon.coerceIn(0, n - 1) * (O_NGUON + GIAN_NGUON) + O_NGUON / 2
+        val x by animateDpAsState((giua - 70).dp, tween(160), label = "bong-ten")
+        Box(Modifier.align(Alignment.TopEnd).padding(top = (34 + O_NGUON + LE_NGUON + 9).dp, end = (46 - LE_NGUON).dp).width(day.dp)
+            .graphicsLayer { alpha = mo.value.coerceIn(0f, 1f) }) {
+            Box(Modifier.offset(x = x).width(140.dp), contentAlignment = Alignment.Center) {
+                val bong = RoundedCornerShape(50)
+                Box(Modifier.kinh(LocalNen.current, bong, toi = 0.30f, sang = 0.10f, vien = 0.5f).padding(horizontal = 12.dp, vertical = 5.dp)) {
+                    Nhan(muc[dangChon.coerceIn(0, n - 1)].ten, 12.sp, FontWeight.Medium, Color.White, bong = false)
+                }
+            }
         }
     }
 }
 
-/**
- * Nút tròn của menu ⏻, cùng cỡ nút tròn hàng trên (NutTron: 40 dp, biểu tượng 19 dp, chọn thì to 1,08): thường là vòng màu
- * trong, chọn thì thành vòng trắng, biểu tượng màu.
- */
+/** Một nút trong viên kính ⏻: biểu tượng trắng; đang chọn thì thành giọt kính sáng, biểu tượng màu, to ra một chút. */
 @Composable
-private fun NutMenuNguon(m: MucNguon, dau: FocusRequester?, onChon: (Boolean) -> Unit) {
+private fun GiotNguon(m: MucNguon, dau: FocusRequester?, modifier: Modifier, onChon: (Boolean) -> Unit) {
     val fr = dau ?: remember { FocusRequester() }
     var chon by remember { mutableStateOf(false) }
-    val to by animateFloatAsState(if (chon) 1.08f else 1f, tween(140), label = "nut-nguon")
-    Box(Modifier.focusRequester(fr)
+    val to by animateFloatAsState(if (chon) 1.08f else 1f, tween(140), label = "giot")
+    Box(modifier.focusRequester(fr)
         .nutTv(m.lam, onChon = { chon = it; onChon(it) })
-        .graphicsLayer { scaleX = to; scaleY = to }
-        .size(40.dp).clip(CircleShape).background(if (chon) Color.White.copy(alpha = 0.95f) else m.mau.copy(alpha = 0.32f)),
+        .graphicsLayer { scaleX = to; scaleY = to }.size(O_NGUON.dp)
+        .then(if (chon) Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.34f))
+            .border(1.dp, Color.White.copy(alpha = 0.85f), CircleShape).anhKinh(CircleShape, 0.35f) else Modifier),
         contentAlignment = Alignment.Center) {
-        Hinh(m.hinh, 19, if (chon) m.mau else Color.White)
+        Hinh(m.hinh, 19, if (chon) m.mau else Color.White.copy(alpha = 0.85f))
     }
 }
 

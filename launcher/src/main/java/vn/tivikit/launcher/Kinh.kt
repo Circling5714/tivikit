@@ -69,6 +69,13 @@ fun Modifier.kinh(nen: NenKinh?, hinh: Shape, toi: Float = 0.18f, sang: Float = 
     }
 }
 
+/** Vệt sáng mặt kính kiểu Liquid Glass (macOS Tahoe): sáng nhạt ở nửa trên khung [hinh], vẽ sau nền kính, dưới nội dung. */
+fun Modifier.anhKinh(hinh: Shape, manh: Float = 0.16f): Modifier = drawWithCache {
+    val duong = Path().apply { addOutline(hinh.createOutline(size, layoutDirection, this@drawWithCache)) }
+    val vet = Brush.verticalGradient(0f to Color.White.copy(alpha = manh), 0.5f to Color.Transparent)
+    onDrawBehind { clipPath(duong) { drawRect(vet) } }
+}
+
 /** Đọc và chuẩn bị ảnh nền (chạy ngoài luồng giao diện). */
 object AnhNen {
     /** Thu ảnh về đúng cỡ màn hình [w]×[h] (phủ kín, cắt phần thừa ở giữa) rồi làm bản kính mờ. */
