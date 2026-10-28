@@ -17,7 +17,9 @@ import java.net.URL
  * APK, cỡ, SHA-256, nhật ký); link releases/latest/download luôn trỏ tới bản mới nhất (không tính lượt gọi API). Tải APK,
  * kiểm tra cỡ + SHA-256 rồi cài bằng PackageInstaller: Android 12+ cho app tự cập nhật chính nó không cần bấm, máy cũ
  * hơn mở hộp cài của Android. Android chỉ cài đè khi APK cùng chữ ký, nên bản giả không cài được.
- * Phần dữ liệu OTA (danh sách mẫu tivi, APK Home sạch tải lặng lẽ) giữ từ CleanTV, chỉ chạy khi cap-nhat.json có "duLieu".
+ * Phần dữ liệu OTA của CleanTV ("duLieu" trong cap-nhat.json: danh sách mẫu tivi, APK app phụ tải lặng lẽ) đã bỏ
+ * (28/10/2026): bản phát hành không dùng tới, mà nó thay được app phụ cài lên tivi chỉ với kiểm tra cỡ file, tên file lấy
+ * từ JSON làm đường dẫn. App phụ, dữ liệu đi theo bản phát hành (ký, kiểm SHA-256).
  */
 object CapNhat {
     const val KHO = "Circling5714/tivikit"
@@ -42,13 +44,7 @@ object CapNhat {
     fun nenTuCai(ctx: Context, b: BanMoi) = BuildConfig.TU_CAP_NHAT && Build.VERSION.SDK_INT >= 31 && tuCai(ctx) && !dangMo &&
         prefs(ctx).getInt("can_bam", 0) < b.versionCode
 
-    /** File dữ liệu đã tải về (nếu có) — DuLieu và launcher đọc file này trước assets. */
-    fun fileDuLieu(ctx: Context, ten: String) = File(ctx.filesDir, "ota/$ten")
-
-    /**
-     * App vừa lên bản mới → dữ liệu OTA tải lúc trước có thể CŨ hơn đồ đóng sẵn trong bản mới (21/10/2026: launcher 0.3
-     * tải qua OTA đè launcher có nút Máy chiếu của 0.5). Xoá đi, dùng đồ đóng sẵn cho tới lần tải kế.
-     */
+    /** Dữ liệu OTA tải về từ bản cũ (đã bỏ, xem trên): app lên bản mới thì xoá. */
     fun donOtaCuNeuDoiBan(ctx: Context) {
         val p = prefs(ctx)
         if (p.getInt("cho_ban", -1) == BuildConfig.VERSION_CODE) return
@@ -56,10 +52,7 @@ object CapNhat {
         p.edit().putInt("cho_ban", BuildConfig.VERSION_CODE).apply()
     }
 
-    fun moAsset(ctx: Context, ten: String): java.io.InputStream {
-        val f = fileDuLieu(ctx, ten)
-        return if (f.isFile && f.length() > 0) f.inputStream() else ctx.assets.open(ten)
-    }
+    fun moAsset(ctx: Context, ten: String): java.io.InputStream = ctx.assets.open(ten)
 
     private fun tai(url: String, giay: Int = 20): ByteArray {
         val c = URL(url).openConnection() as HttpURLConnection
@@ -71,37 +64,7 @@ object CapNhat {
         } finally { c.disconnect() }
     }
 
-    /**
-     * Đọc cap-nhat.json, kéo dữ liệu mới về nếu khác bản đang có.
-     * Trả về bản app mới nếu có (versionCode cao hơn bản đang chạy).
-     */
-    fun kiemTra(ctx: Context): BanMoi? {
-        if (!BuildConfig.TU_CAP_NHAT) return null
-        val j = JSONObject(String(tai("$GOC/cap-nhat.json"), Charsets.UTF_8))
-        val prefs = prefs(ctx)
-        j.optJSONObject("duLieu")?.let { dl ->
-            for (ten in dl.keys()) {
-                val o = dl.getJSONObject(ten)
-                // Dữ liệu do bản app CŨ HƠN phát hành thì bỏ: đồ đóng sẵn trong app mới hơn (22/10/2026: bản thử 1.7
-                // tải lại launcher của 1.5 từ máy chủ rồi dùng nó thay launcher có âm lịch).
-                if (o.optInt("tuBan", 0) < BuildConfig.VERSION_CODE) { fileDuLieu(ctx, ten).delete(); continue }
-                val phienBan = o.getString("phienBan")
-                if (prefs.getString(ten, "") == phienBan && fileDuLieu(ctx, ten).isFile) continue
-                runCatching {
-                    val bytes = tai(GOC + "/" + o.getString("url").removePrefix("/"), 60)
-                    if (bytes.size.toLong() != o.optLong("co", bytes.size.toLong())) error("Sai cỡ $ten")
-                    val f = fileDuLieu(ctx, ten).apply { parentFile?.mkdirs() }
-                    val tam = File(f.path + ".tam")
-                    tam.writeBytes(bytes)
-                    if (!tam.renameTo(f)) error("Không ghi được $ten")
-                    prefs.edit().putString(ten, phienBan).apply()
-                }
-            }
-        }
-        return docBanMoi(j, BuildConfig.VERSION_CODE)
-    }
-
-    /** Chỉ đọc bản app mới (không kéo dữ liệu) — cho việc kiểm tra chạy nền và nút Kiểm tra ngay. */
+    /** Bản app mới trong cap-nhat.json của bản phát hành mới nhất (null nếu không mới hơn bản đang chạy). */
     fun kiemTraApp(): BanMoi? =
         if (!BuildConfig.TU_CAP_NHAT) null else docBanMoi(JSONObject(String(tai("$GOC/cap-nhat.json"), Charsets.UTF_8)), BuildConfig.VERSION_CODE)
 
@@ -124,7 +87,8 @@ object CapNhat {
 
     /** Tải APK bản mới vào cache (tải sẵn rồi mà còn đúng thì dùng lại) và kiểm tra; sai cỡ / SHA-256 thì báo lỗi, không cài. */
     fun taiVe(ctx: Context, ban: BanMoi): File {
-        val f = File(ctx.cacheDir, "cap-nhat/TiviKit-${ban.versionName}.apk").apply { parentFile?.mkdirs() }
+        // Tên file theo số bản (versionCode), không lấy versionName của JSON làm đường dẫn.
+        val f = File(ctx.cacheDir, "cap-nhat/TiviKit-${ban.versionCode}.apk").apply { parentFile?.mkdirs() }
         if (f.isFile && hopLe(f.readBytes(), ban)) return f
         val b = tai(ban.apk, 180)
         if (!hopLe(b, ban)) error(t("file tải về không khớp bản đã phát hành (cỡ / SHA-256)", "the download doesn't match the release (size / SHA-256)"))
@@ -174,8 +138,10 @@ class KetQuaCai : BroadcastReceiver() {
                 hop?.let { runCatching { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
             }
             PackageInstaller.STATUS_SUCCESS -> if (ngam) ThongBaoCapNhat.baoDaCai(ctx, ban)
+            // Cài nền hỏng (máy hết chỗ…): mời cập nhật bằng thông báo, không thì người dùng không biết có bản mới.
             else -> if (!ngam) Toast.makeText(ctx, t("Cài bản mới không được: ", "Couldn't install the update: ") +
                 (y.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: ""), Toast.LENGTH_LONG).show()
+                else ThongBaoCapNhat.bao(ctx, ban)
         }
     }
 

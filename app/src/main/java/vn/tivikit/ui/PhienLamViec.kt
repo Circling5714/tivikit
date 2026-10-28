@@ -402,7 +402,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     init {
         vn.tivikit.dulieu.TenTrenTv.nap(ctx)
         if (vn.tivikit.BuildConfig.TU_CAP_NHAT) viewModelScope.launch {
-            val b = runCatching { io { vn.tivikit.CapNhat.kiemTra(ctx) } }.getOrNull()
+            val b = runCatching { io { vn.tivikit.CapNhat.kiemTraApp() } }.getOrNull()
             banMoi = b
             if (b != null) xuLyBanMoi(b)
         }
@@ -1244,8 +1244,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     }
 
     fun chupManHinh() = chay(t("Đang chụp màn hình tivi…", "Taking a TV screenshot…")) {
-        val bytes = io { tv.chupManHinh() }
-        anhTv = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        anhTv = io { tv.chupManHinh().let { BitmapFactory.decodeByteArray(it, 0, it.size) } }
             ?: error(t("Không chụp được (một số tivi cấm chụp khi đang xem HDMI — bấm Home trên remote rồi thử lại).", "Could not capture (some TVs block it on an HDMI input — press Home on the remote and retry)."))
     }
 
@@ -1843,8 +1842,12 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         if (!daHenTatAdb) return
         daHenTatAdb = false
         viewModelScope.launch {
-            // Huỷ không được (tivi đã tắt ADB, kết nối mất): coi như đã tự tắt.
-            if (runCatching { io { tv.huyTatAdbTrenTv() } }.isFailure) {
+            // Huỷ không được: nối lại một lần (điện thoại hay cắt socket của app nằm nền, xem KetNoiAdb.conSong) rồi huỷ lại;
+            // vẫn không được thì tivi đã tắt ADB thật, coi như đã tự tắt (28/10/2026: trước đây lỗi socket là coi như đã tắt,
+            // mà hẹn trên tivi vẫn chạy và tắt ADB dù người dùng quay lại kịp).
+            val huyDuoc = runCatching { io { tv.huyTatAdbTrenTv() } }.isSuccess ||
+                (runCatching { io { adb.ketNoiLai() } }.getOrDefault(false) && runCatching { io { tv.huyTatAdbTrenTv() } }.isSuccess)
+            if (!huyDuoc) {
                 giuKetNoi.boDich()
                 runCatching { io { adb.disconnect() } }
                 datLai()

@@ -223,8 +223,8 @@ class XemManHinh(private val vm: PhienLamViec) {
 
     /** Một ảnh chụp màn hình tivi (screencap): hình tạm, hoặc hình chính ở chế độ ảnh. */
     private suspend fun chup(lan: Int) {
-        val b = runCatching { vm.io { vm.tv.chupManHinh() } }.getOrNull()
-        val bm = b?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() }
+        // Giải mã ngoài luồng giao diện: ảnh 1080p / 4K mỗi 1,5 giây làm nút remote trên màn này giật (28/10/2026).
+        val bm = runCatching { vm.io { vm.tv.chupManHinh().let { BitmapFactory.decodeByteArray(it, 0, it.size) } } }.getOrNull()
         if (lan != lanChay || (coHinh && !cheDoAnh)) return
         if (bm != null) {
             anh = bm
