@@ -67,6 +67,9 @@ class KetNoiAdb private constructor(
         }
     }
 
+    /** Lệnh có chữ ngoài ASCII thì libadb hỏng: đổi trước khi mở (LenhAscii). */
+    override fun openStream(destination: String): io.github.muntashirakon.adb.AdbStream = super.openStream(LenhAscii.doi(destination))
+
     private val khoaNoiLai = Any()
     @Volatile private var lucNoiLai = 0L
 

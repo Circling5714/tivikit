@@ -41,6 +41,10 @@ class KenhNhanhTest {
     @Test fun json_khuHoi() {
         val k = KenhNhanh.Kenh("073", "HTV7 HD")
         assertEquals(k, KenhNhanh.tuJson(JSONObject(KenhNhanh.json(k))))
+        // Tên có dấu: lệnh thuần ASCII, app phụ đọc ra đúng chữ.
+        val hn = KenhNhanh.Kenh("098", "Hà Nội 1")
+        assertTrue(KenhNhanh.json(hn).all { it.code < 0x80 })
+        assertEquals(hn, KenhNhanh.tuJson(JSONObject(KenhNhanh.json(hn))))
         assertNull(KenhNhanh.tuJson(JSONObject("""{"so":"x"}""")))
         assertNull(KenhNhanh.tuJson(null))
     }

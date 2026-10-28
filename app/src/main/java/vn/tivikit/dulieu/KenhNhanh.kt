@@ -52,9 +52,12 @@ object KenhNhanh {
      */
     fun tenSach(s: String): String = s.replace(Regex("[,'\"`\$\\\\=\\r\\n]"), " ").trim().replace(Regex("\\s+"), " ").take(30)
 
-    /** Cấu hình gửi cho app phụ (content call … --method dat), như Kenh.json của module kenh/. */
-    fun json(k: Kenh): String = JSONObject().put("ten", k.ten)
-        .apply { if (k.laVtvGo) put("app", "vtvgo").put("ma", k.ma) else put("so", k.so) }.toString()
+    /**
+     * Cấu hình gửi cho app phụ (content call … --method dat), như Kenh.json của module kenh/. Chữ có dấu thành \uXXXX như
+     * TiviKitLauncher.cauHinh: lệnh qua libadb nên thuần ASCII ("Hà Nội 1" làm hỏng lệnh, 28/10/2026).
+     */
+    fun json(k: Kenh): String = TiviKitLauncher.chiAscii(JSONObject().put("ten", k.ten)
+        .apply { if (k.laVtvGo) put("app", "vtvgo").put("ma", k.ma) else put("so", k.so) }.toString())
 
     private val MA_GO = Regex("[A-Za-z0-9_-]{1,60}")
 
