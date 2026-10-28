@@ -39,7 +39,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }.also { pkgHomeDaDo = it }
 
     /** Gọi khi kết nối tivi mới: quên những gì đã dò của tivi trước. */
-    fun quenTivi() { pkgHomeDaDo = null; cvteDaDo = null; cauHinhTruocGo = null; anhKenh = emptyList() }
+    fun quenTivi() { pkgHomeDaDo = null; cvteDaDo = null; cauHinhTruocGo = null; anhKenh = emptyList(); gacToken = null }
     val cmpHome get() = "$pkgHome/$NS_HOME.MainActivity"
     /** File APK trong assets cho pkgHome. */
     val apkHome get() = if (pkgHome == PKG_HOME_XIAOMI) "tvhome-xiaomi.apk" else "tvhome.apk"
@@ -1281,6 +1281,13 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /** Ghi [pkg] vào danh sách tivi sẽ tự bật lại; lần đầu thì đặt kịch bản canh gác. Gói đầu danh sách là Home gốc. */
     fun gacThem(pkg: String) {
         if (!TEN_GOI.matches(pkg)) return
+        // Gác cũ phải còn chạy thật trên tivi (đúng mã, tiến trình còn): lỗi giữa chừng không tới boGac, gác trên tivi hết hạn
+        // tự xoá, hay kịch bản không lên được, thì dựng gác mới (28/10/2026: trước đây cứ tin gacToken, tắt Home không có gác).
+        gacToken?.let { tk ->
+            val con = runCatching { sh("[ \"\$(cat $GAC-token 2>/dev/null)\" = '$tk' ] && ps -A -o ARGS | grep -c '^sh $GAC.sh $tk'") }
+                .getOrNull()?.trim()?.lines()?.lastOrNull()?.toIntOrNull()?.let { it > 0 } == true
+            if (!con) gacToken = null
+        }
         if (gacToken == null) {
             val tk = java.util.UUID.randomUUID().toString().replace("-", "").take(12)
             runCatching {
