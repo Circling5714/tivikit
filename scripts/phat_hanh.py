@@ -34,8 +34,9 @@ DAU_CHUNG_CHI = "ec4c282ecefa87e7e959d44de052ccb047a8164c383ff39341d910d85af6f65
 # Nhật ký trong app (banner, thông báo) chỉ chừng này dòng; đầy đủ ở GitHub Release.
 DONG_TRONG_APP = 12
 # Tự phát hành không ai duyệt (26/10/2026) chỉ khi thứ vào APK không đổi ngoài dữ liệu mẫu tivi. Mấy file này không vào APK:
-# workflow, tài liệu (README, docs/), script phát hành / cập nhật mẫu, test.
-NGOAI_APK = re.compile(r"^(\.github/|docs/|[^/]+\.md$|NOTICE$|LICENSE$|scripts/(phat_hanh|cap_nhat_mau)\.py$|.+/src/test/)")
+# tài liệu (README, docs/), script phát hành / cập nhật mẫu, test của các module. Workflow thì tính (28/10/2026): nó quyết định
+# APK dựng và ký ra sao, đổi thì phải có người duyệt.
+NGOAI_APK = re.compile(r"^(\.github/FUNDING\.yml$|docs/|[^/]+\.md$|NOTICE$|LICENSE$|scripts/(phat_hanh|cap_nhat_mau)\.py$|[^/]+/src/test/)")
 DU_LIEU = "app/src/main/assets/du-lieu.json"
 # Hai file trong APK chỉ được đổi đúng dòng ghi số mẫu (scripts/cap_nhat_mau.py sửa).
 DONG_SO_MAU = {
@@ -138,7 +139,8 @@ def ngoai_du_lieu():
     if tag is None:
         return ["(chưa có bản phát hành nào)"]
     con = []
-    for f in git("diff", "--name-only", f"{tag}..HEAD").stdout.splitlines():
+    # --no-renames: file chuyển từ trong APK ra ngoài (docs/…) hiện cả đường cũ, không lọt qua như một file tài liệu mới.
+    for f in git("diff", "--name-only", "--no-renames", f"{tag}..HEAD").stdout.splitlines():
         f = f.strip()
         if not f or f == DU_LIEU or NGOAI_APK.match(f):
             continue
