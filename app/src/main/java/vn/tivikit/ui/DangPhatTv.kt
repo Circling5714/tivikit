@@ -36,7 +36,7 @@ class DangPhatTv(private val vm: PhienLamViec) {
     private val moc = HashMap<String, Pair<Long, Long>>()
 
     /**
-     * Tên bài app Cast SmartTube tra cho phiên SmartTube không gửi tên (video mở từ đường link, như video cast sang — 28/10/2026):
+     * Tên bài app Cast SmartTube tra cho phiên SmartTube (video mở từ đường link, như video cast sang, không có tên — 28/10/2026):
      * mốc cập nhật của phiên lúc hỏi và (tên, kênh), null = app Cast không trả lời (chưa cài / bản cũ). Phiên đổi trạng thái
      * (bài mới, tạm dừng…) thì hỏi lại.
      */
@@ -83,13 +83,16 @@ class DangPhatTv(private val vm: PhienLamViec) {
         if (p == null) { bai = null; return }
         var tieuDe = p.tieuDe
         var phu = p.phu
-        if (tieuDe == null && p.goi in CastSmartTube.SMARTTUBE) {
+        // SmartTube có khi chỉ gửi tên kênh, không có tên bài: bản dump in tên kênh vào chỗ tên bài. Hỏi app Cast cả khi
+        // bản dump có tên (nó đọc đúng ô tên bài, thiếu thì tra theo mã video).
+        if (p.goi in CastSmartTube.SMARTTUBE) {
             val daHoi = tenCast?.takeIf { it.first == p.capNhat }
             val tra = if (daHoi != null) daHoi.second else {
                 val j = runCatching { vm.io { vm.tv.baiCast() } }.getOrNull()
                 val kq = j?.optString("tieuDe")?.takeIf { it.isNotEmpty() }?.let { it to j.optString("kenh") }
-                // Có tên, hay app Cast không trả lời: nhớ tới lần phiên đổi. Đang tra tên (rỗng): lần đọc sau hỏi tiếp.
-                if (j == null || kq != null) tenCast = p.capNhat to kq
+                // Có tên, app Cast không trả lời hay không đọc được phiên phát (tivi ít RAM, trả {}): nhớ tới lần phiên đổi. Đang
+                // tra tên (có mã video, tên rỗng): lần đọc sau hỏi tiếp.
+                if (j == null || kq != null || !j.has("videoId")) tenCast = p.capNhat to kq
                 kq
             }
             tra?.let { (t, k) -> tieuDe = t; phu = k.ifEmpty { null } }
