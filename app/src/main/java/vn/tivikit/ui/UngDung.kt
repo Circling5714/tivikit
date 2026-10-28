@@ -749,7 +749,7 @@ private fun ManDangTat(vm: PhienLamViec) = Cuon {
         }
         if (vm.khongCaiHome) NutChinh(if (vm.laFireTv) t("Xong (Fire TV không thay được Home)", "Done (Fire TV can't change Home)") else t("Xong (máy này không cài được Home sạch)", "Done (no clean Home on this device)"), icon = Icons.Rounded.CheckCircle) { vm.man = Man.XONG }
         else {
-            NutChinh(t("Tiếp: Home sạch", "Next: clean Home"), icon = Icons.Rounded.Home) { vm.man = Man.HOME_SACH }
+            NutChinh(t("Tiếp: Home sạch", "Next: clean Home"), icon = Icons.Rounded.Home) { vm.sangHomeSach() }
             NutPhu(t("Bỏ qua Home sạch", "Skip clean Home")) { vm.man = Man.XONG }
         }
         NutGopY(vm)
@@ -1079,7 +1079,7 @@ private fun TheTuyChinh(vm: PhienLamViec) {
         val luu = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri -> if (uri != null) vm.xuatCauHinh(uri) }
         val mo = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) vm.nhapCauHinh(uri) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.weight(1f)) { NutPhu(t("Lưu ra file", "Save to file"), Icons.Rounded.Save) { luu.launch("cleantv-" + (vm.thongTin?.model ?: "tivi").replace(Regex("[^A-Za-z0-9]+"), "-") + ".json") } }
+            Box(Modifier.weight(1f)) { NutPhu(t("Lưu ra file", "Save to file"), Icons.Rounded.Save, enabled = !vm.dangBan) { luu.launch("cleantv-" + (vm.thongTin?.model ?: "tivi").replace(Regex("[^A-Za-z0-9]+"), "-") + ".json") } }
             Box(Modifier.weight(1f)) { NutPhu(t("Mở file", "Open file"), Icons.Rounded.FolderOpen) { mo.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) } }
         }
         if (vm.cauHinhBao.isNotEmpty()) Phu(vm.cauHinhBao, Xanh)
@@ -1363,7 +1363,8 @@ private fun TheKichBan(vm: PhienLamViec) {
         Phu(t("Lưu một file lệnh adb để đưa tivi về như cũ từ máy tính, kể cả khi mất điện thoại hay đã gỡ TiviKit. Windows bấm đúp file, Mac / Linux chạy sh tên-file.bat.",
             "Save a file of adb commands that puts the TV back from a computer, even without this phone or TiviKit. Windows: double-click it; Mac / Linux: sh file-name.bat."))
         val luu = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri -> uri?.let { vm.xuatKichBan(it) } }
-        NutPhu(t("Lưu kịch bản khôi phục", "Save restore script"), Icons.Rounded.Save) {
+        // Đang bận thì việc lưu bị bỏ (chay) mà file đã tạo: để trống. Chờ xong việc rồi mới lưu.
+        NutPhu(t("Lưu kịch bản khôi phục", "Save restore script"), Icons.Rounded.Save, enabled = !vm.dangBan) {
             luu.launch("cleantv-khoi-phuc-" + sl.ten.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(30) + ".bat")
         }
         if (vm.cauHinhBao.isNotEmpty()) Phu(vm.cauHinhBao, Xanh)

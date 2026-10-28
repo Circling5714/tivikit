@@ -492,7 +492,12 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     }
 
     /** Về màn chính, giữ kết nối. */
-    fun veHub() { dangDon = false; dangKhoiPhuc = false; sauKetNoi = null; man = Man.CHINH; khoaTre.boPhien() }
+    fun veHub() {
+        dangDon = false; dangKhoiPhuc = false; sauKetNoi = null; man = Man.CHINH; khoaTre.boPhien()
+        // Vào màn Kết nối (Đổi tivi, Khôi phục một bản sao lưu) rồi quay lại mà vẫn nối tivi cũ: ô IP trở lại tivi đang nối,
+        // không thì sao lưu / khởi động lại / thẻ tivi dùng IP của tivi kia (28/10/2026).
+        if (thongTin != null) adb.diemCuoi?.let { (h, p) -> ip = h; cong = p.toString() }
+    }
 
     private fun xuLyBanMoi(b: vn.tivikit.CapNhat.BanMoi) {
         val p = ctx.getSharedPreferences("ota", Context.MODE_PRIVATE)
@@ -784,6 +789,10 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         tv.quenTivi()
         thongBao = t("Đang đọc thông tin tivi…", "Reading the TV…")
         val (info, gp) = io { tv.docThongTin() }
+        // Sang tivi khác mà không qua Ngắt kết nối (Đổi tivi): bỏ mọi thứ của tivi trước (28/10/2026: ảnh nền, nơi xem thời
+        // tiết của tivi A được ghi sang tivi B; Khôi phục / Bật lại từng app dùng danh sách gói của tivi A cho tivi B).
+        if (tiviTruoc != null && tiviTruoc != info.khoaLuu) quenTiviTruoc()
+        tiviTruoc = info.khoaLuu
         goiHome = io { tv.pkgHome }
         thongTin = info; getprop = gp
         khongPhaiTivi = !io { tv.laTivi() }
@@ -901,7 +910,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     fun batDauTat() = chay(t("Đang sao lưu…", "Backing up…")) {
         val info = thongTin ?: return@chay
         if (chanKhongPhaiTivi) return@chay
-        nhatKy.clear(); ketQua = null; tienDo = 0f
+        nhatKy.clear(); ketQua = null; tienDo = 0f; khoiPhucXong = false
         manTruocHome = Man.DANG_TAT
         man = Man.DANG_TAT
         val sl = io { tv.damBaoSaoLuu(info, getprop, ip) }
@@ -933,7 +942,11 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     /** Bỏ dọn, sang Home sạch; [veLai] = màn khi bấm quay lại (màn chọn gói, hoặc màn chính khi mở từ ô Home sạch). */
     fun boQuaDon(veLai: Man = Man.CHON_GOI) = chay(t("Đang sao lưu…", "Backing up…")) {
         val info = thongTin ?: return@chay
+        // Máy không phải tivi (điện thoại, máy tính bảng nối qua ADB) chưa xác nhận: về màn thông tin có lời cảnh báo, như
+        // nút dọn (28/10/2026: ô Home sạch ở màn chính cài thẳng launcher tivi lên điện thoại).
+        if (chanKhongPhaiTivi) { man = Man.THONG_TIN; return@chay }
         saoLuu = io { tv.damBaoSaoLuu(info, getprop, ip) }
+        khoiPhucXong = false
         taiLaiSaoLuu()
         chuanBiDock()
         manTruocHome = veLai
@@ -981,6 +994,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     var apkTrenTv by mutableStateOf<List<Pair<String, Long>>?>(null)
     private var abiTvDaDo: List<String>? = null
     private var tiviCuaDsCai: String? = null
+    /** Tivi của lần nối trước (khoaLuu): khác thì quenTiviTruoc. */
+    private var tiviTruoc: String? = null
     @Volatile private var phanTramCu = -1
 
     /** Màn Cài app: đọc lại app trên tivi để ô gợi ý biết app nào đã cài (Cập nhật / Mở thay cho Thêm / CH Play). */
@@ -1248,7 +1263,21 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     /** Màn mà nút Back ở Home sạch quay về: vừa dọn → màn dọn; Đổi giao diện → thông tin tivi; Bỏ qua → chọn gói. */
     var manTruocHome by mutableStateOf(Man.DANG_TAT)
 
-    fun moDoiTheme() { chuanBiDock(); manTruocHome = if (man == Man.CHINH) Man.CHINH else Man.THONG_TIN; man = Man.HOME_SACH; viewModelScope.launch { napCauHinhCu() } }
+    /** Nạp cấu hình đang có trong lúc bận: Áp dụng chưa bấm được khi chưa đọc xong (đọc chậm thì ghi đè bằng mặc định). */
+    fun moDoiTheme() = chay(t("Đang đọc Home sạch trên tivi…", "Reading the clean Home on the TV…")) {
+        chuanBiDock(); manTruocHome = if (man == Man.CHINH) Man.CHINH else Man.THONG_TIN; man = Man.HOME_SACH
+        napCauHinhCu()
+    }
+
+    /**
+     * "Tiếp: Home sạch" sau khi dọn: tivi đã có Home sạch thì nạp cấu hình đang có (28/10/2026: trước đây mở thẳng màn với
+     * lựa chọn mặc định, Áp dụng ghi đè dock, lời chào, thời tiết và thay cả ảnh nền riêng của tivi).
+     */
+    fun sangHomeSach() = chay(t("Đang đọc Home sạch trên tivi…", "Reading the clean Home on the TV…")) {
+        chuanBiDock()
+        man = Man.HOME_SACH
+        if (daCoHomeSach) napCauHinhCu()
+    }
 
     /** "Đổi giao diện": mở ra đúng các lựa chọn đang có trên tivi thay vì mặc định. */
     /** Đã nạp config.json của tivi vào các lựa chọn chưa (mỗi lần kết nối một lần — quay lại màn không xoá chỉnh sửa). */
@@ -1256,8 +1285,9 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     private suspend fun napCauHinhCu() {
         if (daNapCu) return
-        daNapCu = true
+        // Đọc hỏng thì lần sau đọc lại (và Áp dụng đọc trước khi ghi), không coi như đã nạp.
         val j = runCatching { io { tv.docCauHinhTv() } }.getOrNull() ?: return
+        daNapCu = true
         napTuJson(j)
         // Ảnh nền riêng đã đặt từ trước: đọc lại từ tivi để Áp dụng lần sau không thay bằng ảnh theme (23/10/2026).
         // Nhận ra bằng cờ vgs_anh_rieng (từ 2.5.6) hoặc ảnh trên tivi không trùng ảnh của theme nào (bản cũ hơn).
@@ -1358,6 +1388,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     }
 
     fun caiHomeSach() = chay(t("Đang cài Home sạch…", "Installing the clean Home…")) {
+        if (chanKhongPhaiTivi) { man = Man.THONG_TIN; return@chay }
         if (laAndroidCu) error(t("Home sạch cần Android 8 trở lên, tivi/hộp này là Android ${thongTin?.android}. TiviKit chỉ dọn được quảng cáo và app rác trên máy này.", "The clean Home needs Android 8 or later; this TV/box runs Android ${thongTin?.android}. TiviKit can only clean ads and junk apps here."))
         if (laFireTv) error(t("Fire TV không cho app nào thay màn Home (Amazon khoá). TiviKit chỉ dọn được quảng cáo và app rác trên Fire TV.", "Fire TV does not let any app replace Home (Amazon locks it). On Fire TV TiviKit can only clean ads and junk apps."))
         val sl = saoLuu ?: io { tv.damBaoSaoLuu(thongTin!!, getprop, ip) }.also { saoLuu = it }
@@ -1699,6 +1730,15 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
 
     /** Đổi theme / dock cho tivi đã có Home sạch. */
     fun apDungTheme() = chay(t("Đang đổi giao diện…", "Applying the theme…")) {
+        // Chưa đọc được cấu hình đang có trên tivi: đọc trước rồi để người dùng xem lại, không ghi đè bằng lựa chọn mặc định.
+        if (daCoHomeSach && !daNapCu) {
+            napCauHinhCu()
+            if (!daNapCu) error(t("Không đọc được cấu hình Home sạch đang có trên tivi, chưa đổi gì. Kiểm tra kết nối rồi thử lại.",
+                "Couldn't read the clean Home settings on the TV; nothing was changed. Check the connection and try again."))
+            loi = t("Đã nạp cấu hình đang có trên tivi. Xem lại các lựa chọn rồi bấm Áp dụng lần nữa.",
+                "Loaded the settings that are on the TV. Check the choices, then tap Apply again.")
+            return@chay
+        }
         val json = cauHinhHome()
         val anh = anhNenTheme()
         // Cài đè launcher đi kèm app (bản mới có dòng thời tiết…), giữ dữ liệu và dịch vụ trợ năng.
@@ -1831,7 +1871,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     // ---------- Khôi phục ----------
 
     fun moKhoiPhuc(b: BanSaoLuu) {
-        dangKhoiPhuc = true
+        dangKhoiPhuc = true; khoiPhucXong = false
         ip = b.ip
         man = Man.KET_NOI
     }
@@ -1920,12 +1960,24 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         goiTatKhongSaoLuu = null
     }
 
-    fun datLai() {
-        thongTin = null; trangThai = null; muc = emptyList(); chon.clear(); ketQua = null
-        dock.clear(); tenChao = ""; homeXong = false; dnsChanQc = false; dangKhoiPhuc = false; khoiPhucXong = false; anhTv = null
-        laMayChieu = false; mayChieu = null; ghimMayChieu.clear()
-        nhatKy.clear(); saoLuu = null; saoLuuTuTv = false; goiTatKhongSaoLuu = null; epSetupwraith = false
+    /**
+     * Những gì thuộc về một tivi: kế hoạch dọn, phần đang soạn cho Home sạch (dock, lời chào, ảnh nền riêng, nơi xem thời
+     * tiết, ô kênh VTVgo), danh sách gói tắt, DNS riêng, kết quả khôi phục. Giao diện và tuỳ chọn Home sạch thì giữ.
+     */
+    private fun quenTiviTruoc() {
+        muc = emptyList(); chon.clear(); ketQua = null
+        dock.clear(); tenChao = ""; homeXong = false; khoiPhucXong = false; anhTv = null
+        datAnhCoSan(null); thanhPho = null; kenhChon.clear()
+        mayChieu = null; ghimMayChieu.clear()
+        nhatKy.clear(); goiTatKhongSaoLuu = null; epSetupwraith = false
         dsTatTv = null; chonBatLai.clear(); batLaiBao = ""
+        dnsTivi.quen()
+    }
+
+    fun datLai() {
+        quenTiviTruoc()
+        thongTin = null; trangThai = null; dnsChanQc = false; dangKhoiPhuc = false
+        laMayChieu = false; saoLuu = null; saoLuuTuTv = false
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
         phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); cast.quen(); khoaTre.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         dongLenh.quen(); lienKet.quen(); qlLauncher.quen()

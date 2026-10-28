@@ -26,6 +26,9 @@ class DnsTivi(private val vm: PhienLamViec) {
     var tuNhap by mutableStateOf("")
     var bao by mutableStateOf("")
 
+    /** Kết nối tivi khác / làm lại từ đầu: tên NextDNS, ID, máy chủ tự nhập là của tivi trước. */
+    fun quen() { dangDung = null; xacNhan = null; loai = Loai.ADGUARD; idNextDns = ""; tenNextDns = ""; tuNhap = ""; bao = "" }
+
     /** Private DNS có từ Android 9 (API 28). */
     val duocDung: Boolean get() = (vm.thongTin?.sdk ?: 0) >= 28
 

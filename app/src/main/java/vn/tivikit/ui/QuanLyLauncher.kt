@@ -112,7 +112,10 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         vm.damBaoKetNoi()
         val capNhat = tkl?.daCai == true
         val hs = TiviKitLauncher.tuHomeSach(runCatching { vm.io { vm.tv.docCauHinhTv() } }.getOrNull())
-        val cauHinh = TiviKitLauncher.cauHinh(vm.tenChao.ifBlank { hs.ten }, NgonNgu.tiengViet, vm.thanhPho ?: hs.noi, if (capNhat) null else hs.dock)
+        // Cập nhật thì giữ lời chào / nơi xem thời tiết đang có trên launcher ("ten" rỗng là xoá lời chào, 28/10/2026).
+        val cu = tkl.takeIf { capNhat }
+        val ten = cu?.ten?.takeIf { it.isNotBlank() } ?: vm.tenChao.ifBlank { hs.ten }
+        val cauHinh = TiviKitLauncher.cauHinh(ten, NgonNgu.tiengViet, cu?.noi ?: vm.thanhPho ?: hs.noi, if (capNhat) null else hs.dock)
         vm.io { vm.tv.caiTkl(apkTkl(), cauHinh) { s -> baoViec(s) } }
         runCatching { vm.kenhNhanh.guiTkl() }
         doc()
