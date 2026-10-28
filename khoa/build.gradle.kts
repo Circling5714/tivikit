@@ -25,8 +25,9 @@ android {
         targetSdk = 35
         // 2 (25/10/2026): giới hạn giờ xem mỗi ngày, báo cáo thời gian xem.
         // 3 (28/10/2026): mã OTP + mã dự phòng thay PIN; đổi cấu hình phải nhập mã (phiên), quên mã chờ 24 giờ.
-        versionCode = 3
-        versionName = "1.2"
+        // 4 (28/10/2026): khoá theo app, hẹn giờ khoá app; khoá bật thì Cài đặt, gỡ / cài app, cho phép ADB cần mã.
+        versionCode = 4
+        versionName = "1.3"
     }
     signingConfigs {
         if (kyFile.exists()) {

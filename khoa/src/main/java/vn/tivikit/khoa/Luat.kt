@@ -10,10 +10,12 @@ data class Khung(val tu: Int, val den: Int, val ngay: Set<Int>)
 /**
  * Cấu hình phụ huynh đặt từ TiviKit. [phutThuong] / [phutCuoiTuan]: số phút được xem mỗi ngày thứ Hai–Sáu / thứ Bảy–Chủ
  * Nhật, 0 = không giới hạn (25/10/2026). [coMa]: tivi đã có mã mở khoá (Kho.maMo, lưu riêng; 28/10/2026 thay PIN).
+ * [apps]: luật khoá theo app (28/10/2026, xem KhoaApp).
  */
 data class CauHinh(
     val bat: Boolean, val khung: List<Khung>, val moTamPhut: Int = 60,
     val phutThuong: Int = 0, val phutCuoiTuan: Int = 0, val coMa: Boolean = false,
+    val apps: List<LuatApp> = emptyList(),
 )
 
 /** Luật khoá, không đụng Android để test được trên máy tính. */
@@ -23,16 +25,19 @@ object Luat {
         val ks = o.optJSONArray("khung") ?: JSONArray()
         CauHinh(
             bat = o.optBoolean("bat"),
-            khung = (0 until ks.length()).map { i ->
-                val k = ks.getJSONObject(i)
-                val ng = k.optJSONArray("ngay") ?: JSONArray("[1,2,3,4,5,6,7]")
-                Khung(phut(k.getString("tu")), phut(k.getString("den")), (0 until ng.length()).map { ng.getInt(it) }.filter { it in 1..7 }.toSet())
-            },
+            khung = (0 until ks.length()).map { docKhung(ks.getJSONObject(it)) },
             moTamPhut = o.optInt("moTamPhut", 60).coerceIn(5, 240),
             phutThuong = o.optInt("phutThuong", 0).coerceIn(0, 24 * 60),
             phutCuoiTuan = o.optInt("phutCuoiTuan", 0).coerceIn(0, 24 * 60),
+            apps = KhoaApp.docLuat(o.optJSONArray("apps")),
         )
     }.getOrNull()
+
+    /** {"tu":"21:00","den":"06:00","ngay":[1..7]} → Khung (ngày lạ bỏ qua, thiếu "ngay" là mọi ngày). */
+    fun docKhung(k: JSONObject): Khung {
+        val ng = k.optJSONArray("ngay") ?: JSONArray("[1,2,3,4,5,6,7]")
+        return Khung(phut(k.getString("tu")), phut(k.getString("den")), (0 until ng.length()).map { ng.getInt(it) }.filter { it in 1..7 }.toSet())
+    }
 
     /** "21:30" → 1290. */
     fun phut(hhmm: String): Int {

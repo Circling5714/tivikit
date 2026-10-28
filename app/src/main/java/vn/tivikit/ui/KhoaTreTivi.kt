@@ -8,6 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import vn.tivikit.dulieu.MaOtp
 import vn.tivikit.dulieu.ThoiGianXem
+import vn.tivikit.dulieu.tenDep
 import vn.tivikit.t
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -37,6 +38,27 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
     /** Báo cáo 7 ngày đọc từ app khoá; null = tivi chưa có app khoá bản đếm giờ. */
     var thoiGian by mutableStateOf<ThoiGianXem?>(null)
         private set
+
+    // ---------- Khoá theo app (28/10/2026) ----------
+
+    /** Luật khoá app: các gói [goi] khoá luôn, trong [khung], hay khi cả nhóm đã dùng đủ [phutNgay] phút hôm nay. */
+    data class LuatApp(val id: String, val goi: Set<String>, val luon: Boolean = false, val khung: List<Khung> = emptyList(), val phutNgay: Int = 0) {
+        fun json(): JSONObject = JSONObject().put("id", id).put("goi", JSONArray(goi.sorted())).put("luon", luon)
+            .put("khung", JSONArray(khung.map { JSONObject().put("tu", it.tu).put("den", it.den).put("ngay", JSONArray(it.ngay.sorted())) }))
+            .put("phutNgay", phutNgay)
+    }
+    enum class KieuLuat { LUON, GIO, PHUT }
+    val luatApp = mutableStateListOf<LuatApp>()
+    /** App mở được trên tivi, để chọn cho luật và hẹn khoá. */
+    var dsApp by mutableStateOf<List<String>>(emptyList())
+        private set
+    /** Ô thêm luật: app đã chọn, kiểu luật, số phút mỗi ngày. */
+    var chonLuat by mutableStateOf<Set<String>>(emptySet())
+    var kieuLuat by mutableStateOf(KieuLuat.GIO)
+    var phutLuat by mutableStateOf(60)
+    /** Ô hẹn giờ khoá: app đã chọn, khoá sau mấy phút (tới hết ngày). */
+    var chonHen by mutableStateOf<Set<String>>(emptySet())
+    var sauPhut by mutableStateOf(30)
 
     /** Tivi đã có mã OTP (app khoá 1.2 trở lên). */
     val coOtp: Boolean get() = trenTv?.optBoolean("coOtp") == true
@@ -82,7 +104,15 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
     private fun canMa(j: JSONObject?) = j?.optBoolean("coOtp") == true && !j.optBoolean("goDuoc")
     private fun phienCon(): String? = phien?.takeIf { System.currentTimeMillis() < phienHet }
 
-    fun quen() { trenTv = null; thoiGian = null; khung.clear(); bao = ""; boPhien(); huyMaMoi(); dongHoiMa() }
+    fun quen() {
+        trenTv = null; thoiGian = null; khung.clear(); bao = ""; boPhien(); huyMaMoi(); dongHoiMa()
+        luatApp.clear(); dsApp = emptyList(); chonLuat = emptySet(); chonHen = emptySet()
+    }
+
+    private fun docKhung(a: JSONArray?): List<Khung> = if (a == null) emptyList() else (0 until a.length()).map { i ->
+        val k = a.getJSONObject(i); val ng = k.optJSONArray("ngay") ?: JSONArray()
+        Khung(k.optString("tu"), k.optString("den"), (0 until ng.length()).map { ng.getInt(it) }.toSet())
+    }
 
     /** Rời màn / đổi tivi: lần sau phải nhập lại mã. */
     fun boPhien() { phien = null; phienHet = 0 }
@@ -100,18 +130,23 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
             return@chayRoi null
         }
         trenTv = j; bao = ""; huyMaMoi()
-        khung.clear()
+        khung.clear(); luatApp.clear(); chonLuat = emptySet(); chonHen = emptySet()
         phutThuong = j?.optInt("phutThuong") ?: 0; phutCuoiTuan = j?.optInt("phutCuoiTuan") ?: 0
         thoiGian = docThoiGian(j)
         if (j != null) {
             bat = j.optBoolean("bat")
-            val ks = j.optJSONArray("khung") ?: JSONArray()
-            for (i in 0 until ks.length()) {
-                val k = ks.getJSONObject(i); val ng = k.optJSONArray("ngay") ?: JSONArray()
-                khung += Khung(k.optString("tu"), k.optString("den"), (0 until ng.length()).map { ng.getInt(it) }.toSet())
+            khung += docKhung(j.optJSONArray("khung"))
+            val ds = j.optJSONArray("apps") ?: JSONArray()
+            for (i in 0 until ds.length()) {
+                val o = ds.getJSONObject(i); val g = o.optJSONArray("goi") ?: JSONArray()
+                luatApp += LuatApp(o.optString("id").ifBlank { "l$i" }, (0 until g.length()).map { g.getString(it) }.toSet(),
+                    o.optBoolean("luon"), docKhung(o.optJSONArray("khung")), o.optInt("phutNgay"))
             }
         }
-        if (khung.isEmpty() && phutThuong == 0 && phutCuoiTuan == 0) { bat = true; khung += Khung("21:00", "06:00", (1..7).toSet()) }
+        if (khung.isEmpty() && luatApp.isEmpty() && phutThuong == 0 && phutCuoiTuan == 0) { bat = true; khung += Khung("21:00", "06:00", (1..7).toSet()) }
+        // App để chọn: app mở được trên tivi, cộng app đã có trong luật (có thể đã tắt hay không có biểu tượng).
+        if (vm.trangThai == null) vm.trangThai = vm.io { vm.tv.docTrangThai() }
+        dsApp = (vm.appChoDock() + luatApp.flatMap { it.goi }).distinct()
         vm.man = Man.KHOA_TRE
         null
     }
@@ -207,12 +242,13 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
         if (buoc == Buoc.CAT && !daCat) error(t("Cất mã dự phòng rồi đánh dấu \"Đã cất\" trước khi lưu.", "Store the backup codes and tick \"Stored\" before saving."))
         if (!coMaTv && khoaMoi == null) error(t("Cài mã OTP trước (thẻ Mã mở khoá): khoá không dùng PIN nữa.", "Set up the OTP code first (Unlock code card): the lock no longer uses a PIN."))
         if (goDuoc && khoaMoi == null) error(t("Đã vào bằng Quên mã: cài mã OTP mới rồi mới lưu được.", "You came in through Forgot code: set up a new OTP code before saving."))
-        if (khung.isEmpty() && phutThuong == 0 && phutCuoiTuan == 0) error(t("Thêm ít nhất một khung giờ khoá hoặc đặt giới hạn mỗi ngày.", "Add a lock period or a daily limit."))
-        val gio = Regex("^([01][0-9]|2[0-3]):[0-5][0-9]$")
-        khung.forEach { if (!gio.matches(it.tu) || !gio.matches(it.den) || it.ngay.isEmpty()) error(t("Khung giờ ${it.tu}–${it.den} chưa đúng (giờ dạng 21:00, chọn ít nhất một ngày).", "Period ${it.tu}–${it.den} is not valid.")) }
+        if (khung.isEmpty() && luatApp.isEmpty() && phutThuong == 0 && phutCuoiTuan == 0)
+            error(t("Thêm ít nhất một khung giờ khoá, giới hạn mỗi ngày hay luật khoá app.", "Add a lock period, a daily limit or an app rule."))
+        (khung + luatApp.flatMap { it.khung }).forEach { if (!GIO.matches(it.tu) || !GIO.matches(it.den) || it.ngay.isEmpty()) error(t("Khung giờ ${it.tu}–${it.den} chưa đúng (giờ dạng 21:00, chọn ít nhất một ngày).", "Period ${it.tu}–${it.den} is not valid.")) }
         val j = JSONObject().put("bat", bat).put("moTamPhut", MO_TAM)
             .put("khung", JSONArray(khung.map { JSONObject().put("tu", it.tu).put("den", it.den).put("ngay", JSONArray(it.ngay.sorted())) }))
             .put("phutThuong", phutThuong).put("phutCuoiTuan", phutCuoiTuan)
+            .put("apps", JSONArray(luatApp.map { it.json() }))
         if (coMaTv && !goDuoc) j.put("phien", phienHoac { luu() } ?: return@chay)
         if (maMoiXong) MaOtp.ghiVao(j, khoaMoi, duPhongMoi)
         val apk = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, "khoa.apk").readBytes() }
@@ -227,11 +263,13 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
         thoiGian = docThoiGian(trenTv)
         val chay = trenTv?.optBoolean("dichVuChay") == true
         val coHan = phutThuong > 0 || phutCuoiTuan > 0
+        val ca = if (coHan) t("Trong khung giờ khoá hoặc khi đã xem hết giờ trong ngày, tivi hiện màn khoá (còn 5 phút thì báo trước). ",
+                "During the periods, or once today's time is used up, the TV shows the lock screen (with a 5-minute warning). ")
+            else if (khung.isNotEmpty()) t("Trong khung giờ, tivi hiện màn khoá. ", "During the periods the TV shows the lock screen. ") else ""
+        val app = if (luatApp.isNotEmpty()) t("Mở app đang khoá thì tivi hiện màn khoá của app đó. ", "Opening a locked app shows that app's lock screen. ") else ""
         bao = doiMa +
             if (!bat) t("Đã lưu. Khoá đang tắt.", "Saved. The lock is off.")
-            else if (chay && coHan) t("Đã bật khoá. Trong khung giờ khoá hoặc khi đã xem hết giờ trong ngày, tivi hiện màn khoá (còn 5 phút thì báo trước); nhập mã trong app xác thực thì mở $MO_TAM phút.",
-                "The lock is on. During the periods, or once today's time is used up, the TV shows the lock screen (with a 5-minute warning); a code from the authenticator app unlocks it for $MO_TAM minutes.")
-            else if (chay) t("Đã bật khoá. Trong khung giờ, tivi hiện màn khoá; nhập mã trong app xác thực thì mở $MO_TAM phút.", "The lock is on. During the periods the TV shows the lock screen; a code from the authenticator app unlocks it for $MO_TAM minutes.")
+            else if (chay) t("Đã bật khoá. ", "The lock is on. ") + ca + app + t("Nhập mã trong app xác thực thì mở $MO_TAM phút.", "A code from the authenticator app unlocks it for $MO_TAM minutes.")
             else t("Đã lưu nhưng dịch vụ khoá chưa chạy. Tắt tivi bật lại rồi mở lại màn này kiểm tra.", "Saved, but the lock service isn't running yet. Restart the TV and check again.")
         vn.tivikit.Dem.gui(vm.ctx, "khoa", vm.tenTiviDem(), khung.size, if (bat) "bat" else "tat")
     }
@@ -260,5 +298,76 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
         trenTv = null; thoiGian = null; huyMaMoi(); boPhien()
         bao = t("Đã tắt và gỡ Khoá trẻ em khỏi tivi. Dòng TiviKit trong app xác thực không dùng nữa, xoá được.",
             "The Kids lock is off and removed from the TV. You can delete the TiviKit entry in the authenticator app.")
+    }
+
+    // ---------- Khoá theo app (28/10/2026) ----------
+
+    /** App xem video có trên tivi (cả trình duyệt: khoá SmartTube mà để trình duyệt thì trẻ vào YouTube bằng web). */
+    val videoTrenTv: List<String> get() = dsApp.filter { it in NHOM_VIDEO }
+
+    /** Thêm luật từ ô "Thêm luật" (chưa lưu lên tivi): [tu]/[den]/[ngay] là khung giờ khi kiểu là Theo giờ. */
+    fun themLuat(tu: String, den: String, ngay: Set<Int>): Boolean {
+        if (chonLuat.isEmpty()) { vm.loi = t("Chọn ít nhất một app.", "Pick at least one app."); return false }
+        val l = when (kieuLuat) {
+            KieuLuat.LUON -> LuatApp(idMoi(), chonLuat, luon = true)
+            KieuLuat.GIO -> {
+                val k = Khung(chuanGio(tu), chuanGio(den), ngay)
+                if (!GIO.matches(k.tu) || !GIO.matches(k.den) || ngay.isEmpty()) { vm.loi = t("Giờ dạng 20:00, chọn ít nhất một ngày.", "Times like 20:00, pick at least one day."); return false }
+                LuatApp(idMoi(), chonLuat, khung = listOf(k))
+            }
+            KieuLuat.PHUT -> LuatApp(idMoi(), chonLuat, phutNgay = phutLuat)
+        }
+        vm.loi = ""; luatApp += l; chonLuat = emptySet()
+        return true
+    }
+
+    private fun idMoi() = java.lang.Long.toString(System.currentTimeMillis(), 36)
+
+    /** "8h" → "08:00", "20.30" → "20:30" (như ô tự đặt khung giờ khoá). */
+    fun chuanGio(s: String) = s.trim().replace('.', ':').replace('h', ':').removeSuffix(":")
+        .let { if (Regex("^[0-9]:").containsMatchIn(it) || Regex("^[0-9]$").matches(it)) "0$it" else it }
+        .let { if (Regex("^[0-9]{2}$").matches(it)) "$it:00" else it }
+
+    /** Hẹn khoá các app đã chọn sau [sauPhut] phút tới hết ngày: gửi tivi ngay (cần phiên), không chờ Lưu. */
+    fun henKhoa(): Unit = vm.chay(t("Đang hẹn khoá…", "Setting the timer…")) {
+        if (chonHen.isEmpty()) error(t("Chọn ít nhất một app.", "Pick at least one app."))
+        val p = if (coOtp && !goDuoc) phienHoac { henKhoa() } ?: return@chay else null
+        val j = JSONObject().put("goi", JSONArray(chonHen.sorted())).put("sauPhut", sauPhut)
+        if (p != null) j.put("phien", p)
+        try { vm.io { vm.tv.henKhoaApp(j.toString()) } }
+        catch (e: vn.tivikit.adb.ThaoTacTv.CanMaException) { boPhien(); phienHoac { henKhoa() }; return@chay }
+        val ten = chonHen.joinToString(", ") { tenDep(it) }
+        chonHen = emptySet()
+        trenTv = vm.io { vm.tv.docKhoa() }
+        bao = if (sauPhut == 0) t("Đã khoá $ten tới hết hôm nay.", "$ten locked for the rest of today.")
+            else t("$ten sẽ khoá sau $sauPhut phút, tới hết hôm nay (tivi báo trước 5 phút).", "$ten will lock in $sauPhut minutes, until the end of today (5-minute warning on the TV).")
+    }
+
+    /** Bỏ hẹn khoá thứ [i] (theo danh sách tivi trả về). */
+    fun boHen(i: Int): Unit = vm.chay(t("Đang bỏ hẹn khoá…", "Removing the timer…")) {
+        val p = if (coOtp && !goDuoc) phienHoac { boHen(i) } ?: return@chay else null
+        val j = JSONObject().put("bo", i)
+        if (p != null) j.put("phien", p)
+        try { vm.io { vm.tv.henKhoaApp(j.toString()) } }
+        catch (e: vn.tivikit.adb.ThaoTacTv.CanMaException) { boPhien(); phienHoac { boHen(i) }; return@chay }
+        trenTv = vm.io { vm.tv.docKhoa() }
+        bao = t("Đã bỏ hẹn khoá.", "Timer removed.")
+    }
+
+    companion object {
+        private val GIO = Regex("^([01][0-9]|2[0-3]):[0-5][0-9]$")
+
+        /**
+         * App xem video và trình duyệt hay gặp trên tivi (tên gói lấy từ bảng tên app và Gợi ý app): nút "Nhóm xem video"
+         * chọn những app trong này có trên tivi.
+         */
+        val NHOM_VIDEO = setOf(
+            "org.smarttube.stable", "org.smarttube.beta", "com.google.android.youtube.tv", "com.google.android.youtube.tvkids",
+            "com.google.android.youtube.tvmusic", "io.gh.reisxd.tizentube.cobalt", "com.netflix.ninja", "com.amazon.amazonvideo.livingroom",
+            "com.disney.disneyplus", "com.viettel.tv360.tv", "vn.vtv.vtvgotv", "net.fptplay.ottbox", "com.vieon.tv", "vn.vieon.tv",
+            "com.vnpt.mytv", "vn.vnpt.mytv.atv", "com.galaxyplay.tv", "com.kplus.tv", "com.crunchyroll.crunchyroid", "com.fgl27.twitch",
+            "org.videolan.vlc", "org.xbmc.kodi", "is.xyz.mpv", "com.brouken.player", "org.jellyfin.androidtv", "com.plexapp.android",
+            "com.phlox.tvwebbrowser", "org.mozilla.tv.firefox", "com.android.chrome",
+        )
     }
 }

@@ -35,4 +35,41 @@ class Kho(ctx: Context) {
     }
 
     fun giayXem(ngay: String): Long = soXem.optLong(ngay)
+
+    // ---------- Khoá theo app (28/10/2026) ----------
+
+    /** Hẹn khoá một lần còn hạn (TiviKit đặt qua hen-khoa). */
+    var hen: List<HenKhoa>
+        get() = KhoaApp.conHan(KhoaApp.docHen(p.getString("hen_khoa", null)), System.currentTimeMillis())
+        set(v) = p.edit().putString("hen_khoa", KhoaApp.jsonHen(v).toString()).apply()
+
+    /** App bố mẹ đã nhập mã mở riêng: gói → mở tới lúc nào. */
+    val moApp: Map<String, Long> get() = runCatching {
+        val o = JSONObject(p.getString("mo_app", null) ?: "{}")
+        o.keys().asSequence().associateWith { o.getLong(it) }
+    }.getOrDefault(emptyMap())
+
+    fun moRiengApp(goi: String, den: Long) {
+        val bay = System.currentTimeMillis()
+        val o = JSONObject(); (moApp + (goi to den)).filterValues { it > bay }.forEach { (g, d) -> o.put(g, d) }
+        p.edit().putString("mo_app", o.toString()).apply()
+    }
+
+    /** Cài đặt / hộp gỡ app / hộp cho phép ADB mở được tới lúc này (bố mẹ vừa nhập mã). */
+    var moCaiDatDen: Long get() = p.getLong("mo_cai_dat_den", 0); set(v) = p.edit().putLong("mo_cai_dat_den", v).apply()
+
+    /** Sổ phút dùng của từng luật app có giới hạn: ngày → (id luật → giây), 7 ngày gần nhất. */
+    private val soApp: JSONObject get() = runCatching { JSONObject(p.getString("so_app", null) ?: "{}") }.getOrDefault(JSONObject())
+
+    fun giayDung(ngay: String): Map<String, Long> = soApp.optJSONObject(ngay)?.let { o -> o.keys().asSequence().associateWith { o.getLong(it) } }.orEmpty()
+
+    fun congDung(ngay: String, them: Map<String, Long>) {
+        if (them.isEmpty()) return
+        val so = soApp
+        val o = so.optJSONObject(ngay) ?: JSONObject()
+        them.forEach { (id, giay) -> o.put(id, o.optLong(id) + giay) }
+        so.put(ngay, o)
+        so.keys().asSequence().toList().sortedDescending().drop(7).forEach { so.remove(it) }
+        p.edit().putString("so_app", so.toString()).apply()
+    }
 }

@@ -101,6 +101,12 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
   mã dự phòng dùng được một lần; Dòng lệnh ADB và Khôi phục cũng hỏi mã.
 - **Thử màn khoá:** thêm khung giờ khoá chứa giờ hiện tại → Lưu. Tivi hiện màn khoá với 6 ô số và giờ tivi; gõ mã
   bằng remote (số hoặc mũi tên + OK) thì mở 60 phút; gõ một mã dự phòng 8 số cũng mở được.
+- **Thử khoá theo app:** thẻ Khoá theo app → chọn SmartTube (hay bấm Nhóm xem video) → Theo giờ, khung chứa giờ hiện
+  tại → Thêm luật này → Lưu. Mở SmartTube: tivi về Home, hiện "SmartTube đang nghỉ"; Back thì ra ngoài; gõ mã thì
+  SmartTube mở lại và dùng được 60 phút. Thẻ Hẹn giờ khoá app → chọn một app → Sau 15 phút → Hẹn khoá: mở app đó, còn
+  5 phút thì tivi báo ở góc, tới giờ thì tivi che app lại.
+- **Thử bảo vệ Cài đặt:** lúc khoá bật, mở Cài đặt trên tivi → hiện "Cài đặt cần mã của bố mẹ"; gõ mã thì Cài đặt mở,
+  10 phút sau mới hỏi lại. Gỡ app khoá từ Cài đặt / trình quản lý file cũng hỏi mã.
 - **Thử giới hạn:** giới hạn giờ xem ngày thường và cuối tuần đều 6 phút → Lưu; xem tivi liên tục. Còn 5 phút (tức
   sau khoảng 1 phút xem) thì tivi báo trước; hết giờ thì tivi khoá tới nửa đêm, nhập mã mở được 60 phút; báo cáo
   thời gian xem trên điện thoại có số phút đúng.

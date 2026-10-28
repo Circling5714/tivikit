@@ -16,6 +16,8 @@ import java.util.Calendar
  *   content call --uri content://vn.tivikit.khoa --method dat --arg '<json>'
  *       (kèm "phien" khi tivi đã có mã; cài / đổi mã thì thêm "otp": mã gốc base32, "duPhong": {muoi, bam: [...]})
  *   content call --uri content://vn.tivikit.khoa --method mo-tam --arg '{"phut":60,"phien":…}'   (0 = khoá lại ngay)
+ *   content call --uri content://vn.tivikit.khoa --method hen-khoa --arg '{"phien":…,"goi":[…],"sauPhut":30}'
+ *       (khoá các app đó từ 30 phút nữa tới hết ngày; {"phien":…,"bo":0} bỏ hẹn thứ 0)
  *   content call --uri content://vn.tivikit.khoa --method quen-ma        (24 giờ sau đổi được không cần mã, xem XacThuc)
  *   content call --uri content://vn.tivikit.khoa --method thoi-gian      (báo cáo 7 ngày, xem BaoCao)
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được giờ khoá hay mã. Tivi đã có mã mở khoá
@@ -61,6 +63,19 @@ class CauHinhProvider : ContentProvider() {
                 kho.moTamDen = if (phut <= 0) 0 else System.currentTimeMillis() + phut * 60_000L
                 kq.putString("ok", "1")
             }
+            "hen-khoa" -> {
+                val o = runCatching { JSONObject(arg ?: "") }.getOrNull() ?: return loi("hen sai")
+                if (!XacThuc.duocDoi(kho, o.optString("phien"))) return loi("can-ma")
+                val ds = kho.hen.toMutableList()
+                if (o.has("bo")) o.optInt("bo", -1).takeIf { it in ds.indices }?.let { ds.removeAt(it) }
+                else {
+                    val goi = KhoaApp.dsGoi(o.optJSONArray("goi")).takeIf { it.isNotEmpty() } ?: return loi("hen sai")
+                    val tu = System.currentTimeMillis() + o.optInt("sauPhut", 0).coerceIn(0, 24 * 60) * 60_000L
+                    ds += HenKhoa(goi, tu, KhoaApp.nuaDem(tu))
+                }
+                kho.hen = ds
+                kq.putString("ok", "1")
+            }
             "quen-ma" -> {
                 // Không cần mã: ai cũng gửi được, nhưng phải chờ 24 giờ, tivi báo suốt lúc chờ, ai nhập đúng mã là huỷ.
                 if (kho.maMo != null && kho.yeuCauGo == 0L) kho.yeuCauGo = System.currentTimeMillis()
@@ -85,6 +100,14 @@ class CauHinhProvider : ContentProvider() {
                 o.put("giayHomNay", daXem)
                 o.put("gioiHanHomNay", c?.let { Luat.gioiHanPhut(it, Luat.thu(lich)) } ?: 0)
                 o.put("lyDo", when (Luat.lyDo(c, lich, daXem, kho.moTamDen)) { Luat.LyDo.HET_GIO -> "het-gio"; Luat.LyDo.GIO_KHOA -> "gio-khoa"; null -> "" })
+                // Khoá theo app (28/10/2026): hẹn khoá còn hạn, phút đã dùng hôm nay của từng luật, app đang khoá lúc này.
+                val hen = kho.hen
+                val dung = KhoaDichVu.giayDung(kho, Luat.ngay(lich))
+                val moApp = kho.moApp
+                o.put("hen", KhoaApp.jsonHen(hen))
+                o.put("dungApp", JSONObject().apply { c?.apps?.forEach { put(it.id, dung(it.id)) } })
+                o.put("appKhoa", org.json.JSONArray(KhoaApp.goiCo(c, hen).filter { KhoaApp.khoa(c, hen, it, lich, dung, moApp[it] ?: 0) != null }.sorted()))
+                o.put("baoVe", c != null && c.bat && c.coMa && bay >= kho.moCaiDatDen)
                 kq.putString("json", o.toString())
             }
             "thoi-gian" -> kq.putString("json", BaoCao.lap(context!!).toString())

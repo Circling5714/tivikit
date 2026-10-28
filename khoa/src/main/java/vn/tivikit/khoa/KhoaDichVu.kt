@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -12,6 +13,7 @@ import android.graphics.drawable.GradientDrawable
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -29,6 +31,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Dịch vụ khoá (23/10/2026): trong khung giờ phụ huynh đặt, phủ một lớp kín màn hình (lớp trợ năng nằm trên mọi
@@ -38,6 +41,9 @@ import java.util.Locale
  * (vì giờ khoá, hết giờ xem hay hết lượt mở tạm) hiện lời báo nhỏ ở góc màn hình.
  * Mã mở (28/10/2026): mã OTP 6 số trong app xác thực của phụ huynh hoặc mã dự phòng 8 số thay PIN 4 số (xem Otp,
  * XacThuc); sai 5 lần liền thì chờ, lần sau lâu hơn.
+ * Khoá theo app (28/10/2026): app có luật khoá (KhoaApp) mà lên màn hình thì về Home, che lại hỏi mã của riêng app đó;
+ * Back thì ra ngoài. Khoá đang bật thì Cài đặt, hộp gỡ / cài app và hộp cho phép gỡ lỗi ADB cũng phải nhập mã — trẻ
+ * không xoá dữ liệu, buộc dừng hay gỡ được app khoá.
  */
 class KhoaDichVu : AccessibilityService() {
     companion object {
@@ -46,20 +52,41 @@ class KhoaDichVu : AccessibilityService() {
         /** Thời gian xem đã đếm nhưng chưa ghi vào Kho (ghi một phút một lần): thuộc ngày [ngayCho]. */
         @Volatile var ngayCho = ""
         @Volatile var msCho = 0L
+        /** Như [msCho] cho các luật app có giới hạn phút: id luật → mili giây, cũng thuộc ngày [ngayCho]. */
+        val msApp = ConcurrentHashMap<String, Long>()
         private const val NHIP_MS = 15_000L
         /** Gõ đủ 6 số mà sai: chờ chừng này xem có gõ tiếp thành mã dự phòng 8 số không rồi mới báo sai. */
         private const val CHO_GO_TIEP_MS = 2_500L
         /** Có yêu cầu quên mã: báo ở góc màn hình mỗi chừng này lúc tivi đang xem. */
         private const val BAO_QUEN_MS = 60 * 60_000L
+        /** Lớp che một app / Cài đặt để yên chừng này thì tự đóng (đứng ở Home). */
+        private const val CHE_APP_MS = 2 * 60_000L
+        /** Nhập mã ở Cài đặt / hộp gỡ app / hộp cho phép ADB thì mở chừng này. */
+        private const val MO_CAI_DAT_MS = 10 * 60_000L
+        private const val HE_THONG = "com.android.systemui"
         private val PHIM = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓")
 
         /** Số giây tivi được xem ngày [ngay], tính cả phần chưa ghi. */
         fun giayDaXem(kho: Kho, ngay: String): Long = kho.giayXem(ngay) + if (ngay == ngayCho) msCho / 1000 else 0
+
+        /** Số giây từng luật app đã dùng ngày [ngay], tính cả phần chưa ghi. */
+        fun giayDung(kho: Kho, ngay: String): (String) -> Long {
+            val da = kho.giayDung(ngay)
+            return { id -> (da[id] ?: 0) + if (ngay == ngayCho) (msApp[id] ?: 0) / 1000 else 0 }
+        }
     }
+
+    /** Lớp khoá đang che gì: cả tivi (khung giờ / hết giờ xem), một app đang khoá, hay chỗ cần mã lúc khoá bật. */
+    private sealed interface Che
+    private object CheTivi : Che
+    private data class CheApp(val goi: String, val khoa: KhoaApp.Khoa) : Che
+    private data class CheBaoVe(val goi: String, val loai: BaoVe) : Che
+    private enum class BaoVe { CAI_DAT, GO_APP, ADB }
 
     private val tay = Handler(Looper.getMainLooper())
     private lateinit var kho: Kho
     private var lop: View? = null
+    private var che: Che? = null
     private lateinit var tvBieuTuong: TextView
     private lateinit var tvTieuDe: TextView
     private lateinit var tvPhu: TextView
@@ -118,6 +145,7 @@ class KhoaDichVu : AccessibilityService() {
         dangChay = this
         CanhGac.hen(this)
         lanDem = SystemClock.elapsedRealtime()
+        napGoiHeThong()
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_DREAMING_STARTED); addAction(Intent.ACTION_DREAMING_STOPPED)
@@ -139,7 +167,6 @@ class KhoaDichVu : AccessibilityService() {
         super.onDestroy()
     }
 
-    override fun onAccessibilityEvent(e: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 
     fun capNhatSau() = tay.post { capNhat() }
@@ -150,39 +177,48 @@ class KhoaDichVu : AccessibilityService() {
         val bay = Calendar.getInstance()
         val daXem = giayDaXem(kho, Luat.ngay(bay))
         val ly = Luat.lyDo(c, bay, daXem, kho.moTamDen)
-        if (ly != null && lop == null) hienKhoa()
-        if (ly == null && lop != null) anKhoa()
+        if (ly != null && che != CheTivi) hienKhoa(CheTivi)
+        if (ly == null && che == CheTivi) anKhoa()
         if (ly != null) {
             anBaoTruoc(); daBaoTruoc = false
-            if (ly == Luat.LyDo.HET_GIO) {
-                val gh = Luat.gioiHanPhut(c!!, Luat.thu(bay))
-                tvBieuTuong.text = "⏳"
-                tvTieuDe.text = t("Hết giờ xem hôm nay", "TV time is up for today")
-                tvPhu.text = t("Hôm nay đã xem đủ ${Luat.chuThoiGian(gh, true)}. Mai xem tiếp nhé! Bố mẹ nhập mã để mở thêm ${c.moTamPhut} phút.",
-                    "That's ${Luat.chuThoiGian(gh, false)} of TV today. More tomorrow! A parent's code adds ${c.moTamPhut} minutes.")
-            } else {
-                val het = Luat.hetKhoaLuc(c!!, bay)?.let { Luat.chuGio(it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE)) }
-                tvBieuTuong.text = "🔒"
-                tvTieuDe.text = t("Tivi đang nghỉ", "The TV is resting")
-                tvPhu.text = (if (het != null) t("Mở lại lúc $het. ", "Unlocks at $het. ") else "") +
-                    t("Bố mẹ nhập mã để mở ${c.moTamPhut} phút.", "A parent's code unlocks it for ${c.moTamPhut} minutes.")
-            }
-            // Giờ tivi: mã OTP tính theo giờ, giờ sai (hộp không pin giữ giờ, mất điện lúc chưa có mạng) thì mã không khớp.
-            val gio = Luat.chuGio(bay.get(Calendar.HOUR_OF_DAY) * 60 + bay.get(Calendar.MINUTE))
-            tvGio.text = t("Mã 6 số trong app xác thực của bố mẹ, hoặc mã dự phòng 8 số · Giờ tivi $gio",
-                "The 6-digit code from the parent's authenticator app, or an 8-digit backup code · TV time $gio")
-            val quen = chuQuen(trenManKhoa = true)
-            tvQuen.text = quen; tvQuen.visibility = if (quen.isEmpty()) View.GONE else View.VISIBLE
-            veChan()
+            if (che == CheTivi) { veCheTivi(c!!, ly, bay); veChan() }
         } else if (c != null) {
             // Sắp khoá: báo một lần cho đợt này (không báo lúc màn hình tắt).
             val sap = Luat.sapKhoa(c, bay, daXem, kho.moTamDen)
             if (sap != null && !daBaoTruoc && dangXem()) { baoTruoc(sap); daBaoTruoc = true }
             if (sap == null) daBaoTruoc = false
+            capNhatApp(c, bay)
             // Có yêu cầu quên mã: nhắc ở góc màn hình, một giờ một lần, để bố mẹ huỷ nếu không phải mình gửi.
             val luc = System.currentTimeMillis()
             if (kho.yeuCauGo > 0 && bang == null && dangXem() && luc - lanBaoQuen > BAO_QUEN_MS) { bao(chuQuen(trenManKhoa = false), 30_000); lanBaoQuen = luc }
         }
+    }
+
+    private fun veCheTivi(c: CauHinh, ly: Luat.LyDo, bay: Calendar) {
+        if (ly == Luat.LyDo.HET_GIO) {
+            val gh = Luat.gioiHanPhut(c, Luat.thu(bay))
+            tvBieuTuong.text = "⏳"
+            tvTieuDe.text = t("Hết giờ xem hôm nay", "TV time is up for today")
+            tvPhu.text = t("Hôm nay đã xem đủ ${Luat.chuThoiGian(gh, true)}. Mai xem tiếp nhé! Bố mẹ nhập mã để mở thêm ${c.moTamPhut} phút.",
+                "That's ${Luat.chuThoiGian(gh, false)} of TV today. More tomorrow! A parent's code adds ${c.moTamPhut} minutes.")
+        } else {
+            val het = Luat.hetKhoaLuc(c, bay)?.let { Luat.chuGio(it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE)) }
+            tvBieuTuong.text = "🔒"
+            tvTieuDe.text = t("Tivi đang nghỉ", "The TV is resting")
+            tvPhu.text = (if (het != null) t("Mở lại lúc $het. ", "Unlocks at $het. ") else "") +
+                t("Bố mẹ nhập mã để mở ${c.moTamPhut} phút.", "A parent's code unlocks it for ${c.moTamPhut} minutes.")
+        }
+        veChan2Dong(bay)
+    }
+
+    /** Dòng giờ tivi + dòng quên mã, chung cho mọi lớp che. */
+    private fun veChan2Dong(bay: Calendar) {
+        // Giờ tivi: mã OTP tính theo giờ, giờ sai (hộp không pin giữ giờ, mất điện lúc chưa có mạng) thì mã không khớp.
+        val gio = Luat.chuGio(bay.get(Calendar.HOUR_OF_DAY) * 60 + bay.get(Calendar.MINUTE))
+        tvGio.text = t("Mã 6 số trong app xác thực của bố mẹ, hoặc mã dự phòng 8 số · Giờ tivi $gio",
+            "The 6-digit code from the parent's authenticator app, or an 8-digit backup code · TV time $gio")
+        val quen = chuQuen(trenManKhoa = true)
+        tvQuen.text = quen; tvQuen.visibility = if (quen.isEmpty()) View.GONE else View.VISIBLE
     }
 
     /** Lời báo có yêu cầu quên mã đang chờ ("" nếu không có): trên màn khoá thì nhập mã ngay đó, lời báo góc thì vào TiviKit. */
@@ -196,6 +232,155 @@ class KhoaDichVu : AccessibilityService() {
             (if (trenManKhoa) "enter the code here (or in TiviKit) to cancel." else "open Kids lock in TiviKit and enter the code to cancel."))
     }
 
+    // ---------- Khoá theo app, bảo vệ Cài đặt (28/10/2026) ----------
+
+    /** App đang ở trên cùng (theo sự kiện đổi cửa sổ) và lớp màn của nó; app thường mở gần nhất (không phải Home / hệ thống). */
+    private var appTren: String? = null
+    private var lopTren = ""
+    private var appGanNhat: String? = null
+    private var homes: Set<String> = emptySet()
+    private var caiDat: Set<String> = emptySet()
+    private var trinhCai: Set<String> = emptySet()
+    /** App gần nhất đang khoá ở nhịp trước: khoá mới bắt đầu lúc nó phát nền thì dừng phát. */
+    private var ganNhatDaKhoa = false
+    /** App đã được báo "còn N phút" trong đợt này. */
+    private var daBaoApp: String? = null
+    private val anCheApp = Runnable { if (che is CheApp || che is CheBaoVe) roiDi() }
+
+    /** Home, Cài đặt và trình gỡ / cài app của chính tivi này (tên gói khác nhau tuỳ hãng). */
+    private fun napGoiHeThong() = runCatching {
+        val pm = packageManager
+        fun xuLy(vararg ds: Intent) = ds.mapNotNull { pm.resolveActivity(it, 0)?.activityInfo?.packageName }.filter { it != "android" }.toSet()
+        homes = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_ALL).map { it.activityInfo.packageName }.toSet()
+        caiDat = xuLy(Intent(android.provider.Settings.ACTION_SETTINGS),
+            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) +
+            setOf("com.android.tv.settings", "com.android.settings")
+        trinhCai = xuLy(Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName"))) +
+            setOf("com.android.packageinstaller", "com.google.android.packageinstaller")
+    }
+
+    /** Bàn phím ảo đang dùng: cửa sổ của nó không phải app mới lên màn hình. */
+    private fun laBoGo(goi: String) = runCatching {
+        android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.DEFAULT_INPUT_METHOD)?.substringBefore('/') == goi
+    }.getOrDefault(false)
+
+    override fun onAccessibilityEvent(e: AccessibilityEvent?) {
+        if (e?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || !::kho.isInitialized) return
+        val goi = e.packageName?.toString() ?: return
+        val lopMan = e.className?.toString().orEmpty()
+        if (goi == packageName || goi == "android" || laBoGo(goi)) return
+        if (goi == HE_THONG && !lopMan.contains("UsbDebugging")) return
+        if (goi == appTren && lopMan == lopTren) return
+        demGio() // quãng vừa rồi tính cho app cũ
+        appTren = goi; lopTren = lopMan
+        if (goi !in homes && goi != HE_THONG && goi !in caiDat && goi !in trinhCai) { appGanNhat = goi; daBaoApp = null }
+        kiemTraApp(kho.cauHinh ?: return, Calendar.getInstance())
+    }
+
+    /** Lúc khoá đang bật: Cài đặt, hộp gỡ / cài app, hộp cho phép gỡ lỗi ADB cần mã (trừ khi bố mẹ vừa nhập mã). */
+    private fun baoVe(c: CauHinh, goi: String, lopMan: String, ms: Long): BaoVe? {
+        if (!c.bat || !c.coMa || ms < kho.moCaiDatDen) return null
+        return when {
+            goi in caiDat -> BaoVe.CAI_DAT
+            goi in trinhCai -> BaoVe.GO_APP
+            goi == HE_THONG && lopMan.contains("UsbDebugging") -> BaoVe.ADB
+            else -> null
+        }
+    }
+
+    /** App đang ở trên cùng có cần che không (khi cả tivi không khoá): cần thì che lại, hỏi mã. */
+    private fun kiemTraApp(c: CauHinh, bay: Calendar) {
+        if (che == CheTivi) return
+        val goi = appTren ?: return
+        val moi: Che = baoVe(c, goi, lopTren, bay.timeInMillis)?.let { CheBaoVe(goi, it) }
+            ?: KhoaApp.khoa(c, kho.hen, goi, bay, giayDung(kho, Luat.ngay(bay)), kho.moApp[goi] ?: 0)?.let { CheApp(goi, it) }
+            ?: return // không cần che: lớp che app đang mở (nếu có) vẫn chờ nhập mã hay Back
+        if (che != moi) hienKhoa(moi)
+    }
+
+    /** Mỗi nhịp lúc cả tivi không khoá: app đang mở tới giờ khoá thì che; sắp khoá thì báo; app phát nền vừa bị khoá thì dừng phát. */
+    private fun capNhatApp(c: CauHinh, bay: Calendar) {
+        val dung = giayDung(kho, Luat.ngay(bay))
+        val hen = kho.hen
+        val moApp = kho.moApp
+        when (val ch = che) {
+            is CheApp -> KhoaApp.khoa(c, hen, ch.goi, bay, dung, moApp[ch.goi] ?: 0)?.let { if (it != ch.khoa) hienKhoa(ch.copy(khoa = it)) else veCheApp(c, ch, bay) }
+                ?: anKhoa() // hết giờ khoá trong lúc đang che: mở luôn
+            // Khoá vừa tắt, hay bố mẹ vừa nhập mã ở chỗ khác: thôi che.
+            is CheBaoVe -> if (!c.bat || !c.coMa || bay.timeInMillis < kho.moCaiDatDen) anKhoa() else veCheBaoVe(ch, bay)
+            else -> kiemTraApp(c, bay)
+        }
+        appGanNhat?.let { g ->
+            val khoaNay = KhoaApp.khoa(c, hen, g, bay, dung, moApp[g] ?: 0) != null
+            if (khoaNay && !ganNhatDaKhoa && g != appTren) dungPhat() // app phát nền (SmartTube chạy nền…) vừa tới giờ khoá
+            ganNhatDaKhoa = khoaNay
+        }
+        val g = appTren ?: return
+        if (che != null || !dangXem() || g == daBaoApp) return
+        KhoaApp.sapKhoa(c, hen, g, bay, dung, moApp[g] ?: 0)?.let { phut ->
+            bao(t("Còn $phut phút nữa ${tenApp(g)} sẽ nghỉ", "${tenApp(g)} rests in $phut min"), 15_000); daBaoApp = g
+        }
+    }
+
+    private fun tenApp(goi: String): String = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(goi, 0)).toString() }.getOrDefault(goi)
+
+    private fun gio(ms: Long) = Calendar.getInstance().apply { timeInMillis = ms }.let { Luat.chuGio(it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE)) }
+
+    private fun veCheApp(c: CauHinh, ch: CheApp, bay: Calendar) {
+        val ten = tenApp(ch.goi)
+        val k = ch.khoa
+        tvBieuTuong.text = if (k.lyDo == KhoaApp.LyDo.HET_GIO) "⏳" else "🔒"
+        tvTieuDe.text = t("$ten đang nghỉ", "$ten is resting")
+        val vi = when (k.lyDo) {
+            KhoaApp.LyDo.HEN -> if (k.den == KhoaApp.nuaDem(bay.timeInMillis)) "Bố mẹ hẹn khoá app này tới hết hôm nay." else "Bố mẹ hẹn khoá app này tới ${gio(k.den!!)}."
+            KhoaApp.LyDo.LUON -> "Bố mẹ đã khoá app này."
+            KhoaApp.LyDo.GIO_KHOA -> k.den?.let { "Mở lại lúc ${gio(it)}." } ?: "App này đang trong giờ khoá."
+            KhoaApp.LyDo.HET_GIO -> "Hôm nay đã dùng đủ ${Luat.chuThoiGian(k.phut, true)}. Mai dùng tiếp nhé!"
+        }
+        val en = when (k.lyDo) {
+            KhoaApp.LyDo.HEN -> if (k.den == KhoaApp.nuaDem(bay.timeInMillis)) "A parent locked this app for the rest of today." else "A parent locked this app until ${gio(k.den!!)}."
+            KhoaApp.LyDo.LUON -> "A parent locked this app."
+            KhoaApp.LyDo.GIO_KHOA -> k.den?.let { "Unlocks at ${gio(it)}." } ?: "This app is in a lock period."
+            KhoaApp.LyDo.HET_GIO -> "That's ${Luat.chuThoiGian(k.phut, false)} today. More tomorrow!"
+        }
+        tvPhu.text = t("$vi Bố mẹ nhập mã để mở $ten ${c.moTamPhut} phút; bấm Back để ra ngoài.",
+            "$en A parent's code opens $ten for ${c.moTamPhut} minutes; press Back to leave.")
+        veChan2Dong(bay)
+        veChan()
+    }
+
+    private fun veCheBaoVe(ch: CheBaoVe, bay: Calendar) {
+        tvBieuTuong.text = "🛡"
+        tvTieuDe.text = when (ch.loai) {
+            BaoVe.CAI_DAT -> t("Cài đặt cần mã của bố mẹ", "Settings need a parent's code")
+            BaoVe.GO_APP -> t("Gỡ / cài app cần mã của bố mẹ", "Installing or removing apps needs a parent's code")
+            BaoVe.ADB -> t("Cho phép gỡ lỗi cần mã của bố mẹ", "Allowing debugging needs a parent's code")
+        }
+        tvPhu.text = t("Khoá trẻ em đang bật. Bố mẹ nhập mã để mở ${MO_CAI_DAT_MS / 60_000} phút; bấm Back để ra ngoài.",
+            "The Kids lock is on. A parent's code opens it for ${MO_CAI_DAT_MS / 60_000} minutes; press Back to leave.")
+        veChan2Dong(bay)
+        veChan()
+    }
+
+    /** Dừng phát của app đang phát (app vừa bị khoá chạy nền): giành audio focus rồi bấm Dừng media; không tắt tiếng cả tivi. */
+    private fun dungPhat() {
+        val am = getSystemService(AudioManager::class.java) ?: return
+        runCatching {
+            val r = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()).build()
+            am.requestAudioFocus(r)
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE))
+            am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE))
+            tay.postDelayed({ runCatching { am.abandonAudioFocusRequest(r) } }, 1_000)
+        }
+    }
+
+    /** Bấm Back ở lớp che app / Cài đặt: ra Home (hộp cho phép ADB thì đóng hộp = không cho), bỏ lớp che. */
+    private fun roiDi() {
+        performGlobalAction(if ((che as? CheBaoVe)?.loai == BaoVe.ADB) GLOBAL_ACTION_BACK else GLOBAL_ACTION_HOME)
+        anKhoa()
+    }
+
     // ---------- Đếm thời gian xem (25/10/2026) ----------
 
     /** Màn hình chờ (screensaver) đang chạy: không tính là đang xem. */
@@ -204,20 +389,30 @@ class KhoaDichVu : AccessibilityService() {
 
     private fun dangXem() = !dangCho && getSystemService(PowerManager::class.java)?.isInteractive == true
 
-    /** Cộng thời gian từ lần đếm trước nếu tivi đang được xem: màn hình sáng, không chạy màn hình chờ, không bị khoá. */
+    /**
+     * Cộng thời gian từ lần đếm trước nếu tivi đang được xem: màn hình sáng, không chạy màn hình chờ, không bị che. Cộng
+     * cả cho các luật app có giới hạn phút của app đang ở trên cùng (28/10/2026).
+     */
     private fun demGio() {
         val luc = SystemClock.elapsedRealtime()
         val qua = (luc - lanDem).coerceIn(0, NHIP_MS * 2) // máy ngủ sâu thì nhịp không chạy: không cộng cả quãng ngủ
         lanDem = luc
         val ngay = Luat.ngay(Calendar.getInstance())
         if (ngay != ngayCho) { luuDem(); ngayCho = ngay }
-        if (lop == null && dangXem()) msCho += qua
-        if (msCho >= 60_000) luuDem()
+        if (lop == null && dangXem()) {
+            msCho += qua
+            appTren?.let { g -> KhoaApp.luatDem(kho.cauHinh, g).forEach { id -> msApp.merge(id, qua) { a, b -> a + b } } }
+        }
+        if (msCho >= 60_000 || msApp.values.any { it >= 60_000 }) luuDem()
     }
 
     /** Ghi phần đã đếm vào Kho (một phút một lần cho đỡ ghi bộ nhớ). */
     private fun luuDem() {
-        if (ngayCho.isNotEmpty() && msCho >= 1000) { kho.congXem(ngayCho, msCho / 1000); msCho %= 1000 }
+        if (ngayCho.isEmpty()) return
+        if (msCho >= 1000) { kho.congXem(ngayCho, msCho / 1000); msCho %= 1000 }
+        val ghi = msApp.filterValues { it >= 1000 }.mapValues { it.value / 1000 }
+        kho.congDung(ngayCho, ghi)
+        ghi.forEach { (id, giay) -> msApp.merge(id, -giay * 1000) { a, b -> a + b } }
     }
 
     // ---------- Báo trước ----------
@@ -262,8 +457,32 @@ class KhoaDichVu : AccessibilityService() {
         if (dam) typeface = Typeface.DEFAULT_BOLD
     }
 
-    private fun hienKhoa() {
-        nhap = ""; choSai = false; chon = 4
+    /** Che màn hình (hay đổi thứ đang che) theo [moi]: cả tivi thì về Home và tắt tiếng; một app thì về Home và dừng phát. */
+    private fun hienKhoa(moi: Che) {
+        val cu = che
+        if (lop == null && !taoLop()) return
+        if (cu == CheTivi && moi != CheTivi) imTieng(false)
+        if (cu is CheApp && moi !is CheApp) thaFocus()
+        if (cu != moi) { nhap = ""; choSai = false; chon = 4; tvBao.text = ""; vePin(); veChon() }
+        che = moi; dangKhoa = moi == CheTivi
+        tay.removeCallbacks(anCheApp)
+        when (moi) {
+            CheTivi -> if (cu != CheTivi) { performGlobalAction(GLOBAL_ACTION_HOME); imTieng(true) } // app đang chạy lui về nền
+            is CheApp -> {
+                if (cu !is CheApp || cu.goi != moi.goi) { performGlobalAction(GLOBAL_ACTION_HOME); giuFocus() }
+                kho.cauHinh?.let { veCheApp(it, moi, Calendar.getInstance()) }
+                tay.postDelayed(anCheApp, CHE_APP_MS)
+            }
+            is CheBaoVe -> {
+                // Hộp cho phép ADB để nguyên bên dưới cho bố mẹ bấm Cho phép sau khi nhập mã.
+                if (moi.loai != BaoVe.ADB) performGlobalAction(GLOBAL_ACTION_HOME)
+                veCheBaoVe(moi, Calendar.getInstance())
+                tay.postDelayed(anCheApp, CHE_APP_MS)
+            }
+        }
+    }
+
+    private fun taoLop(): Boolean {
         val cot = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
         // Gọn cho vừa màn 540dp (720p và 1080p đều vậy) cả khi có dòng báo quên mã hai dòng (28/10/2026).
         tvBieuTuong = chu("🔒", 36f); cot.addView(tvBieuTuong)
@@ -291,33 +510,43 @@ class KhoaDichVu : AccessibilityService() {
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_FULLSCREEN,
             PixelFormat.TRANSLUCENT)
-        runCatching { getSystemService(WindowManager::class.java).addView(nen, lp) }.onSuccess {
-            lop = nen; dangKhoa = true
-            performGlobalAction(GLOBAL_ACTION_HOME) // app đang chạy lui về nền
-            imTieng(true)
-            vePin(); veChon()
-        }
+        return runCatching { getSystemService(WindowManager::class.java).addView(nen, lp) }.onSuccess { lop = nen }.isSuccess
     }
 
     private fun anKhoa() {
         lop?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeView(v) } }
-        if (lop != null) imTieng(false)
-        lop = null; dangKhoa = false
+        if (che == CheTivi) imTieng(false)
+        if (che is CheApp) thaFocus()
+        tay.removeCallbacks(anCheApp)
+        lop = null; che = null; dangKhoa = false
     }
 
     private fun imTieng(bat: Boolean) {
         val am = getSystemService(AudioManager::class.java) ?: return
         runCatching {
             if (bat) {
-                val r = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()).build()
-                am.requestAudioFocus(r); focus = r
+                giuFocus()
                 am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0)
             } else {
-                focus?.let { am.abandonAudioFocusRequest(it) }; focus = null
+                thaFocus()
                 am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, 0)
             }
         }
+    }
+
+    /** Giành audio focus: app đang phát (kể cả phát nền) tự dừng. */
+    private fun giuFocus() {
+        val am = getSystemService(AudioManager::class.java) ?: return
+        runCatching {
+            val r = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()).build()
+            am.requestAudioFocus(r); focus = r
+        }
+    }
+
+    private fun thaFocus() {
+        val am = getSystemService(AudioManager::class.java) ?: return
+        focus?.let { r -> runCatching { am.abandonAudioFocusRequest(r) } }; focus = null
     }
 
     /** Ô số: 6 cho mã OTP, gõ tới số thứ 7 thì thành 8 (mã dự phòng). */
@@ -351,6 +580,11 @@ class KhoaDichVu : AccessibilityService() {
 
     private fun xuLy(k: Int) {
         if (lop == null) return
+        // Lớp che app / Cài đặt: Back, Home là ra ngoài; để yên thì tự đóng sau CHE_APP_MS.
+        if (che != CheTivi) {
+            if (k == KeyEvent.KEYCODE_BACK || k == KeyEvent.KEYCODE_HOME) { roiDi(); return }
+            tay.removeCallbacks(anCheApp); tay.postDelayed(anCheApp, CHE_APP_MS)
+        }
         when (k) {
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> go(('0' + (k - KeyEvent.KEYCODE_0)).toString())
             in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> go(('0' + (k - KeyEvent.KEYCODE_NUMPAD_0)).toString())
@@ -395,11 +629,27 @@ class KhoaDichVu : AccessibilityService() {
         }
     }
 
+    /** Đúng mã: cả tivi thì mở tạm; app thì mở riêng app đó rồi mở lại nó; Cài đặt… thì mở 10 phút. */
     private fun moKhoa() {
         val c = kho.cauHinh ?: return
         tay.removeCallbacks(saiCho)
-        kho.moTamDen = System.currentTimeMillis() + c.moTamPhut * 60_000L
+        val bay = System.currentTimeMillis()
+        val ch = che
         demGio() // quãng vừa khoá không tính là xem
-        nhap = ""; choSai = false; anKhoa()
+        nhap = ""; choSai = false
+        when (ch) {
+            CheTivi -> kho.moTamDen = bay + c.moTamPhut * 60_000L
+            is CheApp -> kho.moRiengApp(ch.goi, bay + c.moTamPhut * 60_000L)
+            is CheBaoVe -> kho.moCaiDatDen = bay + MO_CAI_DAT_MS
+            null -> {}
+        }
+        anKhoa()
+        runCatching {
+            when {
+                ch is CheApp -> packageManager.getLaunchIntentForPackage(ch.goi) ?: packageManager.getLeanbackLaunchIntentForPackage(ch.goi)
+                ch is CheBaoVe && ch.loai == BaoVe.CAI_DAT -> Intent(android.provider.Settings.ACTION_SETTINGS)
+                else -> null
+            }?.let { startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
     }
 }

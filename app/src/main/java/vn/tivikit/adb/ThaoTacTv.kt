@@ -1530,6 +1530,17 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /** Báo tivi quên mã: 24 giờ sau đổi được khoá không cần mã. {yeuCauGo, goDuocLuc}. */
     fun quenMaKhoa(): org.json.JSONObject? = docQua(PKG_KHOA, "quen-ma")
 
+    /**
+     * Hẹn khoá app (28/10/2026), cần phiên: {"phien","goi":[…],"sauPhut":N} khoá các app đó từ N phút nữa tới hết ngày;
+     * {"phien","bo":i} bỏ hẹn thứ i. [json] không chứa nháy đơn.
+     */
+    fun henKhoaApp(json: String) {
+        require(!json.contains('\'')) { "json" }
+        val kq = sh("content call --uri $khoaUri --method hen-khoa --arg '$json'")
+        kiemPhien(kq)
+        if (!kq.contains("ok=1")) error(t("Tivi không nhận hẹn khoá: ${kq.trim()}", "The TV rejected the timer: ${kq.trim()}"))
+    }
+
     /** Lệnh khoá trả "can-ma": phiên nhập mã không có / hết hạn. */
     private fun kiemPhien(kq: String) { if (kq.contains("can-ma")) throw CanMaException() }
 

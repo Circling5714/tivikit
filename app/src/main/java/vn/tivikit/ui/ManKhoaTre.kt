@@ -38,6 +38,7 @@ import io.nayuki.qrcodegen.QrCode
 import org.json.JSONObject
 import vn.tivikit.ManHinh
 import vn.tivikit.dulieu.MaOtp
+import vn.tivikit.dulieu.tenDep
 import vn.tivikit.t
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -56,8 +57,8 @@ internal fun ManKhoaTre(vm: PhienLamViec) = Cuon {
         Text(t("Khoá trẻ em", "Kids lock"), style = KieuTieuDeLon)
         Phu(t("Tới giờ khoá, hay xem hết giờ trong ngày, tivi hiện màn khoá che mọi thứ (cả HDMI, YouTube) và chặn phím remote. Bố mẹ nhập mã trong app xác thực trên điện thoại thì mở ${k.MO_TAM} phút. Tắt tivi bật lại vẫn khoá.",
             "During the lock periods, or once the day's time is used up, the TV shows a lock screen over everything (HDMI and YouTube too) and blocks the remote. A code from the parent's authenticator app unlocks it for ${k.MO_TAM} minutes. It stays locked after a restart."))
-        Phu(t("Khoá bật thì giờ tivi luôn tự động theo mạng: ai tắt giờ tự động để chỉnh giờ né khoá, app bật lại ngay.",
-            "While the lock is on, the TV keeps its clock automatic: turning automatic time off to dodge the lock gets switched back at once."))
+        Phu(t("Khoá bật thì giờ tivi luôn tự động theo mạng: ai tắt giờ tự động để chỉnh giờ né khoá, app bật lại ngay. Mở Cài đặt hay gỡ / cài app trên tivi cũng phải nhập mã, nên trẻ không xoá dữ liệu hay gỡ được app khoá.",
+            "While the lock is on, the TV keeps its clock automatic: turning automatic time off to dodge the lock gets switched back at once. Opening Settings or installing / removing apps on the TV asks for the code too, so a child can't clear or remove the lock app."))
     }
     k.trenTv?.let { j ->
         TheTrenTv(k, j)
@@ -68,6 +69,8 @@ internal fun ManKhoaTre(vm: PhienLamViec) = Cuon {
     }
     TheGioKhoa(k)
     TheGioiHan(vm)
+    TheKhoaApp(vm)
+    TheHenKhoa(vm)
     TheMaMo(vm)
     if (k.bao.isNotEmpty()) Phu(k.bao, Xanh)
     NutChinh(t("Lưu & áp dụng lên tivi", "Save & apply to the TV"), enabled = !vm.dangBan, icon = Icons.Rounded.Lock) { k.luu() }
@@ -91,6 +94,10 @@ private fun TheTrenTv(k: KhoaTreTivi, j: JSONObject) = The(t("Trên tivi", "On t
         ChonChip(t("Mở tạm ${k.MO_TAM} phút", "Unlock ${k.MO_TAM} min"), false) { k.moTam(k.MO_TAM) }
         ChonChip(t("Khoá lại ngay", "Lock now"), false) { k.moTam(0) }
     }
+    val appKhoa = j.optJSONArray("appKhoa")?.let { a -> (0 until a.length()).map { tenDep(a.getString(it)) } }.orEmpty()
+    if (appKhoa.isNotEmpty()) Phu(t("App đang khoá: ${appKhoa.joinToString(", ")}.", "Apps locked now: ${appKhoa.joinToString(", ")}."), Cam)
+    if (j.optBoolean("baoVe")) Phu(t("Khoá đang bật nên trên tivi, mở Cài đặt, gỡ / cài app hay cho phép gỡ lỗi ADB đều phải nhập mã.",
+        "With the lock on, opening Settings, installing or removing apps and allowing ADB debugging on the TV all ask for the code."))
     // App khoá cài từ trước khi đổi tên gói (com.icm.cleantv.khoa), hay bản trước 28/10/2026: còn mở bằng PIN.
     if (j.optBoolean("banCu")) Phu(t("Đây là Khoá trẻ em của TiviKit bản cũ, vẫn khoá bằng PIN cũ. Cài mã OTP ở thẻ Mã mở khoá rồi bấm Lưu: app cài bản mới với giờ khoá này và gỡ bản cũ.",
         "This is the Kids lock from the old TiviKit and it still works with the old PIN. Set up the OTP code in the Unlock code card and tap Save: the app installs the new version with these periods and removes the old one."), Cam)
@@ -135,6 +142,117 @@ private fun TheGioKhoa(k: KhoaTreTivi) = The(t("Giờ khoá", "Lock periods"), I
         k.khung += KhoaTreTivi.Khung(chuan(tu), chuan(den), ngay); tu = ""; den = ""
     }
     Phu(t("Khung qua đêm (21:00–06:00) tính theo ngày bắt đầu: chọn T2 là khoá từ tối thứ Hai tới sáng thứ Ba.", "Overnight periods count from the starting day."))
+}
+
+// ---------------- Khoá theo app (28/10/2026) ----------------
+
+/** "SmartTube, YouTube và 3 app khác". */
+private fun tenNhom(goi: Collection<String>): String {
+    val ten = goi.map { tenDep(it) }.sorted()
+    return if (ten.size <= 3) ten.joinToString(", ") else ten.take(3).joinToString(", ") + t(" và ${ten.size - 3} app khác", " and ${ten.size - 3} more")
+}
+
+private fun chuNgay(ngay: Set<Int>) = if (ngay.size == 7) t("mọi ngày", "every day") else ngay.sorted().joinToString(" ") { t(TEN_THU[it - 1], TEN_THU_EN[it - 1]) }
+
+/** Một dòng tả luật: "20:00–06:00 mọi ngày", "Tối đa 1 giờ mỗi ngày · hôm nay 35 phút", "Khoá luôn". */
+private fun moTaLuat(l: KhoaTreTivi.LuatApp, dung: JSONObject?): String = when {
+    l.luon -> t("Khoá luôn (bố mẹ nhập mã thì mở tạm)", "Always locked (a parent's code opens it for a while)")
+    l.khung.isNotEmpty() -> l.khung.joinToString("; ") { "${it.tu}–${it.den} ${chuNgay(it.ngay)}" }
+    else -> t("Tối đa ", "At most ") + vn.tivikit.dulieu.ThoiGianXem.chuGioiHan(l.phutNgay) + t(" mỗi ngày", " a day") +
+        (dung?.optLong(l.id)?.takeIf { dung.has(l.id) }?.let { t(" · hôm nay ", " · today ") + vn.tivikit.dulieu.ThoiGianXem.chu(it) } ?: "")
+}
+
+/** Chọn app trên tivi (nhiều app): nút "Nhóm xem video" chọn / bỏ cả nhóm app xem video có trên tivi. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChonApp(ds: List<String>, video: List<String>, chon: Set<String>, doi: (Set<String>) -> Unit) {
+    if (ds.isEmpty()) { Phu(t("Chưa đọc được danh sách app trên tivi.", "Couldn't read the TV's app list.")); return }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (video.isNotEmpty()) {
+            val du = chon.containsAll(video)
+            ChonChip(t("Nhóm xem video (${video.size})", "Video apps (${video.size})"), du) { doi(if (du) chon - video.toSet() else chon + video) }
+        }
+        ds.forEach { g -> ChonChip(tenDep(g), g in chon) { doi(if (g in chon) chon - g else chon + g) } }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TheKhoaApp(vm: PhienLamViec) = The(t("Khoá theo app", "App locks"), Icons.Rounded.Apps) {
+    val k = vm.khoaTre
+    Phu(t("Khoá riêng từng app, ví dụ SmartTube, YouTube, TV360. Mở app đang khoá thì tivi về Home và hiện màn khoá của app đó; bố mẹ nhập mã thì mở app ${k.MO_TAM} phút. Nên khoá cả nhóm: chỉ khoá SmartTube thì trẻ chuyển sang YouTube hay trình duyệt.",
+        "Lock single apps, e.g. SmartTube, YouTube, TV360. Opening a locked app sends the TV Home and shows that app's lock screen; a parent's code opens it for ${k.MO_TAM} minutes. Lock the whole group: lock only SmartTube and a child switches to YouTube or a browser."))
+    val dung = k.trenTv?.optJSONObject("dungApp")
+    k.luatApp.forEachIndexed { i, l ->
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(The2).padding(start = 14.dp, top = 6.dp, bottom = 6.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tenNhom(l.goi), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(moTaLuat(l, dung), fontSize = 12.sp, color = ChuPhu)
+            }
+            IconButton(onClick = { k.luatApp.removeAt(i) }) { Icon(Icons.Rounded.Close, t("Xoá", "Remove")) }
+        }
+    }
+    Text(t("Thêm luật", "Add a rule"), fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+    ChonApp(k.dsApp, k.videoTrenTv, k.chonLuat) { k.chonLuat = it }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ChonChip(t("Theo giờ", "By time"), k.kieuLuat == KhoaTreTivi.KieuLuat.GIO) { k.kieuLuat = KhoaTreTivi.KieuLuat.GIO }
+        ChonChip(t("Giới hạn mỗi ngày", "Daily limit"), k.kieuLuat == KhoaTreTivi.KieuLuat.PHUT) { k.kieuLuat = KhoaTreTivi.KieuLuat.PHUT }
+        ChonChip(t("Khoá luôn", "Always"), k.kieuLuat == KhoaTreTivi.KieuLuat.LUON) { k.kieuLuat = KhoaTreTivi.KieuLuat.LUON }
+    }
+    var tu by remember { mutableStateOf("20:00") }
+    var den by remember { mutableStateOf("06:00") }
+    var ngay by remember { mutableStateOf((1..7).toSet()) }
+    when (k.kieuLuat) {
+        KhoaTreTivi.KieuLuat.GIO -> {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(tu, { tu = it.take(5) }, label = { Text(t("Khoá từ", "Lock from")) }, singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(den, { den = it.take(5) }, label = { Text(t("Đến", "To")) }, singleLine = true, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                (1..7).forEach { d -> ChonChip(t(TEN_THU[d - 1], TEN_THU_EN[d - 1]), d in ngay) { ngay = if (d in ngay) ngay - d else ngay + d } }
+            }
+        }
+        KhoaTreTivi.KieuLuat.PHUT -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(30, 60, 90, 120, 180).forEach { p -> ChonChip(vn.tivikit.dulieu.ThoiGianXem.chuGioiHan(p), k.phutLuat == p) { k.phutLuat = p } }
+        }
+        KhoaTreTivi.KieuLuat.LUON -> Phu(t("Khoá tới khi bố mẹ xoá luật này; nhập mã trên tivi thì mở tạm từng lần.", "Locked until a parent removes this rule; a code on the TV opens it for a while."))
+    }
+    NutPhu(t("Thêm luật này", "Add this rule"), Icons.Rounded.Add) { k.themLuat(tu, den, ngay) }
+    Phu(t("Luật mới có hiệu lực sau khi bấm Lưu & áp dụng.", "New rules take effect after Save & apply."))
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TheHenKhoa(vm: PhienLamViec) = The(t("Hẹn giờ khoá app", "App lock timer"), Icons.Rounded.Timer) {
+    val k = vm.khoaTre
+    Phu(t("Khoá app sau một lúc, tới hết hôm nay. Ví dụ cho con xem SmartTube thêm 30 phút: chọn SmartTube, 30 phút, bấm Hẹn khoá. Áp dụng ngay, không cần Lưu; còn 5 phút thì tivi báo trước.",
+        "Lock apps after a while, until the end of today. E.g. 30 more minutes of SmartTube: pick SmartTube, 30 minutes, Set the timer. It applies at once, no Save needed; the TV warns 5 minutes ahead."))
+    val hen = k.trenTv?.optJSONArray("hen")
+    val bay = System.currentTimeMillis()
+    if (hen != null) for (i in 0 until hen.length()) {
+        val h = hen.getJSONObject(i)
+        val goi = h.optJSONArray("goi")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
+        val tu = h.optLong("tu")
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(The2).padding(start = 14.dp, top = 6.dp, bottom = 6.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tenNhom(goi), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(if (tu <= bay) t("Đang khoá tới hết hôm nay", "Locked until the end of today")
+                    else t("Khoá lúc ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(tu))}, tới hết hôm nay", "Locks at ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(tu))}, until the end of today"),
+                    fontSize = 12.sp, color = ChuPhu)
+            }
+            IconButton(onClick = { if (!vm.dangBan) k.boHen(i) }) { Icon(Icons.Rounded.Close, t("Bỏ hẹn", "Remove")) }
+        }
+    }
+    ChonApp(k.dsApp, k.videoTrenTv, k.chonHen) { k.chonHen = it }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(0, 15, 30, 45, 60, 90, 120).forEach { p ->
+            ChonChip(if (p == 0) t("Khoá ngay", "Now") else t("Sau ", "In ") + vn.tivikit.dulieu.ThoiGianXem.chuGioiHan(p), k.sauPhut == p) { k.sauPhut = p }
+        }
+    }
+    val duoc = k.trenTv != null && (k.coOtp || k.goDuoc)
+    NutPhu(t("Hẹn khoá", "Set the timer"), Icons.Rounded.Timer, enabled = !vm.dangBan && duoc && k.chonHen.isNotEmpty()) { k.henKhoa() }
+    if (!duoc) Phu(t("Lưu khoá lên tivi (với mã OTP) trước rồi mới hẹn khoá được.", "Save the lock to the TV (with the OTP code) first, then set timers."))
+    else if (k.trenTv?.optBoolean("bat") != true) Phu(t("Khoá trẻ em đang tắt: hẹn khoá chỉ chạy khi bật.", "The Kids lock is off: timers only work while it's on."), Cam)
 }
 
 // ---------------- Mã mở khoá (28/10/2026) ----------------
