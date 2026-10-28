@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Wi-Fi bỏ gói multicast cho đỡ tốn pin nếu không có app giữ khoá: cần để nghe điện thoại tìm tivi (SSDP). -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- App nào đang ở trước màn hình khi máy nhận vừa bật (chưa thấy lần đổi cửa sổ nào): SmartTube đang nghe nền thì video
+         mới cũng về nghe nền. TiviKit cấp qua ADB (appops GET_USAGE_STATS); không cấp thì coi như SmartTube đang hiện. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <!-- Android 11+: thấy SmartTube (các bản) và app mở được link YouTube. -->

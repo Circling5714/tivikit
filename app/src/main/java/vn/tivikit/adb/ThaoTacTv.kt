@@ -1787,11 +1787,13 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
 
     /**
      * Cài / cập nhật app Cast SmartTube, cho nó bật màn hình (Android 14+), đọc phiên media của SmartTube (tivi ít RAM không
-     * cho thì thôi: vẫn chạy, chỉ không đồng bộ được khi bấm remote tivi), đặt [ten] (null = giữ), bật dịch vụ trợ năng.
+     * cho thì thôi: vẫn chạy, chỉ không đồng bộ được khi bấm remote tivi), đọc thống kê dùng app (biết app nào đang hiện lúc
+     * vừa bật), đặt [ten] (null = giữ), bật dịch vụ trợ năng.
      */
     fun caiCast(apk: ByteArray, ten: String?, bao: (String) -> Unit) {
         caiAppPhu(CastSmartTube.GOI, apk) { bao(t("Cài app Cast SmartTube lên tivi…", "Installing Cast to SmartTube on the TV…")) }
-        sh("cmd appops set ${CastSmartTube.GOI} TURN_SCREEN_ON allow 2>/dev/null; cmd notification allow_listener ${CastSmartTube.NGHE} 2>/dev/null; true")
+        sh("cmd appops set ${CastSmartTube.GOI} TURN_SCREEN_ON allow 2>/dev/null; cmd appops set ${CastSmartTube.GOI} GET_USAGE_STATS allow 2>/dev/null; " +
+            "cmd notification allow_listener ${CastSmartTube.NGHE} 2>/dev/null; true")
         if (ten != null) sh(CastSmartTube.lenhDatTen(ten))
         bao(t("Bật dịch vụ Cast…", "Turning the Cast service on…"))
         val dv = CastSmartTube.DICH_VU

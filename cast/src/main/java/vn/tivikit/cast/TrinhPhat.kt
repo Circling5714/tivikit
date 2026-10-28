@@ -1,5 +1,7 @@
 package vn.tivikit.cast
 
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -120,7 +122,23 @@ class TrinhPhat(private val ctx: Context) {
         }.getOrDefault(false)
     }
 
-    private fun tieuDe(p: MediaController?): String? = p?.metadata?.description?.title?.toString()
+    /**
+     * App đang ở trước màn hình theo thống kê dùng app (app lên trước cuối cùng), khi dịch vụ trợ năng chưa thấy lần đổi cửa
+     * sổ nào từ lúc bật (vừa cài, vừa khởi động lại: 28/10/2026 trên Skyworth, video mới tới lúc đang nghe nền mà SmartTube
+     * ở luôn trên màn hình). Cần GET_USAGE_STATS (TiviKit cấp qua ADB); không có thì null.
+     */
+    @Suppress("DEPRECATION")
+    private fun appTuThongKe(): String? = runCatching {
+        val bay = System.currentTimeMillis()
+        val ds = ctx.getSystemService(UsageStatsManager::class.java).queryEvents(bay - 24 * 3_600_000L, bay)
+        val e = UsageEvents.Event()
+        var goi: String? = null
+        while (ds.hasNextEvent()) {
+            ds.getNextEvent(e)
+            if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) goi = e.packageName
+        }
+        goi
+    }.getOrNull()
 
     /**
      * Bài SmartTube đang phát (provider dang-phat, cho thẻ Đang phát của TiviKit): mã video, tên, kênh. Phiên của SmartTube
@@ -135,28 +153,31 @@ class TrinhPhat(private val ctx: Context) {
         return JSONObject().put("videoId", id).put("tieuDe", tieuDe).put("kenh", kenh)
     }
 
-    /** SmartTube đang phát mà không ở trên màn hình: người xem đã bấm Home để nghe nền. */
-    private fun dangNgheNen(): Boolean {
-        val tren = goiTren ?: return false
-        if (tren in GOI_SMARTTUBE) return false
+    /**
+     * SmartTube đang phát mà không ở trên màn hình ([tren] = app đang hiện): người xem đã bấm Home để nghe nền. Tivi không cho
+     * đọc phiên phát thì chỉ biết có tiếng: chỉ tính khi tiếng đó là video đã cast trước đó ([daCast]), không phải app nhạc khác.
+     */
+    private fun dangNgheNen(tren: String?, daCast: Boolean): Boolean {
+        if (tren == null || tren in GOI_SMARTTUBE) return false
         val st = phien()?.playbackState?.state
         return if (st != null) st == PlaybackState.STATE_PLAYING || st == PlaybackState.STATE_BUFFERING
-        else videoId != null && am.isMusicActive
+        else daCast && am.isMusicActive
     }
 
     /**
-     * Video mới tới lúc SmartTube đang phát nền: SmartTube phải lên màn hình để mở video, chờ video mới phát (có phiên media
-     * thì chờ tên bài đổi khỏi [tieuDeCu]) rồi cho SmartTube rời màn hình như người xem bấm Home (cách nghe nền của SmartTube
-     * chạy lúc đó), về launcher [ve]. Quá 12 giây thì cứ về.
+     * Video mới tới lúc SmartTube đang phát nền: SmartTube phải lên màn hình để mở video, chờ video [id] phát (có phiên media
+     * thì chờ phiên báo đúng mã video: video cast sang không có tên bài để so) rồi cho SmartTube rời màn hình như người xem bấm
+     * Home (cách nghe nền của SmartTube chạy lúc đó), về launcher [ve]. Quá 12 giây thì cứ về.
      */
-    private fun choVeNen(ve: String?, tieuDeCu: String?) {
+    private fun choVeNen(ve: String?, id: String) {
         val het = SystemClock.elapsedRealtime() + 12_000
         tay.postDelayed(object : Runnable {
             override fun run() {
                 val bay = SystemClock.elapsedRealtime()
                 val tren = goiTren in GOI_SMARTTUBE
                 val p = phien()
-                val daPhat = if (p != null) p.playbackState?.state == PlaybackState.STATE_PLAYING && (tieuDeCu == null || tieuDe(p) != tieuDeCu)
+                val daPhat = if (p != null) p.playbackState?.state == PlaybackState.STATE_PLAYING &&
+                        p.metadata?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID).let { it == null || it == id }
                     else am.isMusicActive && bay - mocTren > 2_500
                 when {
                     tren && daPhat && bay - mocTren > 1_000 -> veHome?.invoke(ve)
@@ -212,20 +233,21 @@ class TrinhPhat(private val ctx: Context) {
 
     @Synchronized fun phat(id: String, tu: Double): Boolean {
         if (!MA_VIDEO.matches(id)) return false
+        // Trước khi mở: SmartTube có đang nghe nền không, và launcher nào để về lại (màn bảo vệ đang che thì launcher hiện
+        // gần nhất).
+        val tren = goiTren ?: appTuThongKe()
+        val nen = dangNgheNen(tren, daCast = videoId != null)
+        val ve = tren?.takeIf { laHome(it) } ?: launcherCuoi
         videoId = id
         viTriGoc = tu
         moc = SystemClock.elapsedRealtime()
         trangThai = PHAT
         cpn = UUID.randomUUID().toString().replace("-", "").take(16)
         ttTheo = PHAT
-        val nen = dangNgheNen()
-        // Đang nghe nền: về lại launcher đang hiện (màn bảo vệ đang che thì launcher hiện gần nhất), cùng tên bài đang phát.
-        val ve = goiTren?.takeIf { laHome(it) } ?: launcherCuoi
-        val tieuDeCu = if (nen) tieuDe(phien()) else null
         // SmartTube tạo / đổi phiên media khi bắt đầu phát.
         tay.postDelayed({ theoDoi() }, 3_000)
         val ok = mo(id, tu)
-        if (ok && nen) choVeNen(ve, tieuDeCu)
+        if (ok && nen) choVeNen(ve, id)
         return ok
     }
 
