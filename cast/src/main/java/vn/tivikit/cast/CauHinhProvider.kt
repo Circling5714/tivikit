@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Bundle
 import android.os.Process
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -14,6 +15,9 @@ import org.json.JSONObject
  *   content call --uri content://vn.tivikit.cast --method dat --arg '{"ten":"SmartTube phòng khách"}'   ("" = tên mặc định)
  *   content call --uri content://vn.tivikit.cast --method ma-tv   (mã TV 12 số để liên kết điện thoại, sống 5 phút)
  *   content call --uri content://vn.tivikit.cast --method dang-phat   (bài SmartTube đang phát: mã video, tên, kênh)
+ *   content call --uri content://vn.tivikit.cast --method dat --arg '{"nhanCast":false}'   (tạm ngừng nhận cast)
+ *   content call --uri content://vn.tivikit.cast --method dien-thoai --arg '{"id":"…","lam":"cho-phep|hom-nay|24h|chan|xoa"}'
+ *   content call --uri content://vn.tivikit.cast --method huy-lien-ket   (mọi điện thoại mất liên kết, phải nhập mã mới)
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root.
  */
 class CauHinhProvider : ContentProvider() {
@@ -35,12 +39,30 @@ class CauHinhProvider : ContentProvider() {
                     .put("dienThoai", may?.soDienThoai ?: 0)
                     .put("dangPhat", may?.dangPhat ?: "")
                     .put("biChe", may?.biChe == true)
+                    .put("nhanCast", kho.nhanCast)
+                    .put("dienThoai", JSONArray(DanhBa.json(kho.dienThoai)))
+                    .put("dangNoi", JSONArray((may?.dangNoi ?: emptySet()).toList()))
                     .put("nhatKy", kho.nhatKy)
                     .toString())
             }
             "dat" -> {
                 val o = runCatching { JSONObject(arg ?: "") }.getOrNull() ?: return kq.apply { putString("loi", "sai") }
-                kho.ten = o.optString("ten").trim().take(60).takeIf { it.isNotEmpty() }
+                if (o.has("ten")) kho.ten = o.optString("ten").trim().take(60).takeIf { it.isNotEmpty() }
+                if (o.has("nhanCast")) kho.nhanCast = o.optBoolean("nhanCast", true)
+                kq.putString("ok", "1")
+            }
+            "dien-thoai" -> {
+                val o = runCatching { JSONObject(arg ?: "") }.getOrNull()
+                val lam = o?.optString("lam")?.let(DanhBa.Lam::tu)
+                val id = o?.optString("id").orEmpty()
+                if (lam == null || id.isEmpty()) return kq.apply { putString("loi", "sai") }
+                val may = CastDichVu.dangChay?.may
+                if (may != null) may.lamDienThoai(id, lam) else kho.doiDienThoai { DanhBa.lam(it, id, lam, System.currentTimeMillis()) }
+                kq.putString("ok", "1")
+            }
+            "huy-lien-ket" -> {
+                val may = CastDichVu.dangChay?.may ?: return kq.apply { putString("loi", "dich-vu-tat") }
+                may.huyLienKet()
                 kq.putString("ok", "1")
             }
             "thu-tim" -> kq.putString("json", CastDichVu.dangChay?.may?.thuTim()?.toString() ?: "[]")

@@ -106,6 +106,23 @@ class Lounge(
         return so.takeIf { ma == 200 && it.length in 6..16 && it.all(Char::isDigit) }?.also { ghi("xin mã TV để liên kết điện thoại") }
     }
 
+    /**
+     * Huỷ mọi liên kết (28/10/2026): báo các điện thoại đang nối là tivi rời đi, bỏ screen cũ (máy đã liên kết bằng mã TV
+     * hay qua Wi-Fi đều giữ screen đó nên mất tivi), vòng chạy xin screen mới rồi mở phiên lại. Điện thoại muốn dùng lại
+     * thì nhập mã TV mới (tivi tìm được qua Wi-Fi thì tự ghép lại như lần đầu).
+     */
+    fun doiScreen() = thread(isDaemon = true) {
+        if (sid != null) runCatching { guiNgay(listOf("loungeScreenDisconnected" to emptyMap()), null) }
+        lanDoiScreen++
+        kho.screenId = null
+        token = null; tokenHet = 0; sid = null
+        runCatching { dangNghe?.disconnect() }
+        ghi("huỷ mọi liên kết: xin screen mới")
+    }
+
+    /** Tăng mỗi lần đổi screen: phiên đang mở dở bằng screen cũ thì bỏ (moPhien). */
+    @Volatile private var lanDoiScreen = 0
+
     // ---------- Vòng chạy ----------
 
     private fun vongLap() {
@@ -138,6 +155,7 @@ class Lounge(
     /** Screen (giữ lâu dài) → lounge token → mở phiên: lấy SID / gsessionid và tình trạng phòng. */
     private fun moPhien() {
         sid = null; gsid = null
+        val lan = lanDoiScreen
         var id = kho.screenId ?: xinScreen().also { kho.screenId = it }
         val tk = try { layToken(id) } catch (e: Exception) {
             // Screen cũ có thể đã bị YouTube bỏ: xin screen mới.
@@ -154,6 +172,7 @@ class Lounge(
         val ds = TinNhan.tach(than)
         capNhat(ds)
         if (sid == null || gsid == null) throw PhienHong("thiếu SID", tokenHong = true)
+        if (lan != lanDoiScreen) throw PhienHong("vừa huỷ mọi liên kết", tokenHong = true)
         ghi("đã nối kênh YouTube")
         ds.filter { it.ten !in setOf("c", "S", "noop") }.takeIf { it.isNotEmpty() }?.let(nhan)
     }

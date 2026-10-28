@@ -33,6 +33,19 @@ class Kho(ctx: Context) {
         get() = p.getBoolean("bi_che", false)
         set(v) { p.edit().putBoolean("bi_che", v).apply() }
 
+    /** Điện thoại đã nối vào tivi: trạng thái duyệt / chặn / hạn khách (DienThoai, DanhBa). */
+    var dienThoai: List<DienThoai>
+        @Synchronized get() = DanhBa.tuJson(p.getString("dien_thoai", null))
+        @Synchronized set(v) { p.edit().putString("dien_thoai", DanhBa.json(v)).apply() }
+
+    /** Đổi danh sách điện thoại một lần (đọc, đổi, ghi liền nhau). */
+    @Synchronized fun doiDienThoai(f: (List<DienThoai>) -> List<DienThoai>): List<DienThoai> = f(dienThoai).also { dienThoai = it }
+
+    /** Đang nhận cast (tắt thì tivi bỏ qua mọi video điện thoại gửi, vẫn giữ liên kết). */
+    var nhanCast: Boolean
+        get() = p.getBoolean("nhan_cast", true)
+        set(v) { p.edit().putBoolean("nhan_cast", v).apply() }
+
     /** 30 dòng gần nhất {luc, viec}: TiviKit đọc để biết điện thoại nào đã nối, video nào đã mở. */
     val nhatKy: JSONArray get() = runCatching { JSONArray(p.getString("nhat_ky", "[]")) }.getOrDefault(JSONArray())
 
