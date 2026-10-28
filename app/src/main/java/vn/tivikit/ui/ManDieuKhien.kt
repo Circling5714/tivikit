@@ -73,7 +73,11 @@ internal fun ManDieuKhien(vm: PhienLamViec) {
                 if (e == androidx.lifecycle.Lifecycle.Event.ON_START) x.tiepTuc()
             }
             vongDoi.lifecycle.addObserver(nghe)
-            onDispose { vongDoi.lifecycle.removeObserver(nghe); x.tat() }
+            // Xoay máy (activity dựng lại) thì chỉ tạm dừng: dựng lại xong ON_START xem tiếp (28/10/2026: xoay là tắt hẳn).
+            onDispose {
+                vongDoi.lifecycle.removeObserver(nghe)
+                if ((vongDoi as? android.app.Activity)?.isChangingConfigurations == true) x.tamDung() else x.tat()
+            }
         }
     }
     Column(Modifier.fillMaxSize()) {
