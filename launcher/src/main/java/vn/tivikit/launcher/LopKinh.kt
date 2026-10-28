@@ -102,29 +102,32 @@ internal fun MenuNguon(tt: TrangThaiHome) {
         if (tt.coKhoa) add(MucNguon(Icons.Rounded.Lock, XanhIos, t("Khoá trẻ em ngay", "Kids lock now")) { tt.hd.khoaTreEm() })
     }
     LopPhu(toi = 0.28f, canh = Alignment.TopEnd, goc = TransformOrigin(1f, 0f), modifier = Modifier.padding(top = 84.dp, end = 46.dp)) {
-        Column(Modifier.kinh(LocalNen.current, RoundedCornerShape(30.dp), toi = 0.30f, sang = 0.12f)
-            .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.kinh(LocalNen.current, RoundedCornerShape(24.dp), toi = 0.30f, sang = 0.12f)
+            .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 muc.forEachIndexed { i, m -> NutMenuNguon(m, if (i == 0) dau else null) { if (it) dangChon = i } }
             }
-            Spacer(Modifier.height(8.dp))
-            Nhan(muc.getOrNull(dangChon)?.ten.orEmpty(), 12.sp, FontWeight.Medium, Color.White.copy(alpha = 0.85f), bong = false)
+            Spacer(Modifier.height(7.dp))
+            Nhan(muc.getOrNull(dangChon)?.ten.orEmpty(), 12.sp, FontWeight.Medium, Color.White.copy(alpha = 0.92f), bong = false)
         }
     }
 }
 
-/** Nút tròn của menu ⏻: thường là vòng màu trong, chọn thì thành vòng trắng, biểu tượng màu, to ra một chút. */
+/**
+ * Nút tròn của menu ⏻, cùng cỡ nút tròn hàng trên (NutTron: 40 dp, biểu tượng 19 dp, chọn thì to 1,08): thường là vòng màu
+ * trong, chọn thì thành vòng trắng, biểu tượng màu.
+ */
 @Composable
 private fun NutMenuNguon(m: MucNguon, dau: FocusRequester?, onChon: (Boolean) -> Unit) {
     val fr = dau ?: remember { FocusRequester() }
     var chon by remember { mutableStateOf(false) }
-    val to by animateFloatAsState(if (chon) 1.1f else 1f, tween(140), label = "nut-nguon")
+    val to by animateFloatAsState(if (chon) 1.08f else 1f, tween(140), label = "nut-nguon")
     Box(Modifier.focusRequester(fr)
         .nutTv(m.lam, onChon = { chon = it; onChon(it) })
         .graphicsLayer { scaleX = to; scaleY = to }
-        .size(54.dp).clip(CircleShape).background(if (chon) Color.White.copy(alpha = 0.95f) else m.mau.copy(alpha = 0.32f)),
+        .size(40.dp).clip(CircleShape).background(if (chon) Color.White.copy(alpha = 0.95f) else m.mau.copy(alpha = 0.32f)),
         contentAlignment = Alignment.Center) {
-        Hinh(m.hinh, 26, if (chon) m.mau else Color.White)
+        Hinh(m.hinh, 19, if (chon) m.mau else Color.White)
     }
 }
 
