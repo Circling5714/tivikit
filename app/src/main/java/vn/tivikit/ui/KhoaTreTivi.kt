@@ -293,8 +293,11 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
         bao = if (phut > 0) t("Đã mở tạm $phut phút.", "Unlocked for $phut minutes.") else t("Đã khoá lại (nếu đang trong giờ khoá hoặc đã hết giờ xem).", "Locked again (if within a period or out of time for today).")
     }
 
-    fun tat() = vm.chay(t("Đang tắt khoá…", "Turning the lock off…")) {
-        vm.io { vm.tv.tatKhoa(go = true, phien = phienCon()) }
+    fun tat(): Unit = vm.chay(t("Đang tắt khoá…", "Turning the lock off…")) {
+        // Như mọi việc khác ở màn này: quá 15 phút từ lần nhập mã thì hỏi lại (28/10/2026: trước đây để TiviKit mở sẵn màn
+        // Khoá trẻ em thì ai cầm điện thoại cũng gỡ được khoá, không cần mã).
+        val p = if (coOtp && !goDuoc) phienHoac { tat() } ?: return@chay else null
+        vm.io { vm.tv.tatKhoa(go = true, phien = p) }
         trenTv = null; thoiGian = null; huyMaMoi(); boPhien()
         bao = t("Đã tắt và gỡ Khoá trẻ em khỏi tivi. Dòng TiviKit trong app xác thực không dùng nữa, xoá được.",
             "The Kids lock is off and removed from the TV. You can delete the TiviKit entry in the authenticator app.")

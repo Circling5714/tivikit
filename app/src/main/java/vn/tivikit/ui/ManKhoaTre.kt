@@ -76,7 +76,17 @@ internal fun ManKhoaTre(vm: PhienLamViec) = Cuon {
     TheMaMo(vm)
     if (k.bao.isNotEmpty()) Phu(k.bao, Xanh)
     NutChinh(t("Lưu & áp dụng lên tivi", "Save & apply to the TV"), enabled = !vm.dangBan, icon = Icons.Rounded.Lock) { k.luu() }
-    if (k.trenTv != null) NutPhu(t("Tắt và gỡ Khoá trẻ em", "Turn off and remove"), Icons.Rounded.LockOpen) { k.tat() }
+    var hoiTat by remember { mutableStateOf(false) }
+    if (k.trenTv != null) NutPhu(t("Tắt và gỡ Khoá trẻ em", "Turn off and remove"), Icons.Rounded.LockOpen) { hoiTat = true }
+    if (hoiTat) AlertDialog(
+        onDismissRequest = { hoiTat = false },
+        icon = { Icon(Icons.Rounded.LockOpen, null, tint = Cam) },
+        title = { Text(t("Gỡ Khoá trẻ em?", "Remove the Kids lock?")) },
+        text = { Text(t("Tivi thôi khoá và gỡ app khoá: giờ khoá, giới hạn, khoá theo app và mã OTP trên tivi mất hết, muốn dùng lại phải cài và quét mã mới.",
+            "The TV stops locking and the lock app is removed: its periods, limits, app locks and OTP code are gone; using it again needs a fresh setup and code.")) },
+        confirmButton = { TextButton(onClick = { hoiTat = false; k.tat() }) { Text(t("Gỡ khoá", "Remove"), color = Cam) } },
+        dismissButton = { TextButton(onClick = { hoiTat = false }) { Text(t("Thôi", "Cancel")) } },
+    )
     Phu(t("Lưu ý: khoá không chống được khôi phục cài đặt gốc hay đổi sang thiết bị khác cắm HDMI. Với hộp Android cắm vào tivi, trẻ vẫn đổi nguồn tivi được. Bấm Khôi phục tivi này cũng gỡ khoá (phải nhập mã).",
         "Note: it can't stop a factory reset or another device on HDMI; with a box plugged into a TV, the TV's own input switch still works. Restore this TV also removes the lock (it asks for the code)."))
 }

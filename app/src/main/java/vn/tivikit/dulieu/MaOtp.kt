@@ -88,7 +88,8 @@ object MaOtp {
     /** [SO_DU_PHONG] mã dự phòng 8 số, khác nhau. */
     fun taoDuPhong(): List<String> {
         val ds = LinkedHashSet<String>()
-        while (ds.size < SO_DU_PHONG) ds += "%08d".format(ngauNhien.nextInt(100_000_000))
+        // Locale.ROOT: máy để ngôn ngữ dùng chữ số khác (ả Rập, Ba Tư…) thì mã ra chữ số đó, gõ 0-9 trên tivi không khớp.
+        while (ds.size < SO_DU_PHONG) ds += String.format(java.util.Locale.ROOT, "%08d", ngauNhien.nextInt(100_000_000))
         return ds.toList()
     }
 
