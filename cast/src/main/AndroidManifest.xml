@@ -29,14 +29,42 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <!-- Khoá trẻ em: xin mã bố mẹ trước khi chặn / duyệt / huỷ liên kết (màn XacNhan của nó). -->
+        <package android:name="vn.tivikit.khoa" />
     </queries>
 
-    <!-- Không có màn mở trong danh sách app: bật / đặt tên ở TiviKit trên điện thoại. -->
+    <!-- Bật / gỡ ở TiviKit trên điện thoại; trên tivi có màn mã TV và điện thoại đã cast (biểu tượng trong danh sách app). -->
     <application
         android:label="@string/ten_app"
         android:icon="@drawable/ic_cast"
+        android:banner="@drawable/banner"
         android:allowBackup="false"
         android:supportsRtl="true">
+        <!-- Mã TV cho khách, điện thoại đã cast (duyệt, chặn, huỷ mọi liên kết), tạm ngừng nhận, đổi tên. -->
+        <activity
+            android:name=".ManCast"
+            android:exported="true"
+            android:label="@string/ten_man"
+            android:theme="@style/NenToi"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode|locale|layoutDirection|fontScale">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <!-- Máy lạ cast lần đầu: hỏi cho phép trên tivi (nổi trên app đang mở). -->
+        <activity
+            android:name=".XinPhep"
+            android:exported="false"
+            android:theme="@style/HopHoi"
+            android:launchMode="singleTask"
+            android:taskAffinity="vn.tivikit.cast.hoi"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode|locale|layoutDirection|fontScale" />
         <!-- Giữ máy nhận chạy suốt và để Android cho mở SmartTube khi app đang chạy nền. -->
         <service
             android:name=".CastDichVu"

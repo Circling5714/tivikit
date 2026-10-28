@@ -28,8 +28,9 @@ class MayThu(private val ctx: Context) {
     private val dienThoai = ConcurrentHashMap<String, String>()
     /** Máy vừa nối gần nhất: người gửi video khi lệnh không ghi tài khoản (DanhBa.nguoiGui). */
     @Volatile private var ganNhat: String? = null
-    /** Video máy lạ gửi, giữ lại chờ tivi hỏi xong: (mã máy, dữ liệu setPlaylist). */
-    @Volatile private var choDuyet: Pair<String, JSONObject>? = null
+    /** Video máy lạ gửi, giữ lại chờ tivi hỏi xong: mã máy, dữ liệu setPlaylist, app đang ở trước lúc video tới. */
+    private class ChoDuyet(val id: String, val du: JSONObject, val tren: String?)
+    @Volatile private var choDuyet: ChoDuyet? = null
     /** Hỏi trên tivi có cho máy lạ cast không (màn XinPhep: máy, mã video); null = chưa có màn, cho phát như trước. */
     var hoiDuyet: ((DienThoai, String) -> Unit)? = null
     private val tay = Handler(Looper.getMainLooper())
@@ -150,12 +151,12 @@ class MayThu(private val ctx: Context) {
 
     /** Tivi trả lời câu hỏi cho máy [id] cast ([lam] null = không trả lời: bỏ qua video này, lần sau hỏi lại). */
     fun traLoiDuyet(id: String, lam: DanhBa.Lam?) {
-        val cho = choDuyet?.takeIf { it.first == id }
+        val cho = choDuyet?.takeIf { it.id == id }
         if (cho != null) choDuyet = null
         if (lam != null) lamDienThoai(id, lam)
         val duoc = lam == DanhBa.Lam.CHO_PHEP || lam == DanhBa.Lam.HOM_NAY || lam == DanhBa.Lam.MOT_NGAY
         if (cho != null && duoc) thread(isDaemon = true) {
-            moVideo(cho.second, kho.dienThoai.firstOrNull { it.id == id }?.tenHien)
+            moVideo(cho.du, kho.dienThoai.firstOrNull { it.id == id }?.tenHien, cho.tren)
             lounge.gui(dayDu())
         }
     }
@@ -249,7 +250,7 @@ class MayThu(private val ctx: Context) {
             xet == DienThoai.Xet.PHAT || hoi == null -> moVideo(d, ten)
             else -> {
                 val may = ai ?: DienThoai("", ten)
-                choDuyet = may.id to d
+                choDuyet = ChoDuyet(may.id, d, tp.appTren())
                 kho.ghi("hỏi trên tivi: $ten muốn cast")
                 hoi(may, d.optString("videoId"))
             }
@@ -257,11 +258,11 @@ class MayThu(private val ctx: Context) {
         gui(t, dayDu())
     }
 
-    /** Mở video của setPlaylist [d] (người gửi [ai] để báo trên tivi). */
-    private fun moVideo(d: JSONObject, ai: String?) {
+    /** Mở video của setPlaylist [d] (người gửi [ai] để báo trên tivi; [trenTruoc]: app ở trước lúc video tới, xem TrinhPhat.phat). */
+    private fun moVideo(d: JSONObject, ai: String?, trenTruoc: String? = null) {
         val id = d.optString("videoId").takeIf { it.isNotEmpty() } ?: return
         if (!tp.datDanhSach(d)) return
-        val ok = tp.phat(id, d.optString("currentTime").toDoubleOrNull() ?: 0.0)
+        val ok = tp.phat(id, d.optString("currentTime").toDoubleOrNull() ?: 0.0, trenTruoc)
         kho.ghi(if (ok) "mở video $id" + (ai?.let { " ($it)" } ?: "") else "không mở được video $id")
         if (ok) baoCast(ai, id)
     }

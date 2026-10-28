@@ -16,7 +16,8 @@ class CastDichVu : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         dangChay = this
-        if (may == null) may = MayThu(this).also { it.batDau() }
+        // Máy lạ cast lần đầu: hỏi trên tivi (XinPhep), mở được khi chạy nền vì là dịch vụ trợ năng.
+        if (may == null) may = MayThu(this).also { m -> m.hoiDuyet = { d, video -> XinPhep.mo(this, d, video) }; m.batDau() }
     }
 
     /** Bàn phím ảo đang dùng: cửa sổ của nó không phải app đang xem. */

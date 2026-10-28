@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Màn Cast SmartTube: nền tối ngay từ lúc mở (không lộ màn trắng). -->
+    <style name="NenToi" parent="android:Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+    <!-- Hộp hỏi khách: nổi trên app đang mở, phần ngoài hộp tối mờ (vẽ trong màn). -->
+    <style name="HopHoi" parent="android:Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

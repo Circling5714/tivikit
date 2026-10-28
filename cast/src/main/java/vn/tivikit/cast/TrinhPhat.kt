@@ -242,13 +242,20 @@ class TrinhPhat(private val ctx: Context) {
         videoId?.let { id -> ds.indexOf(id).takeIf { it >= 0 }?.let { chiSo = it } }
     }
 
-    @Synchronized fun phat(id: String, tu: Double): Boolean {
+    /** App đang ở trước màn hình (thống kê dùng app, không được thì dịch vụ trợ năng). */
+    fun appTren(): String? = lenTruoc(System.currentTimeMillis() - 24 * 3_600_000L)?.goi ?: goiTren
+
+    /**
+     * Mở video [id] từ giây [tu]. [trenTruoc] = app đang ở trước lúc video tới, khi video phải chờ tivi hỏi duyệt (lúc mở
+     * thì hộp hỏi của app này mới là app ở trước).
+     */
+    @Synchronized fun phat(id: String, tu: Double, trenTruoc: String? = null): Boolean {
         if (!MA_VIDEO.matches(id)) return false
         // Trước khi mở: app nào đang ở trước (theo thống kê dùng app; không đọc được thì theo dịch vụ trợ năng), SmartTube có
         // đang nghe nền không, và launcher nào để về lại (màn bảo vệ không phải app: vẫn là launcher bên dưới).
         val luc = System.currentTimeMillis()
         val tk = lenTruoc(luc - 24 * 3_600_000L)
-        val tren = tk?.goi ?: goiTren
+        val tren = trenTruoc ?: tk?.goi ?: goiTren
         val nen = dangNgheNen(tren, daCast = videoId != null)
         val ve = tren?.takeIf { laHome(it) } ?: tk?.launcher ?: launcherCuoi
         Log.i(Dial.NHAN, "video mới: đang hiện $tren (${if (tk != null) "thống kê" else "trợ năng"}), nghe nền: $nen, về: $ve")

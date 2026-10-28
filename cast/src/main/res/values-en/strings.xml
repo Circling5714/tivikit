@@ -2,4 +2,5 @@
 <resources>
     <string name="ten_app">Cast SmartTube (TiviKit)</string>
     <string name="mo_ta">Lets the YouTube app on phones on the same Wi-Fi find this TV under the Cast button, and plays what they send in SmartTube. Only knows which app is showing (so SmartTube playing in the background stays there); doesn\'t read the screen or catch remote keys.</string>
+    <string name="ten_man">Cast SmartTube</string>
 </resources>
