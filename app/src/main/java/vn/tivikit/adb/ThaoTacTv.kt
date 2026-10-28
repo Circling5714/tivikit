@@ -261,6 +261,10 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         val heThong0 = pidHeThong()
         ds.forEachIndexed { i, p ->
             bao(t("Tắt ${i + 1}/${ds.size}: $p", "Disabling ${i + 1}/${ds.size}: $p"))
+            // Ghi vào bản sao lưu TRƯỚC khi tắt: lệnh đứt giữa chừng (rớt mạng, hết giờ chờ) mà gói đã tắt thì Khôi phục vẫn bật
+            // lại; chỉ bỏ ra khi tivi trả lời rõ là không tắt được (28/10/2026). Bật lại một gói đang bật thì vô hại.
+            val ghiTruoc = p !in sl.daTatTruoc && p !in sl.daTatBoiApp
+            if (ghiTruoc) { sl.daTatBoiApp += p; luuSaoLuu(sl) }
             var matKetNoi = false
             var out = try {
                 sh("pm disable-user --user 0 $p")
@@ -288,6 +292,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
                 luuSaoLuu(sl) // ghi sau MỖI gói: rớt mạng giữa chừng vẫn khôi phục đúng.
             } else {
                 loi += p to out.trim().lines().lastOrNull().orEmpty()
+                if (ghiTruoc && out.isNotBlank() && !out.startsWith(t("lỗi: ", "error: "))) { sl.daTatBoiApp -= p; luuSaoLuu(sl) }
             }
         }
         return KetQuaTat(daTat, boQua, loi)
@@ -496,12 +501,20 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         // Gỡ là mất config.json: giữ lại để dayCauHinh lấy các khoá app không tự biết (chuyển đè Home cũ, nút gán riêng,
         // tên ô Kênh nhanh). 26/10/2026: Home sạch đổi sang khoá TiviKit, mọi tivi đã cài đi qua đây một lần.
         cauHinhTruocGo = docCauHinhTv()
+        // Giữa lúc gỡ và cài lại tivi không có Home sạch; Home sạch đang là Home thì Home của hãng thường đã tắt từ lúc dọn:
+        // rớt mạng hay cài lại hỏng là tivi không còn màn Home nào. Đặt gác cho Home của hãng đang tắt (tivi tự bật lại nếu
+        // điện thoại biến mất), cài lại hỏng thì bật lại ngay (28/10/2026).
+        val homeTat = if (!laHome) emptyList() else runCatching { sh("pm list packages -d") }.getOrDefault("").lines()
+            .map { it.removePrefix("package:").trim() }.filter { it in HOME_GOC_BIET }
+        val gacMoi = homeTat.isNotEmpty() && gacToken == null
+        homeTat.forEach { gacThem(it) }
         sh("pm uninstall $pkgHome")
         val lai = runCatching { adb.caiApk(apk) }.getOrElse { "Failure ${it.message}" }
         if (lai.contains("Success")) {
             if (laHome) sh("cmd package set-home-activity --user 0 $cmpHome")
             if (troNang.contains(pkgHome)) sh("settings put secure enabled_accessibility_services '$troNang'; settings put secure accessibility_enabled 1")
-        }
+        } else homeTat.forEach { runCatching { sh("pm enable $it") } }
+        if (gacMoi) boGac()
         return lai
     }
 
@@ -2184,7 +2197,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         /** Lỗi kiểu kết nối ADB đã đứt (libadb: "connect() must be called first", luồng đóng, mạng reset). */
         fun laMatKetNoi(e: Throwable): Boolean {
             val m = listOfNotNull(e.message, e.cause?.message).joinToString(" ")
-            return Regex("must be called first|not connected|Stream closed|closed|Broken pipe|EPIPE|reset|ECONNRESET|Socket", RegexOption.IGNORE_CASE).containsMatchIn(m) ||
+            // "Tivi không trả lời sau N giây": hết giờ chờ (KetNoiAdb) cũng là tivi đã rớt mạng / treo.
+            return Regex("must be called first|not connected|Stream closed|closed|Broken pipe|EPIPE|reset|ECONNRESET|Socket|không trả lời", RegexOption.IGNORE_CASE).containsMatchIn(m) ||
                 e is java.io.EOFException || e is java.net.SocketException
         }
 

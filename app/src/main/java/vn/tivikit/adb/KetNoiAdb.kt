@@ -6,7 +6,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.math.BigInteger
 import java.security.KeyFactory
@@ -67,8 +66,27 @@ class KetNoiAdb private constructor(
         }
     }
 
-    /** Lệnh có chữ ngoài ASCII thì libadb hỏng: đổi trước khi mở (LenhAscii). */
-    override fun openStream(destination: String): io.github.muntashirakon.adb.AdbStream = super.openStream(LenhAscii.doi(destination))
+    /**
+     * Mở một luồng tới tivi. Lệnh có chữ ngoài ASCII thì libadb hỏng: đổi trước (LenhAscii). Tivi mất mạng giữa chừng thì
+     * libadb chờ OKAY mãi (socket chết chưa báo lỗi, treo tới khi TCP bỏ, chừng 15 phút): mở trên luồng riêng, quá
+     * MO_TOI_DA_GIAY thì ngắt luồng đó (nhả khoá của libadb) và báo như mất kết nối (28/10/2026).
+     */
+    override fun openStream(destination: String): io.github.muntashirakon.adb.AdbStream {
+        val dich = LenhAscii.doi(destination)
+        val f = MO_LUONG.submit(java.util.concurrent.Callable { moThat(dich) })
+        return try {
+            f.get(MO_TOI_DA_GIAY, TimeUnit.SECONDS)
+        } catch (e: java.util.concurrent.TimeoutException) {
+            f.cancel(true)
+            throw java.io.IOException("Tivi không trả lời sau $MO_TOI_DA_GIAY giây (mở lệnh)")
+        } catch (e: InterruptedException) {
+            f.cancel(true); throw e
+        } catch (e: java.util.concurrent.ExecutionException) {
+            throw e.cause ?: e
+        }
+    }
+
+    private fun moThat(dich: String): io.github.muntashirakon.adb.AdbStream = super.openStream(dich)
 
     private val khoaNoiLai = Any()
     @Volatile private var lucNoiLai = 0L
@@ -99,7 +117,7 @@ class KetNoiAdb private constructor(
      */
     fun shell(lenh: String, giay: Int = 120): String {
         val dau = "__TVS_" + java.lang.Long.toHexString(System.nanoTime()) + "__"
-        val chu = docToiKhi(openStream("shell:$lenh; echo $dau"), giay) { it.contains(dau) }
+        val chu = docToiKhi(openStream("shell:$lenh; echo $dau"), giay, dau) { it.contains(dau) }
         return chu.substringBefore(dau)
     }
 
@@ -185,15 +203,20 @@ class KetNoiAdb private constructor(
      * Quá [giay] giây thì trả null — không phải lỗi, người dùng chưa bấm gì; luồng tự đóng trước (lệnh lỗi, mất kết nối)
      * thì trả phần đã nhận. Lệnh trên tivi chỉ biết luồng đã đóng khi in thêm dòng: người gọi tự dừng nó.
      */
-    fun nghe(lenh: String, giay: Int, xong: (String) -> Boolean): String? = docHoacHetGio(openStream("shell:$lenh"), giay, xong)
+    fun nghe(lenh: String, giay: Int, xong: (String) -> Boolean): String? = docHoacHetGio(openStream("shell:$lenh"), giay, xong = xong)
 
-    /** Đọc luồng tới khi [xong] đúng với phần đã nhận, hoặc luồng đóng, hoặc quá [giay] giây. */
-    private fun docToiKhi(stream: io.github.muntashirakon.adb.AdbStream, giay: Int = 120, xong: (String) -> Boolean): String =
-        docHoacHetGio(stream, giay, xong) ?: throw java.io.IOException("Tivi không trả lời sau $giay giây")
+    /**
+     * Đọc luồng tới khi [xong] đúng với phần đã nhận, hoặc luồng đóng, hoặc quá [giay] giây. Có [dau] (dấu kết thúc tự chèn)
+     * thì chỉ dò dấu trong phần mới nhận, không giải mã lại cả phần đã nhận sau mỗi lần đọc (28/10/2026: ảnh 8 MB qua base64
+     * phải giải mã hàng GB chữ, quá hạn 120 giây khi TiviKit chạy trên hộp).
+     */
+    private fun docToiKhi(stream: io.github.muntashirakon.adb.AdbStream, giay: Int = 120, dau: String? = null, xong: (String) -> Boolean): String =
+        docHoacHetGio(stream, giay, dau, xong) ?: throw java.io.IOException("Tivi không trả lời sau $giay giây")
 
     /** Như docToiKhi, quá [giay] giây thì trả null. */
-    private fun docHoacHetGio(stream: io.github.muntashirakon.adb.AdbStream, giay: Int, xong: (String) -> Boolean): String? {
-        val out = ByteArrayOutputStream()
+    private fun docHoacHetGio(stream: io.github.muntashirakon.adb.AdbStream, giay: Int, dau: String? = null, xong: (String) -> Boolean): String? {
+        val out = BoDem()
+        val dauB = dau?.toByteArray(Charsets.UTF_8)
         val hetHan = System.currentTimeMillis() + giay * 1000L
         val luong = Thread {
             runCatching {
@@ -202,8 +225,11 @@ class KetNoiAdb private constructor(
                 while (true) {
                     val n = input.read(buf)
                     if (n < 0) break
-                    synchronized(out) { out.write(buf, 0, n) }
-                    if (xong(synchronized(out) { out.toString("UTF-8") })) break
+                    val du = synchronized(out) {
+                        out.them(buf, n)
+                        if (dauB != null) out.coOCuoi(dauB, n) else xong(out.chu())
+                    }
+                    if (du) break
                 }
             }
         }.apply { isDaemon = true; start() }
@@ -213,7 +239,33 @@ class KetNoiAdb private constructor(
             luong.interrupt()
             return null
         }
-        return synchronized(out) { out.toString("UTF-8") }.replace("\r", "")
+        return synchronized(out) { out.chu() }.replace("\r", "")
+    }
+
+    /** Bộ đệm byte lớn dần (không chép lại khi đọc), dò được một dãy byte ở đoạn cuối. */
+    private class BoDem {
+        private var b = ByteArray(16 * 1024)
+        private var n = 0
+
+        fun them(x: ByteArray, k: Int) {
+            if (n + k > b.size) b = b.copyOf(maxOf(b.size * 2, n + k))
+            System.arraycopy(x, 0, b, n, k)
+            n += k
+        }
+
+        /** [m] có nằm trong [moi] byte vừa thêm (tính cả chỗ nối với phần trước) không. */
+        fun coOCuoi(m: ByteArray, moi: Int): Boolean {
+            var i = maxOf(0, n - moi - m.size + 1)
+            while (i <= n - m.size) {
+                var j = 0
+                while (j < m.size && b[i + j] == m[j]) j++
+                if (j == m.size) return true
+                i++
+            }
+            return false
+        }
+
+        fun chu(): String = String(b, 0, n, Charsets.UTF_8)
     }
 
     /**
@@ -254,7 +306,7 @@ class KetNoiAdb private constructor(
     ): String {
         val stream = openStream("exec:$lenh")
         doHet(stream, nguon, co, tienDo)
-        return docToiKhi(stream, giay, xong)
+        return docToiKhi(stream, giay, xong = xong)
     }
 
     /**
@@ -346,11 +398,15 @@ class KetNoiAdb private constructor(
             i += n
         }
         o.flush()
-        docToiKhi(stream, 120) { it.contains(dau) }
+        docToiKhi(stream, 120, dau) { it.contains(dau) }
         return shell("wc -c < $duongDan").trim().toIntOrNull() == noiDung.size
     }
 
     companion object {
+        /** Luồng mở lệnh (openStream): hạn MO_TOI_DA_GIAY giây cho tivi trả lời OKAY. */
+        private val MO_LUONG = java.util.concurrent.Executors.newCachedThreadPool { r -> Thread(r, "adb-mo").apply { isDaemon = true } }
+        private const val MO_TOI_DA_GIAY = 20L
+
         @Volatile private var hienTai: KetNoiAdb? = null
 
         fun lay(context: Context): KetNoiAdb = hienTai ?: synchronized(this) {
