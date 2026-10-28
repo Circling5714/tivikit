@@ -66,6 +66,9 @@ class KhoaDichVu : AccessibilityService() {
         /** Nhập mã ở Cài đặt / hộp gỡ app / hộp cho phép ADB thì mở chừng này. */
         private const val MO_CAI_DAT_MS = 10 * 60_000L
         private const val HE_THONG = "com.android.systemui"
+        private const val LOP_ADB = "UsbDebuggingActivity"
+        /** Vân tay khoá RSA trong hộp cho phép ADB: MD5 là 16 cặp số hex nối bằng dấu hai chấm. */
+        private val VAN_TAY = Regex("(?:[0-9A-Fa-f]{2}:){15,}[0-9A-Fa-f]{2}")
         private val PHIM = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓", PHU_HUYNH)
         /** Ô cuối, dưới bàn phím số: mở bảng phụ huynh (nhập mã trước). */
         private const val PHU_HUYNH = "⚙  Phụ huynh"
@@ -272,12 +275,22 @@ class KhoaDichVu : AccessibilityService() {
         android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.DEFAULT_INPUT_METHOD)?.substringBefore('/') == goi
     }.getOrDefault(false)
 
+    /**
+     * Hộp "Cho phép gỡ lỗi qua USB?" của System UI. Nó là AlertActivity nên sự kiện báo lớp android.app.Dialog chứ không
+     * phải UsbDebuggingActivity (Skyworth Google TV, 28/10/2026): nhận bằng vân tay khoá RSA (các cặp số hex) trong chữ
+     * của hộp, ngôn ngữ nào cũng có.
+     */
+    private fun laHopAdb(e: AccessibilityEvent): Boolean {
+        val lop = e.className?.toString().orEmpty()
+        return lop.contains("UsbDebugging") || (lop == "android.app.Dialog" && e.text.any { it != null && VAN_TAY.containsMatchIn(it) })
+    }
+
     override fun onAccessibilityEvent(e: AccessibilityEvent?) {
         if (e?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || !::kho.isInitialized) return
         val goi = e.packageName?.toString() ?: return
-        val lopMan = e.className?.toString().orEmpty()
         if (goi == packageName || goi == "android" || laBoGo(goi)) return
-        if (goi == HE_THONG && !lopMan.contains("UsbDebugging")) return
+        // System UI chỉ xét hộp cho phép gỡ lỗi ADB.
+        val lopMan = if (goi != HE_THONG) e.className?.toString().orEmpty() else if (laHopAdb(e)) LOP_ADB else return
         if (goi == appTren && lopMan == lopTren) return
         demGio() // quãng vừa rồi tính cho app cũ
         appTren = goi; lopTren = lopMan
@@ -291,7 +304,7 @@ class KhoaDichVu : AccessibilityService() {
         return when {
             goi in caiDat -> BaoVe.CAI_DAT
             goi in trinhCai -> BaoVe.GO_APP
-            goi == HE_THONG && lopMan.contains("UsbDebugging") -> BaoVe.ADB
+            goi == HE_THONG && lopMan == LOP_ADB -> BaoVe.ADB
             else -> null
         }
     }
