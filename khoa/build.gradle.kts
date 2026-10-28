@@ -28,8 +28,8 @@ android {
         // 4 (28/10/2026): khoá theo app, hẹn giờ khoá app; khoá bật thì Cài đặt, gỡ / cài app, cho phép ADB cần mã.
         // 5 (28/10/2026): bảng phụ huynh trên tivi (ô Khoá trẻ em trong danh sách app, nút Phụ huynh trên màn khoá).
         // 6 (28/10/2026): nhận ra hộp cho phép ADB (System UI báo lớp android.app.Dialog) để che, hỏi mã.
-        versionCode = 8
-        versionName = "1.6.1"
+        versionCode = 9
+        versionName = "1.7.0"
     }
     signingConfigs {
         if (kyFile.exists()) {
