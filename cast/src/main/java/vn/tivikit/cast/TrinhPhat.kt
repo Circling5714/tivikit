@@ -287,7 +287,17 @@ class TrinhPhat(private val ctx: Context) {
     @Synchronized fun tua(giay: Double) {
         val id = videoId ?: return
         val p = phien()
-        if (p != null) p.transportControls.seekTo((giay * 1000).toLong()) else mo(id, giay)
+        if (p != null) p.transportControls.seekTo((giay * 1000).toLong())
+        else {
+            // Không đọc được phiên phát (tivi ít RAM): tua bằng cách mở lại video từ giây mới; đang nghe nền thì cho về nền như
+            // phat, không thì SmartTube lên màn hình và ở luôn đó.
+            val luc = System.currentTimeMillis()
+            val tk = lenTruoc(luc - 24 * 3_600_000L)
+            val tren = tk?.goi ?: goiTren
+            val nen = dangNgheNen(tren, daCast = true)
+            val ve = tren?.takeIf { laHome(it) } ?: tk?.launcher ?: launcherCuoi
+            if (mo(id, giay) && nen) choVeNen(ve, id, luc - 500, coThongKe = tk != null)
+        }
         viTriGoc = giay; moc = SystemClock.elapsedRealtime()
         if (p == null) trangThai = PHAT
     }

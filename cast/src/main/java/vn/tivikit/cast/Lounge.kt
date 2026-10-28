@@ -40,6 +40,9 @@ class Lounge(
     /** Lỗi phiên (SID hết hạn, token hỏng): mở phiên mới thay vì thử lại. */
     private class PhienHong(msg: String, val tokenHong: Boolean = false) : Exception(msg)
 
+    /** YouTube trả lời rõ là không còn screen này (không phải lỗi mạng): phải xin screen mới. */
+    private class ScreenMat(msg: String) : Exception(msg)
+
     @Volatile private var chay = false
     @Volatile private var token: String? = null
     @Volatile private var tokenHet = 0L
@@ -148,10 +151,12 @@ class Lounge(
                 loi = 0
             } catch (e: PhienHong) {
                 if (!chay) break
-                ghi("kênh YouTube: ${e.message}, mở lại")
+                // Hỏng liền nhiều lần (YouTube chặn tạm, đổi giao thức): giãn dần tới 60 giây, chỉ ghi nhật ký lần đầu.
+                loi++
+                if (loi == 1) ghi("kênh YouTube: ${e.message}, mở lại")
                 sid = null
                 if (e.tokenHong) token = null
-                if (!ngu(2_000)) break
+                if (!ngu(if (loi == 1) 2_000L else minOf(60_000L, 3_000L * loi))) break
             } catch (e: InterruptedException) {
                 break
             } catch (e: Exception) {
@@ -171,8 +176,11 @@ class Lounge(
         sid = null; gsid = null
         val lan = lanDoiScreen
         var id = kho.screenId ?: xinScreen().also { kho.screenId = it }
-        val tk = try { layToken(id) } catch (e: Exception) {
-            // Screen cũ có thể đã bị YouTube bỏ: xin screen mới.
+        val tk = try { layToken(id) } catch (e: ScreenMat) {
+            // YouTube trả lời rõ là không còn screen cũ: xin screen mới, máy đã liên kết bằng mã TV phải nhập mã mới. Lỗi
+            // mạng (hết giờ chờ, mất DNS, YouTube lỗi tạm) thì vòng chạy thử lại đúng screen này (28/10/2026: trước đây một
+            // lần hết giờ chờ cũng đổi screen, mọi máy liên kết bằng mã TV mất tivi mà không ai biết).
+            ghi("YouTube không còn screen cũ (${e.message}): xin screen mới, điện thoại phải liên kết lại bằng mã TV")
             id = xinScreen(); kho.screenId = id
             layToken(id)
         }
@@ -199,11 +207,19 @@ class Lounge(
         return id
     }
 
-    /** (loungeToken, sau bao lâu thì xin lại) của screen [id]. */
+    /**
+     * (loungeToken, sau bao lâu thì xin lại) của screen [id]. Không có token: ScreenMat khi YouTube trả lời rõ (200 có danh
+     * sách screens, hay 400 / 404 / 410), còn lại (lỗi mạng, 5xx, 429, trang lạ) là IOException để thử lại sau.
+     */
     private fun layToken(id: String): Pair<String, Long> {
         val (ma, than) = goi(URL_TOKEN, thamSo(mapOf("screen_ids" to id)))
-        val s = runCatching { JSONObject(than).getJSONArray("screens").getJSONObject(0) }.getOrNull()
-        val tk = s?.optString("loungeToken")?.takeIf { it.isNotEmpty() } ?: throw IllegalStateException("lounge token HTTP $ma")
+        val ds = runCatching { JSONObject(than).getJSONArray("screens") }.getOrNull()
+        val s = ds?.optJSONObject(0)
+        val tk = s?.optString("loungeToken")?.takeIf { it.isNotEmpty() }
+        if (s == null || tk == null) {
+            val ro = (ma == 200 && ds != null) || ma == 400 || ma == 404 || ma == 410
+            throw if (ro) ScreenMat("lounge token HTTP $ma") else java.io.IOException("lounge token HTTP $ma")
+        }
         return tk to (s.optLong("refreshIntervalInMillis").takeIf { it > 60_000 } ?: TOKEN_MAC_DINH_MS)
     }
 

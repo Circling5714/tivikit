@@ -101,9 +101,14 @@ class Dial(
         val s = runCatching { ServerSocket(CONG) }.getOrElse { ServerSocket(0) }
         http = s; cong = s.localPort
         thread(name = "dial-http", isDaemon = true) {
+            // Tối đa 16 kết nối cùng lúc (máy trong mạng hay app trên tivi giữ kết nối mở mãi thì không làm cạn luồng / bộ
+            // nhớ); accept lỗi tạm (hết file mở…) thì nghỉ rồi nhận tiếp, chỉ thôi khi đã dừng.
+            val cho = java.util.concurrent.Semaphore(16)
             while (chay) {
-                val k = runCatching { s.accept() }.getOrNull() ?: break
-                thread(isDaemon = true) { runCatching { k.use { phucVu(it) } } }
+                val k = try { s.accept() } catch (e: Exception) { if (!chay) break; runCatching { Thread.sleep(1_000) }; continue }
+                if (!cho.tryAcquire()) { runCatching { k.close() }; continue }
+                runCatching { thread(isDaemon = true) { try { runCatching { k.use { phucVu(it) } } } finally { cho.release() } } }
+                    .onFailure { cho.release(); runCatching { k.close() } }
             }
         }
         thread(name = "dial-ssdp", isDaemon = true) { runCatching { ngheSsdp() }.onFailure { ghi("SSDP không chạy được: ${it.message}") } }
@@ -111,9 +116,12 @@ class Dial(
 
     fun dung() {
         chay = false
-        runCatching { thongBao(false) }
-        runCatching { http?.close() }
-        runCatching { ssdp?.close() }
+        // Gọi từ luồng chính (dịch vụ trợ năng bị tắt): gửi mạng ở đó lỗi ngay, nên báo rời đi (byebye) trên luồng riêng.
+        thread(isDaemon = true) {
+            runCatching { thongBao(false) }
+            runCatching { http?.close() }
+            runCatching { ssdp?.close() }
+        }
     }
 
     // ---------- HTTP ----------
@@ -125,9 +133,13 @@ class Dial(
         val phan = dau.split(' ')
         if (phan.size < 2) return
         val tieuDe = HashMap<String, String>()
+        // Yêu cầu thật vài dòng tiêu đề, xong trong tích tắc: quá 64 dòng hay 30 giây thì bỏ.
+        val het = android.os.SystemClock.elapsedRealtime() + 30_000
+        var soDong = 0
         while (true) {
             val d = docDong(vao) ?: break
             if (d.isEmpty()) break
+            if (++soDong > 64 || android.os.SystemClock.elapsedRealtime() > het) return
             val i = d.indexOf(':')
             if (i > 0) tieuDe[d.substring(0, i).trim().lowercase()] = d.substring(i + 1).trim()
         }
@@ -205,10 +217,13 @@ class Dial(
     // ---------- SSDP ----------
 
     private fun ngheSsdp() {
-        val s = MulticastSocket(null).apply { reuseAddress = true; bind(InetSocketAddress(1900)); soTimeout = 60_000 }
+        val s = MulticastSocket(null).apply { reuseAddress = true; bind(InetSocketAddress(1900)) }
         ssdp = s
         val nhom = InetAddress.getByName(NHOM)
-        vaoNhom(s, nhom)
+        // Bật lúc Wi-Fi chưa có địa chỉ (vừa khởi động): chưa vào được nhóm thì thử lại sau 10 giây, khỏi chờ lượt 5 phút.
+        var daVao = vaoNhom(s, nhom)
+        var lanThuVao = System.currentTimeMillis()
+        s.soTimeout = if (daVao) 60_000 else 10_000
         if (!im) thongBao(true)
         var lanNhac = System.currentTimeMillis()
         val buf = ByteArray(2048)
@@ -231,6 +246,10 @@ class Dial(
                 if (!chay) break
                 runCatching { Thread.sleep(1000) }
             }
+            if (!daVao && System.currentTimeMillis() - lanThuVao > 10_000) {
+                daVao = vaoNhom(s, nhom); lanThuVao = System.currentTimeMillis()
+                if (daVao) { s.soTimeout = 60_000; if (!im) thongBao(true) }
+            }
             // Định kỳ: vào lại nhóm (Wi-Fi vừa nối lại thì mất) và báo còn sống.
             if (System.currentTimeMillis() - lanNhac > NHAC_LAI_MS) {
                 vaoNhom(s, nhom); if (!im) thongBao(true); lanNhac = System.currentTimeMillis()
@@ -238,12 +257,14 @@ class Dial(
         }
     }
 
-    private fun vaoNhom(s: MulticastSocket, nhom: InetAddress) {
+    /** Vào nhóm SSDP trên mọi mạng IPv4 đang lên; false nếu chưa vào được mạng nào. */
+    private fun vaoNhom(s: MulticastSocket, nhom: InetAddress): Boolean {
         var co = false
         runCatching { NetworkInterface.getNetworkInterfaces()?.toList() }.getOrNull().orEmpty()
             .filter { ni -> runCatching { ni.isUp && !ni.isLoopback && ni.supportsMulticast() && ni.inetAddresses.toList().any { it is Inet4Address } }.getOrDefault(false) }
             .forEach { ni -> if (runCatching { s.joinGroup(InetSocketAddress(nhom, 1900), ni) }.isSuccess) co = true }
-        if (!co) runCatching { s.joinGroup(nhom) }
+        if (!co) co = runCatching { s.joinGroup(nhom) }.isSuccess
+        return co
     }
 
     /** Các gói trả lời cho một M-SEARCH [tin] (thuần, để thử); không phải tìm DIAL thì rỗng. */

@@ -42,6 +42,9 @@ open class ManCoMa : ComponentActivity() {
     }
     private var moDen = 0L
 
+    /** Đang chờ màn nhập mã bố mẹ trả lời. */
+    protected val dangChoMa: Boolean get() = choMa != null
+
     /** Làm [lam] sau khi có mã bố mẹ (nếu cần); [viec] hiện trên màn nhập mã. */
     fun canMa(viec: String, lam: () -> Unit) {
         if (SystemClock.elapsedRealtime() < moDen) { lam(); return }

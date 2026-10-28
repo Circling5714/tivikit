@@ -59,8 +59,14 @@ class DienThoaiTest {
         val dangNoi = listOf("chu", "khach")
         assertEquals("chu", DanhBa.nguoiGui(ds, dangNoi, "khach", "Cao Minh")?.id)
         assertEquals("khach", DanhBa.nguoiGui(ds, dangNoi, "khach", "")?.id)
-        assertEquals("khach", DanhBa.nguoiGui(ds, dangNoi, "khach", "Ai Do")?.id)
+        // Tài khoản lạ không gán cho máy vừa nối đang mang tài khoản khác: hỏi theo tài khoản.
+        assertNull(DanhBa.nguoiGui(ds, dangNoi, "khach", "Ai Do"))
         assertNull(DanhBa.nguoiGui(ds, dangNoi, null, ""))
+        // Máy vừa nối đã rời đi: không mượn nó (máy bị chặn chưa đăng nhập phát được nhờ máy được phép vừa rời).
+        assertNull(DanhBa.nguoiGui(ds, listOf("chu"), "khach", ""))
+        // Máy vừa nối chưa biết tài khoản (remoteConnected không có user): vẫn là nó.
+        ds = DanhBa.noi(ds, "moi", "Pixel", "", luc(11))
+        assertEquals("moi", DanhBa.nguoiGui(ds, listOf("moi"), "moi", "Ai Do")?.id)
     }
 
     @Test fun dieuKhien_khiChiCoMayBiChan() {

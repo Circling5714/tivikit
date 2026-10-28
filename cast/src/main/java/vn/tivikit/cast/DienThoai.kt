@@ -106,14 +106,16 @@ object DanhBa {
     /**
      * Ai gửi video: lệnh setPlaylist không ghi mã máy, chỉ có tài khoản trong eventDetails ([taiKhoan]). Có tài khoản thì
      * lấy máy đang nối có tài khoản đó (không có máy đang nối thì máy đã biết gần nhất của tài khoản đó), không thì máy vừa
-     * nối gần nhất ([ganNhat]).
+     * nối gần nhất ([ganNhat]) khi máy đó còn đang nối và không mang tài khoản khác (28/10/2026: máy bị chặn / máy lạ phát
+     * được nhờ mượn máy được phép vừa nối rồi đã rời đi). Hai máy cùng đang nối, máy chưa đăng nhập gửi thì vẫn chỉ đoán
+     * được là máy vừa nối: YouTube không cho biết hơn.
      */
     fun nguoiGui(ds: List<DienThoai>, dangNoi: Collection<String>, ganNhat: String?, taiKhoan: String): DienThoai? {
         if (taiKhoan.isNotEmpty()) {
             val cung = ds.filter { it.taiKhoan == taiKhoan }
             (cung.firstOrNull { it.id == ganNhat } ?: cung.firstOrNull { it.id in dangNoi } ?: cung.maxByOrNull { it.lanCuoi })?.let { return it }
         }
-        return ds.firstOrNull { it.id == ganNhat }
+        return ds.firstOrNull { it.id == ganNhat && it.id in dangNoi && (taiKhoan.isEmpty() || it.taiKhoan.isEmpty()) }
     }
 
     /**

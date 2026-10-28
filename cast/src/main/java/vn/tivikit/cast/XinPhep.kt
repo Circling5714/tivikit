@@ -52,10 +52,13 @@ class XinPhep : ManCoMa() {
         setContent { ManHinh() }
     }
 
-    /** Máy khác hỏi lúc hộp đang mở: câu cũ coi như bỏ qua, hỏi câu mới. */
+    /**
+     * Máy khác hỏi lúc hộp đang mở: câu cũ coi như bỏ qua, hỏi câu mới. Cùng máy cast lại (khách bấm lần nữa vì chưa thấy gì)
+     * thì máy nhận đã giữ video mới: chỉ hỏi tiếp, không bỏ (28/10/2026: trước đây bỏ nhầm luôn video mới).
+     */
     override fun onNewIntent(i: Intent) {
         super.onNewIntent(i)
-        if (!daTraLoi) CastDichVu.dangChay?.may?.traLoiDuyet(id, null)
+        if (!daTraLoi && i.getStringExtra(ID).orEmpty() != id) CastDichVu.dangChay?.may?.traLoiDuyet(id, null)
         nhan(i)
     }
 
@@ -83,8 +86,9 @@ class XinPhep : ManCoMa() {
         var con by remember(id) { mutableIntStateOf(GIAY) }
         var bai by remember(video) { mutableStateOf<String?>(null) }
         val fr = remember { FocusRequester() }
+        // Đang nhập mã bố mẹ (màn của Khoá trẻ em) thì không đếm: nhập lâu quá 60 giây không làm mất video.
         LaunchedEffect(id) {
-            while (con > 0) { delay(1_000); con-- }
+            while (con > 0) { delay(1_000); if (!dangChoMa) con-- }
             tra(null)
         }
         LaunchedEffect(video) {
@@ -92,7 +96,7 @@ class XinPhep : ManCoMa() {
         }
         LaunchedEffect(id) { delay(150); runCatching { fr.requestFocus() } }
         BackHandler { tra(null) }
-        // Đang nhập mã bố mẹ thì đếm lại từ đầu, khỏi tự đóng giữa chừng.
+        // Nhập mã bố mẹ xong (hay thôi) thì đếm lại từ đầu.
         val choPhep = { l: DanhBa.Lam -> con = GIAY; canMa(t("cho máy này cast lên tivi", "let this phone cast to the TV")) { tra(l) } }
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
             The(Modifier.width(640.dp).background(Mau.nenDuoi.copy(alpha = 0.94f), RoundedCornerShape(24.dp))) {

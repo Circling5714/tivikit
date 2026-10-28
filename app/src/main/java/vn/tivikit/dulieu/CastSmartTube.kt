@@ -93,8 +93,10 @@ object CastSmartTube {
             }
         }
         val noi = j.optJSONArray("dangNoi")?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() }.orEmpty()
+        // App Cast 2.0 trở lên: "dienThoai" là danh sách máy, số máy đang nối là cỡ dangNoi.
+        val soNoi = if (j.opt("dienThoai") is org.json.JSONArray) noi.size else j.optInt("dienThoai")
         return TrangThai(j.optBoolean("dichVuChay"), j.optString("ten"), j.optInt("cong"), j.optBoolean("daNoi"),
-            j.optInt("dienThoai"), j.optString("dangPhat"), nk, j.optBoolean("biChe"),
+            soNoi, j.optString("dangPhat"), nk, j.optBoolean("biChe"),
             coQuanLy = may != null, nhanCast = j.optBoolean("nhanCast", true), dsMay = may.orEmpty(), dangNoi = noi)
     }
 }

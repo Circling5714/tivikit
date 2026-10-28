@@ -37,7 +37,6 @@ class MayThu(private val ctx: Context) {
 
     val cong: Int get() = dial.cong
     val daNoi: Boolean get() = lounge.daNoi
-    val soDienThoai: Int get() = dienThoai.size
     /** Mã các máy đang nối. */
     val dangNoi: Set<String> get() = dienThoai.keys.toSet()
     val dangPhat: String? get() = tp.videoId
@@ -195,7 +194,7 @@ class MayThu(private val ctx: Context) {
                 kho.ghi("điện thoại nối: ${du?.optString("name").orEmpty()}")
                 gui(t, dayDu())
             }
-            "remoteDisconnected" -> du?.optString("id")?.let { dienThoai.remove(it) }
+            "remoteDisconnected" -> du?.optString("id")?.let { dienThoai.remove(it); if (ganNhat == it) ganNhat = null }
             "getNowPlaying" -> gui(t, listOf("nowPlaying" to tp.nowPlaying()))
             "setPlaylist" -> { du?.let { nhanVideo(t, it) } }
             "updatePlaylist" -> if (duoc()) { du?.let(tp::capNhatDanhSach); gui(t, listOf("onHasPreviousNextChanged" to tp.truocSau())) }
@@ -263,7 +262,9 @@ class MayThu(private val ctx: Context) {
             xet == DienThoai.Xet.PHAT || hoi == null -> moVideo(d, ten)
             else -> {
                 val may = ai ?: DienThoai("", ten)
-                choDuyet = ChoDuyet(may.id, d, tp.appTren())
+                // Cùng máy cast lại lúc hộp hỏi đang mở: giữ video mới, app ở trước vẫn là app trước khi hỏi (giờ là hộp hỏi).
+                val tren = choDuyet?.takeIf { it.id == may.id }?.tren ?: tp.appTren()
+                choDuyet = ChoDuyet(may.id, d, tren)
                 kho.ghi("hỏi trên tivi: $ten muốn cast")
                 hoi(may, d.optString("videoId"))
             }
@@ -288,6 +289,7 @@ class MayThu(private val ctx: Context) {
         val co = may.map { it.optString("id") }.toSet()
         val moi = co - dienThoai.keys
         dienThoai.keys.retainAll(co)
+        if (ganNhat !in co) ganNhat = null
         may.filter { it.optString("id") in moi }.forEach { ghiNoi(it) }
         // Máy vừa nối / rời đi theo connectionEventDetails: máy vừa nối là người gửi video sắp tới.
         runCatching { JSONObject(t.chu("connectionEventDetails") ?: "{}").optString("deviceId") }.getOrNull()

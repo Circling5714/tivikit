@@ -36,7 +36,6 @@ class CauHinhProvider : ContentProvider() {
                     .put("ten", may?.tenHien() ?: kho.ten.orEmpty())
                     .put("cong", may?.cong ?: 0)
                     .put("daNoi", may?.daNoi ?: false)
-                    .put("dienThoai", may?.soDienThoai ?: 0)
                     .put("dangPhat", may?.dangPhat ?: "")
                     .put("biChe", may?.biChe == true)
                     .put("nhanCast", kho.nhanCast)
