@@ -56,4 +56,16 @@ class DialTest {
     @Test fun thamSo() {
         assertEquals(mapOf("pairingCode" to "a b", "theme" to "cl"), Dial.thamSo("pairingCode=a+b&theme=cl\r\n"))
     }
+
+    @Test fun biChe_mayDialCuaHangCungIp() {
+        fun dap(tu: String, loc: String) = org.json.JSONObject().put("tu", tu).put("location", loc)
+        val minh = dap("10.10.16.203:1900", "http://10.10.16.203:8095/dd.xml")
+        // Skyworth: dialserver MediaTek cùng IP, cổng khác.
+        assertEquals(true, Dial.biChe(listOf(dap("10.10.16.203:41234", "http://10.10.16.203:56790/dd.xml"), minh), 8095))
+        // TX3: chỉ có mình; máy DIAL của tivi khác trong nhà không tính.
+        assertEquals(false, Dial.biChe(listOf(minh, dap("10.10.16.50:1900", "http://10.10.16.50:8008/ssdp/device-desc.xml")), 8095))
+        // Không thấy cả lời đáp của mình: mạng chưa lên, chưa kết luận.
+        assertEquals(null, Dial.biChe(listOf(dap("10.10.16.203:41234", "http://10.10.16.203:56790/dd.xml")), 8095))
+        assertEquals(null, Dial.biChe(emptyList(), 8095))
+    }
 }

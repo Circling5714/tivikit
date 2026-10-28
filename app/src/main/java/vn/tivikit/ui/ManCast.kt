@@ -22,8 +22,8 @@ internal fun ManCast(vm: PhienLamViec) = Cuon {
     val c = vm.cast
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(t("Cast SmartTube", "Cast to SmartTube"), style = KieuTieuDeLon)
-        Phu(t("App YouTube trên điện thoại (iPhone hay Android) cùng Wi-Fi với tivi thấy tivi trong nút Cast như YouTube gốc, không cần liên kết bằng mã TV. Video gửi sang mở bằng SmartTube; tạm dừng, tua, đổi âm lượng trên điện thoại được.",
-            "The YouTube app on any phone (iPhone or Android) on the same Wi-Fi finds the TV under the Cast button, as with the official app, with no TV code. What you send plays in SmartTube; pause, seek and volume work from the phone."))
+        Phu(t("App YouTube trên điện thoại (iPhone hay Android) cùng Wi-Fi với tivi thấy tivi trong nút Cast như YouTube gốc, thường không cần liên kết bằng mã TV. Video gửi sang mở bằng SmartTube; tạm dừng, tua, đổi âm lượng trên điện thoại được. SmartTube đang nghe nền (đã bấm Home) thì video mới cũng về nghe nền.",
+            "The YouTube app on any phone (iPhone or Android) on the same Wi-Fi finds the TV under the Cast button, as with the official app, usually with no TV code. What you send plays in SmartTube; pause, seek and volume work from the phone. If SmartTube is playing in the background (after Home), the new video goes back to the background too."))
     }
     if (!c.duocCai) CanhBao(t("Cast SmartTube cần Android 8 trở lên; tivi này là Android ${vm.thongTin?.android}.",
         "Cast to SmartTube needs Android 8 or later; this TV runs Android ${vm.thongTin?.android}."))
@@ -50,6 +50,24 @@ internal fun ManCast(vm: PhienLamViec) = Cuon {
         }
     }
 
+    c.trangThai?.takeIf { it.dichVuChay }?.let { tt ->
+        The(t("Liên kết bằng mã TV", "Link with a TV code"), Icons.Rounded.Pin) {
+            if (tt.biChe) CanhBao(t("Tivi này có sẵn Cast của hãng trả lời trước, nên app YouTube trên điện thoại không thấy \"${tt.ten}\" qua Wi-Fi. Liên kết bằng mã TV một lần là xong.",
+                "This TV has its maker's own Cast, which answers first, so the YouTube app on phones won't find \"${tt.ten}\" over Wi-Fi. Link it once with a TV code."))
+            else Phu(t("Điện thoại không thấy \"${tt.ten}\" trong nút Cast? Liên kết bằng mã TV, chỉ cần một lần.",
+                "A phone doesn't see \"${tt.ten}\" under Cast? Link it with a TV code, just once."))
+            if (c.maTv.isNotEmpty()) {
+                Text(CastSmartTube.hienMa(c.maTv), fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                Phu(t("Mã lấy lúc ${vn.tivikit.dulieu.HenGio.gioCua(c.maTvLuc, java.time.ZoneId.systemDefault()).first}, dùng được chừng 5 phút.",
+                    "Code from ${vn.tivikit.dulieu.HenGio.gioCua(c.maTvLuc, java.time.ZoneId.systemDefault()).first}; it works for about 5 minutes."))
+            }
+            NutPhu(if (c.maTv.isEmpty()) t("Lấy mã TV", "Get a TV code") else t("Lấy mã mới", "Get a new code"), Icons.Rounded.Pin,
+                enabled = !vm.dangBan && tt.daNoi) { c.layMaTv() }
+            Phu(t("Trên điện thoại: YouTube → nút Cast → Thêm thiết bị / Liên kết bằng mã TV (hoặc Bạn → Cài đặt → Xem trên TV → Nhập mã TV), gõ mã ở trên. Xong thì \"${tt.ten}\" luôn có trong nút Cast, không cần mở SmartTube trước.",
+                "On the phone: YouTube → Cast button → Add device / Link with TV code (or You → Settings → Watch on TV → Enter TV code), then type the code above. After that \"${tt.ten}\" is always under Cast, with no need to open SmartTube first."))
+        }
+    }
+
     The(t("Tên hiện trong nút Cast", "Name under the Cast button"), Icons.Rounded.Edit) {
         OutlinedTextField(c.ten, { c.ten = it.take(CastSmartTube.TEN_TOI_DA) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
             shape = RoundedCornerShape(12.dp), label = { Text(t("VD SmartTube phòng khách", "e.g. SmartTube living room")) })
@@ -73,8 +91,8 @@ internal fun ManCast(vm: PhienLamViec) = Cuon {
     if (c.daCai) TextButton(onClick = { c.go() }, enabled = !vm.dangBan) {
         Icon(Icons.Rounded.DeleteOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(t("Gỡ Cast SmartTube khỏi tivi", "Remove Cast to SmartTube from the TV"))
     }
-    Phu(t("Bật sẽ cài app nhỏ \"Cast SmartTube (TiviKit)\", bật dịch vụ trợ năng của nó (để chạy suốt và được mở SmartTube; không đọc màn hình, không bắt phím) và cho nó đọc phiên phát của SmartTube (để đồng bộ khi bấm remote tivi; tivi ít RAM không cho thì bỏ qua). App nói chuyện với máy chủ YouTube như app YouTube trên tivi (giao thức không công khai của YouTube: YouTube đổi thì có thể hỏng tới khi TiviKit cập nhật). Ai cùng Wi-Fi cũng cast được, như Chromecast. Gỡ hoặc Khôi phục tivi là xoá hết.",
-        "Turning it on installs the small \"Cast SmartTube (TiviKit)\" app, turns on its accessibility service (to keep running and be allowed to open SmartTube; it doesn't read the screen or catch keys) and lets it read SmartTube's playback session (to stay in sync when you use the TV remote; skipped on low-RAM TVs that don't allow it). It talks to YouTube's servers the way the YouTube TV app does (YouTube's private protocol: if YouTube changes it, this may break until TiviKit is updated). Anyone on the same Wi-Fi can cast, as with a Chromecast. Remove or Restore deletes everything."))
+    Phu(t("Bật sẽ cài app nhỏ \"Cast SmartTube (TiviKit)\", bật dịch vụ trợ năng của nó (để chạy suốt, được mở SmartTube và biết app nào đang hiện để SmartTube đang nghe nền thì giữ nghe nền; không đọc nội dung màn hình, không bắt phím) và cho nó đọc phiên phát của SmartTube (để đồng bộ khi bấm remote tivi; tivi ít RAM không cho thì bỏ qua). App nói chuyện với máy chủ YouTube như app YouTube trên tivi (giao thức không công khai của YouTube: YouTube đổi thì có thể hỏng tới khi TiviKit cập nhật). Ai cùng Wi-Fi cũng cast được, như Chromecast. Gỡ hoặc Khôi phục tivi là xoá hết.",
+        "Turning it on installs the small \"Cast SmartTube (TiviKit)\" app, turns on its accessibility service (to keep running, be allowed to open SmartTube and know which app is showing, so SmartTube playing in the background stays there; it doesn't read what's on screen or catch keys) and lets it read SmartTube's playback session (to stay in sync when you use the TV remote; skipped on low-RAM TVs that don't allow it). It talks to YouTube's servers the way the YouTube TV app does (YouTube's private protocol: if YouTube changes it, this may break until TiviKit is updated). Anyone on the same Wi-Fi can cast, as with a Chromecast. Remove or Restore deletes everything."))
 }
 
 @Composable

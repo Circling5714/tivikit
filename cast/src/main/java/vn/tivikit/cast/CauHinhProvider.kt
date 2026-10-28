@@ -12,6 +12,7 @@ import org.json.JSONObject
  * TiviKit đọc trạng thái / đặt tên qua ADB:
  *   content call --uri content://vn.tivikit.cast --method doc
  *   content call --uri content://vn.tivikit.cast --method dat --arg '{"ten":"SmartTube phòng khách"}'   ("" = tên mặc định)
+ *   content call --uri content://vn.tivikit.cast --method ma-tv   (mã TV 12 số để liên kết điện thoại, sống 5 phút)
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root.
  */
 class CauHinhProvider : ContentProvider() {
@@ -32,6 +33,7 @@ class CauHinhProvider : ContentProvider() {
                     .put("daNoi", may?.daNoi ?: false)
                     .put("dienThoai", may?.soDienThoai ?: 0)
                     .put("dangPhat", may?.dangPhat ?: "")
+                    .put("biChe", may?.biChe == true)
                     .put("nhatKy", kho.nhatKy)
                     .toString())
             }
@@ -40,6 +42,8 @@ class CauHinhProvider : ContentProvider() {
                 kho.ten = o.optString("ten").trim().take(60).takeIf { it.isNotEmpty() }
                 kq.putString("ok", "1")
             }
+            "thu-tim" -> kq.putString("json", CastDichVu.dangChay?.may?.thuTim()?.toString() ?: "[]")
+            "ma-tv" -> kq.putString("ma", CastDichVu.dangChay?.may?.xinMaTv().orEmpty())
             else -> kq.putString("loi", "khong biet $method")
         }
         return kq

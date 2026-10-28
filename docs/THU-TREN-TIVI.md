@@ -160,6 +160,9 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 | Tạm dừng bằng remote tivi (tivi không phải loại ít RAM) | Điện thoại cũng hiện đang dừng |
 | Tivi đang ở màn bảo vệ rồi gửi video | Màn bảo vệ tắt, video lên |
 | Đổi tên → Lưu tên, mở lại YouTube trên điện thoại | Nút Cast hiện tên mới |
+| SmartTube đang nghe nền (bấm Home lúc đang phát), gửi video khác từ điện thoại | SmartTube hiện lên mở video mới rồi tự về lại launcher đang dùng, video mới phát nền |
+| Tivi có Cast của hãng (Skyworth Google TV): mở màn Cast SmartTube | Thẻ "Liên kết bằng mã TV" báo tivi có Cast của hãng chen trước |
+| Lấy mã TV, nhập trên điện thoại: YouTube → nút Cast → Thêm thiết bị / Liên kết bằng mã TV | Nút Cast có tên tivi (không mờ), chọn là nối; cả khi SmartTube chưa mở |
 | Gỡ Cast SmartTube | Nút Cast trên điện thoại không còn tivi đó |
 
 ## 10. Các tính năng còn lại

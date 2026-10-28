@@ -28,6 +28,7 @@ class Lounge(
         private const val URL_TOKEN = "$GOC/pairing/get_lounge_token_batch"
         private const val URL_GHEP = "$GOC/pairing/register_pairing_code"
         private const val URL_BIND = "$GOC/bc/bind"
+        private const val URL_MA_TV = "$GOC/pairing/get_pairing_code?ctx=pair"
         const val APP = "tivikit"
         const val THEME = "cl"
         private const val UA = "Mozilla/5.0 (Linux; Android) TiviKit-Cast/1.0"
@@ -88,6 +89,21 @@ class Lounge(
             "screen_name" to ten(), "device_id" to kho.maThietBi)))
         ghi(if (code == 200) "điện thoại chọn tivi qua Wi-Fi" else "ghép qua Wi-Fi lỗi $code")
         return code == 200
+    }
+
+    /**
+     * Mã TV (12 số) cho điện thoại liên kết thủ công: YouTube → Cast → Thêm thiết bị → Liên kết bằng mã TV. Dùng khi tivi
+     * có máy DIAL của hãng cùng IP (app YouTube chỉ lấy máy đó, không thấy máy nhận này). Mã sống chừng 5 phút; liên kết
+     * xong thì điện thoại nhớ luôn (screen giữ nguyên), máy nhận chạy suốt nên không cần mở SmartTube trước.
+     */
+    fun xinMaTv(): String? {
+        val id = kho.screenId ?: return null
+        val tk = token ?: return null
+        val (ma, than) = goi(URL_MA_TV, thamSo(mapOf(
+            "access_type" to "permanent", "app" to APP, "lounge_token" to tk, "screen_id" to id,
+            "screen_name" to ten(), "device_id" to kho.maThietBi)))
+        val so = than.trim()
+        return so.takeIf { ma == 200 && it.length in 6..16 && it.all(Char::isDigit) }?.also { ghi("xin mã TV để liên kết điện thoại") }
     }
 
     // ---------- Vòng chạy ----------

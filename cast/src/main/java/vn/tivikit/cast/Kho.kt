@@ -28,6 +28,11 @@ class Kho(ctx: Context) {
         get() = p.getString("ten", null)
         set(v) { p.edit().putString("ten", v).apply() }
 
+    /** Lần dò trước thấy máy DIAL của hãng cùng IP trả lời trước (Dial.biChe): bật máy là im lặng trên SSDP ngay. */
+    var biChe: Boolean
+        get() = p.getBoolean("bi_che", false)
+        set(v) { p.edit().putBoolean("bi_che", v).apply() }
+
     /** 30 dòng gần nhất {luc, viec}: TiviKit đọc để biết điện thoại nào đã nối, video nào đã mở. */
     val nhatKy: JSONArray get() = runCatching { JSONArray(p.getString("nhat_ky", "[]")) }.getOrDefault(JSONArray())
 

@@ -10,7 +10,7 @@ import vn.tivikit.t
 /**
  * Cast SmartTube (28/10/2026): cài app phụ vn.tivikit.cast lên tivi để app YouTube trên điện thoại cùng Wi-Fi thấy tivi
  * trong nút Cast (không cần liên kết bằng mã TV), video gửi sang mở bằng SmartTube; đặt tên hiện trong nút Cast, xem
- * điện thoại nào đã nối, gỡ.
+ * điện thoại nào đã nối, xin mã TV cho tivi có máy Cast của hãng chen trước, gỡ.
  */
 class CastTivi(private val vm: PhienLamViec) {
     var trangThai by mutableStateOf<CastSmartTube.TrangThai?>(null)
@@ -23,6 +23,11 @@ class CastTivi(private val vm: PhienLamViec) {
     /** Tên hiện trong nút Cast (ô nhập). */
     var ten by mutableStateOf("")
     var bao by mutableStateOf("")
+        private set
+    /** Mã TV vừa xin (12 số) và lúc xin (mã sống chừng 5 phút); "" = chưa xin. */
+    var maTv by mutableStateOf("")
+        private set
+    var maTvLuc by mutableStateOf(0L)
         private set
 
     /** App phụ cần Android 8+. */
@@ -83,6 +88,19 @@ class CastTivi(private val vm: PhienLamViec) {
             "Renamed to \"${trangThai?.ten.orEmpty()}\". Phones see the new name next time they open the Cast button (reopening YouTube may help).")
     }
 
+    /**
+     * Xin mã TV để điện thoại liên kết thủ công (tivi có máy Cast của hãng trả lời trước, điện thoại không thấy tivi qua
+     * Wi-Fi). Liên kết một lần là điện thoại nhớ: tivi luôn có trong nút Cast, kể cả khi SmartTube chưa mở.
+     */
+    fun layMaTv() = vm.chay(t("Đang xin mã TV…", "Getting a TV code…")) {
+        vm.damBaoKetNoi()
+        bao = ""
+        maTv = vm.io { vm.tv.maTvCast() }
+        maTvLuc = System.currentTimeMillis()
+        if (maTv.isEmpty()) bao = t("Chưa xin được mã: dịch vụ Cast trên tivi chưa nối được YouTube. Đợi ít giây rồi thử lại.",
+            "Couldn't get a code: the Cast service on the TV hasn't reached YouTube yet. Wait a few seconds and try again.")
+    }
+
     fun go() = vm.chay(t("Đang gỡ Cast SmartTube…", "Removing Cast to SmartTube…")) {
         vm.damBaoKetNoi()
         vm.io { vm.tv.goCast() }
@@ -90,5 +108,5 @@ class CastTivi(private val vm: PhienLamViec) {
         bao = t("Đã gỡ Cast SmartTube khỏi tivi.", "Cast to SmartTube is removed from the TV.")
     }
 
-    fun quen() { trangThai = null; daCai = false; coSmartTube = true; ten = ""; bao = "" }
+    fun quen() { trangThai = null; daCai = false; coSmartTube = true; ten = ""; bao = ""; maTv = ""; maTvLuc = 0L }
 }

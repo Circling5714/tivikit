@@ -62,11 +62,35 @@ class Dial(
             URLDecoder.decode(it.substringBefore('='), "UTF-8") to URLDecoder.decode(it.substringAfter('='), "UTF-8")
         }
 
-        private fun ngay(): String = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US)
-            .apply { timeZone = TimeZone.getTimeZone("GMT") }.format(Date())
+        private val DINH_DANG_NGAY = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US).apply { timeZone = TimeZone.getTimeZone("GMT") }
+
+        private fun ngay(): String = synchronized(DINH_DANG_NGAY) { DINH_DANG_NGAY.format(Date()) }
+
+        /**
+         * Tivi có máy DIAL khác cùng IP (của hãng: MediaTek quick_ssdp, Chromecast built-in) trả lời trước: app YouTube chỉ
+         * giữ một máy mỗi IP nên máy nhận này hiện mờ / không hiện, phải liên kết bằng mã TV (28/10/2026, Skyworth). [ds] =
+         * các lời đáp của một lượt thuTim, [cong] = cổng HTTP của mình. null = chưa dò được (không thấy cả lời đáp của chính
+         * mình: mạng chưa lên).
+         */
+        fun biChe(ds: List<org.json.JSONObject>, cong: Int): Boolean? {
+            fun cuaMinh(o: org.json.JSONObject) = o.optString("location").contains(":$cong/")
+            val ip = ds.filter(::cuaMinh).map { it.optString("tu").substringBeforeLast(':') }.toSet()
+            if (ip.isEmpty()) return null
+            return ds.any { !cuaMinh(it) && it.optString("tu").substringBeforeLast(':') in ip }
+        }
     }
 
     @Volatile private var chay = false
+    /**
+     * Im lặng trên SSDP (biChe: máy DIAL của hãng cùng IP trả lời trước, app YouTube chỉ hiện tivi mờ, không chọn được —
+     * 28/10/2026, Skyworth): không trả lời điện thoại, không báo còn sống, báo byebye một lần cho điện thoại bỏ mục mờ.
+     * Vẫn trả lời M-SEARCH của chính tivi để biChe dò lại được. Điện thoại dùng mã TV.
+     */
+    @Volatile var im = false
+        set(v) {
+            if (v && !field) runCatching { thongBao(false) }
+            field = v
+        }
     private var http: ServerSocket? = null
     private var ssdp: MulticastSocket? = null
     private val bootId = (System.currentTimeMillis() / 1000 % 100_000).toInt()
@@ -185,22 +209,23 @@ class Dial(
         ssdp = s
         val nhom = InetAddress.getByName(NHOM)
         vaoNhom(s, nhom)
-        thongBao(true)
+        if (!im) thongBao(true)
         var lanNhac = System.currentTimeMillis()
         val buf = ByteArray(2048)
         while (chay) {
             val g = DatagramPacket(buf, buf.size)
             try {
                 s.receive(g)
-                val ip = ipToi(g.address)
+                // Trả lời ngay rồi mới ghi nhật ký: tivi có máy DIAL của hãng cùng IP thì app YouTube chỉ lấy máy trả lời trước.
+                val ip = ipNhanh(g.address)
                 val goiTin = String(g.data, 0, g.length, Charsets.UTF_8)
-                if (goiTin.startsWith("M-SEARCH", true)) Log.d(NHAN, "SSDP M-SEARCH từ ${g.address.hostAddress}")
-                if (ip != null) {
+                if (ip != null && (!im || ip == g.address.hostAddress)) {
                     for (tl in traLoiTim(goiTin, "http://$ip:$cong/dd.xml")) {
                         val b = tl.toByteArray(Charsets.UTF_8)
                         s.send(DatagramPacket(b, b.size, g.address, g.port))
                     }
                 }
+                if (goiTin.startsWith("M-SEARCH", true)) Log.d(NHAN, "SSDP M-SEARCH từ ${g.address.hostAddress}")
             } catch (_: SocketTimeoutException) {
             } catch (e: Exception) {
                 if (!chay) break
@@ -208,7 +233,7 @@ class Dial(
             }
             // Định kỳ: vào lại nhóm (Wi-Fi vừa nối lại thì mất) và báo còn sống.
             if (System.currentTimeMillis() - lanNhac > NHAC_LAI_MS) {
-                vaoNhom(s, nhom); thongBao(true); lanNhac = System.currentTimeMillis()
+                vaoNhom(s, nhom); if (!im) thongBao(true); lanNhac = System.currentTimeMillis()
             }
         }
     }
@@ -242,6 +267,35 @@ class Dial(
 
     private fun usn(loai: String) = if (loai == "uuid:$uuid") loai else "uuid:$uuid::$loai"
 
+    /**
+     * Chẩn đoán (TiviKit / ADB gọi qua provider): tự phát một M-SEARCH tìm DIAL như điện thoại, ghi các máy trả lời (kể cả
+     * máy DIAL của hãng cùng IP) và sau bao nhiêu ms. Cùng IP mà máy hãng trả lời trước thì app YouTube chỉ thấy máy hãng.
+     */
+    fun thuTim(): org.json.JSONArray {
+        val kq = org.json.JSONArray()
+        MulticastSocket(0).use { s ->
+            s.soTimeout = 300
+            // false = cho gói vòng lại máy này (API ngược tên): máy nhận của mình và máy DIAL của hãng đều nhận được.
+            runCatching { s.loopbackMode = false }
+            val tin = "M-SEARCH * HTTP/1.1\r\nHOST: $NHOM:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 1\r\nST: $DICH_VU\r\n\r\n".toByteArray()
+            val t0 = System.nanoTime()
+            s.send(DatagramPacket(tin, tin.size, InetAddress.getByName(NHOM), 1900))
+            val buf = ByteArray(2048)
+            while (System.nanoTime() - t0 < 2_500_000_000L) {
+                val g = DatagramPacket(buf, buf.size)
+                try { s.receive(g) } catch (_: SocketTimeoutException) { continue }
+                val chu = String(g.data, 0, g.length, Charsets.UTF_8)
+                fun td(k: String) = Regex("(?im)^$k:\\s*(.+)$").find(chu)?.groupValues?.get(1)?.trim().orEmpty()
+                kq.put(org.json.JSONObject().put("ms", (System.nanoTime() - t0) / 1_000_000).put("tu", "${g.address.hostAddress}:${g.port}")
+                    .put("location", td("LOCATION")).put("usn", td("USN")).put("server", td("SERVER")))
+            }
+        }
+        return kq
+    }
+
+    /** biChe theo lượt dò thật (thuTim). */
+    fun biChe(): Boolean? = thuTim().let { a -> biChe((0 until a.length()).map { a.getJSONObject(it) }, cong) }
+
     /** NOTIFY ssdp:alive (lúc bật, định kỳ) / ssdp:byebye (lúc tắt) tới nhóm multicast. */
     private fun thongBao(song: Boolean) {
         val s = ssdp ?: return
@@ -263,6 +317,15 @@ class Dial(
         is Inet4Address -> a.hostAddress
         is Inet6Address -> a.hostAddress?.removePrefix("::ffff:")?.takeIf { it.count { c -> c == '.' } == 3 }
         else -> null
+    }
+
+    private val ipDaBiet = HashMap<InetAddress, Pair<String, Long>>()
+
+    /** ipToi nhớ 60 giây theo máy hỏi (điện thoại dò mỗi 10 giây): đỡ mở socket mỗi lần trả lời. */
+    private fun ipNhanh(dich: InetAddress): String? {
+        val bay = System.currentTimeMillis()
+        ipDaBiet[dich]?.let { (ip, luc) -> if (bay - luc < 60_000) return ip }
+        return ipToi(dich)?.also { ipDaBiet[dich] = it to bay }
     }
 
     /** IP của tivi trên đường tới [dich] (nối UDP không gửi gói nào). */

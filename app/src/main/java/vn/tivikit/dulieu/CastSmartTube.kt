@@ -28,12 +28,27 @@ object CastSmartTube {
         return "content call --uri content://$GOI --method dat --arg '$json'"
     }
 
+    /**
+     * Xin mã TV để điện thoại liên kết thủ công (YouTube → Cast → Liên kết bằng mã TV): cho tivi có máy Cast của hãng trả
+     * lời trước (điện thoại không thấy tivi qua Wi-Fi). Mã sống chừng 5 phút.
+     */
+    const val LENH_MA_TV = "content call --uri content://$GOI --method ma-tv"
+
+    /** Mã TV trong kết quả của [LENH_MA_TV] ("Result: Bundle[{ma=123456789012}]"); "" nếu chưa có. */
+    fun maTv(ketQua: String): String = Regex("ma=(\\d{6,16})").find(ketQua)?.groupValues?.get(1).orEmpty()
+
+    /** Mã TV chia nhóm 3 số cho dễ gõ, như app YouTube trên tivi: "123 456 789 012". */
+    fun hienMa(ma: String): String = ma.chunked(3).joinToString(" ")
+
     data class NhatKy(val luc: Long, val viec: String)
 
-    /** Trạng thái app phụ (content call … --method doc). */
+    /**
+     * Trạng thái app phụ (content call … --method doc). [biChe] = tivi có máy Cast / DIAL của hãng trả lời trước nên app
+     * YouTube không thấy tivi qua Wi-Fi (Skyworth Google TV, 28/10/2026): phải liên kết bằng mã TV.
+     */
     data class TrangThai(
         val dichVuChay: Boolean, val ten: String, val cong: Int, val daNoi: Boolean, val dienThoai: Int, val dangPhat: String,
-        val nhatKy: List<NhatKy>,
+        val nhatKy: List<NhatKy>, val biChe: Boolean = false,
     )
 
     fun trangThai(j: JSONObject): TrangThai {
@@ -41,6 +56,6 @@ object CastSmartTube {
             (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { NhatKy(it.optLong("luc"), it.optString("viec")) }
         }.orEmpty()
         return TrangThai(j.optBoolean("dichVuChay"), j.optString("ten"), j.optInt("cong"), j.optBoolean("daNoi"),
-            j.optInt("dienThoai"), j.optString("dangPhat"), nk)
+            j.optInt("dienThoai"), j.optString("dangPhat"), nk, j.optBoolean("biChe"))
     }
 }

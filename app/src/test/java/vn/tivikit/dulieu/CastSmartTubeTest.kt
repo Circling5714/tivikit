@@ -31,6 +31,15 @@ class CastSmartTubeTest {
         assertEquals(1, tt.dienThoai)
         assertEquals("eReMfUyYXB4", tt.dangPhat)
         assertEquals(listOf(CastSmartTube.NhatKy(5, "điện thoại nối: iCM16prm")), tt.nhatKy)
+        assertFalse(tt.biChe)
         assertFalse(CastSmartTube.trangThai(JSONObject("{}")).dichVuChay)
+        assertTrue(CastSmartTube.trangThai(JSONObject("""{"dichVuChay":true,"biChe":true}""")).biChe)
+    }
+
+    @Test fun maTv() {
+        assertEquals("123456789012", CastSmartTube.maTv("Result: Bundle[{ma=123456789012}]"))
+        assertEquals("", CastSmartTube.maTv("Result: Bundle[{ma=}]"))
+        assertEquals("", CastSmartTube.maTv("Error while accessing provider:vn.tivikit.cast"))
+        assertEquals("123 456 789 012", CastSmartTube.hienMa("123456789012"))
     }
 }

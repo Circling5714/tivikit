@@ -28,6 +28,16 @@ class MayThu(private val ctx: Context) {
     val daNoi: Boolean get() = lounge.daNoi
     val soDienThoai: Int get() = dienThoai.size
     val dangPhat: String? get() = tp.videoId
+    /** Máy DIAL của hãng trả lời trước (Dial.biChe): điện thoại không thấy tivi qua Wi-Fi, phải dùng mã TV. null = chưa dò. */
+    @Volatile var biChe: Boolean? = null
+        private set
+    @Volatile private var chay = false
+
+    /** Mã TV để điện thoại liên kết thủ công (provider ma-tv). */
+    fun xinMaTv(): String? = lounge.xinMaTv()
+
+    /** Chẩn đoán dò tìm DIAL (provider thu-tim). */
+    fun thuTim() = dial.thuTim()
 
     /** App vừa lên màn hình (dịch vụ trợ năng báo). */
     fun doiTren(goi: String) = tp.doiTren(goi)
@@ -45,6 +55,7 @@ class MayThu(private val ctx: Context) {
         .toString()
 
     fun batDau() {
+        chay = true
         khoaWifi = runCatching {
             ctx.applicationContext.getSystemService(WifiManager::class.java)
                 .createMulticastLock("tivikit-cast").apply { setReferenceCounted(false); acquire() }
@@ -52,11 +63,22 @@ class MayThu(private val ctx: Context) {
         tp.baoDoi = { lounge.gui(listOf("onStateChange" to tp.onStateChange())) }
         tp.veHome = ::veLai
         tp.batTheoDoi()
+        // Lần trước thấy máy DIAL của hãng chen trước: im lặng ngay từ đầu (lượt dò dưới đây xem lại).
+        dial.im = kho.biChe
+        if (kho.biChe) biChe = true
         // Mở cổng, nối mạng ngoài luồng chính.
         thread(isDaemon = true) {
             dial.batDau()
             lounge.batDau()
             kho.ghi("bật máy nhận, cổng ${dial.cong}")
+            // Dò máy DIAL của hãng một lần khi mạng đã lên (chưa thấy cả lời đáp của mình thì thử lại mỗi phút, tối đa 10 lần).
+            for (lan in 1..10) {
+                if (!runCatching { Thread.sleep(if (lan == 1) 10_000L else 60_000L) }.isSuccess || !chay) break
+                val bc = runCatching { dial.biChe() }.getOrNull() ?: continue
+                if (bc != kho.biChe) kho.ghi(if (bc) "tivi có máy Cast của hãng trả lời trước: điện thoại dùng mã TV" else "hết máy Cast của hãng chen trước")
+                biChe = bc; kho.biChe = bc; dial.im = bc
+                break
+            }
         }
     }
 
@@ -79,6 +101,7 @@ class MayThu(private val ctx: Context) {
     }
 
     fun dung() {
+        chay = false
         dial.dung()
         lounge.dung()
         runCatching { khoaWifi?.release() }

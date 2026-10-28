@@ -1801,6 +1801,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /** Đổi tên hiện trong nút Cast ("" = tên mặc định); điện thoại thấy tên mới ở lần tìm sau. */
     fun datTenCast(ten: String) { sh(CastSmartTube.lenhDatTen(ten)) }
 
+    /** Mã TV mới (12 số, sống chừng 5 phút) để điện thoại liên kết thủ công; "" nếu máy nhận chưa nối được YouTube. */
+    fun maTvCast(): String = CastSmartTube.maTv(sh("${CastSmartTube.LENH_MA_TV} 2>&1"))
+
     /** Gỡ app Cast SmartTube: bỏ dịch vụ trợ năng và quyền nghe thông báo rồi gỡ. */
     fun goCast() {
         if (!castDaCai()) return
