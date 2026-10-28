@@ -27,11 +27,17 @@ class DanhThuc : Activity() {
             WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED else 0)
         if (intent.getBooleanExtra("thu", false)) Toast.makeText(this, R.string.da_danh_thuc, Toast.LENGTH_LONG).show()
         val goi = intent.getStringExtra("goi")
-        // Chờ màn hình lên hẳn rồi mới mở app (tivi vừa thức có thể còn đang chuyển nguồn hình).
+        val ctx = applicationContext
+        // Chờ tivi lên hẳn rồi mới mở app: tivi vừa thức còn đang chuyển nguồn hình, và launcher kiểu Home sạch tự mở Home
+        // khoảng 2 giây sau khi đánh thức (Skyworth). Màn này có thể đã bị Home đè và đóng (noHistory): mở bằng ctx của app.
         Handler(Looper.getMainLooper()).postDelayed({
-            if (goi != null) HenGio.moApp(this, goi)
+            if (goi != null && HenGio.moApp(ctx, goi)) HenGioDichVu.dangChay?.canhHome(goi)
             finish()
-        }, 1500)
+        }, CHO_MO_MS)
+    }
+
+    companion object {
+        private const val CHO_MO_MS = 3000L
     }
 }
 

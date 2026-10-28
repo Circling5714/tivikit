@@ -5,6 +5,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PowerManager
 import java.time.ZoneId
@@ -74,6 +75,12 @@ object HenGio {
     }
 
     fun moManHinh(ctx: Context, i: Intent) { runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+
+    /** Các app màn chính (launcher) trên tivi. */
+    fun manChinh(ctx: Context): Set<String> = runCatching {
+        ctx.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_ALL)
+            .map { it.activityInfo.packageName }.toSet()
+    }.getOrDefault(emptySet())
 
     /** Mở màn chính của [goi] (bản tivi trước, bản điện thoại sau). Kênh nhanh cũng mở theo đường này. */
     fun moApp(ctx: Context, goi: String): Boolean {

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Không nghe sự kiện, không đọc nội dung màn hình, không lọc phím: chỉ để tắt tivi đúng giờ và mở màn hình hẹn. -->
+<!-- Không đọc nội dung màn hình, không lọc phím: để tắt tivi đúng giờ và mở màn hình hẹn. Không nghe sự kiện, trừ đổi cửa sổ
+     vài giây sau khi bật tivi mở app (HenGioDichVu.canhHome bật bằng setServiceInfo). -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="false"
