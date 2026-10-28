@@ -430,10 +430,12 @@ object DongLenh {
     /**
      * Tách [lenh] thành lệnh đơn theo ; && || | & ( ) ` và xuống dòng (ngoài nháy), mỗi lệnh đơn thành các từ đã bỏ nháy.
      * File sau > / >> vào ghiVao; 2>&1, < file bỏ; # tới hết dòng là chú thích. Thô hơn sh thật nhưng đủ nhận ra lệnh
-     * nguy hiểm; chỗ không chắc thì nghiêng về báo (thân heredoc bị coi là lệnh).
+     * nguy hiểm; chỗ không chắc thì nghiêng về báo (thân heredoc bị coi là lệnh). $(…) và `…` trong nháy kép vẫn chạy: lệnh
+     * bên trong được tách thêm (28/10/2026: echo "$(reboot -p)" hay r="$(pm uninstall …)" lọt qua).
      */
     fun tach(lenh: String): List<Cau> {
         val ra = mutableListOf<Cau>()
+        val con = mutableListOf<String>()
         var tu = mutableListOf<String>()
         var ghi = mutableListOf<String>()
         val w = StringBuilder()
@@ -460,6 +462,11 @@ object DongLenh {
                 when {
                     c == nhay -> nhay = ' '
                     nhay == '"' && c == '\\' && i + 1 < lenh.length && lenh[i + 1] in "\"\\$`" -> { w.append(lenh[i + 1]); i++ }
+                    nhay == '"' && (c == '`' || (c == '$' && i + 1 < lenh.length && lenh[i + 1] == '(')) -> {
+                        val het = cuoiLenhCon(lenh, i)
+                        con += lenh.substring(if (c == '`') i + 1 else i + 2, maxOf(if (c == '`') i + 1 else i + 2, het - 1))
+                        w.append(lenh, i, het); i = het; continue
+                    }
                     else -> w.append(c)
                 }
                 i++; continue
@@ -483,7 +490,24 @@ object DongLenh {
             i++
         }
         hetCau()
+        con.forEach { ra += tach(it) }
         return ra
+    }
+
+    /** Vị trí ngay sau lệnh con `…` hay $(…) bắt đầu ở [i] (đếm ngoặc lồng nhau); không đóng thì hết chuỗi. */
+    private fun cuoiLenhCon(lenh: String, i: Int): Int {
+        if (lenh[i] == '`') {
+            var j = i + 1
+            while (j < lenh.length && lenh[j] != '`') { if (lenh[j] == '\\') j++; j++ }
+            return minOf(j + 1, lenh.length)
+        }
+        var sau = 0
+        var j = i + 1
+        while (j < lenh.length) {
+            when (lenh[j]) { '(' -> sau++; ')' -> { sau--; if (sau == 0) return j + 1 } }
+            j++
+        }
+        return lenh.length
     }
 
     private val GAN_BIEN = Regex("""^[A-Za-z_][A-Za-z0-9_]*=.*""")

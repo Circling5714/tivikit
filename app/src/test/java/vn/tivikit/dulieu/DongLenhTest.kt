@@ -86,6 +86,14 @@ class DongLenhTest {
         assertTrue(DongLenh.kiemTra("sh -c \"svc wifi disable\"").any { it.ma == "tat-wifi" })
     }
 
+    /** Lệnh con trong nháy kép vẫn chạy (28/10/2026). */
+    @Test fun lenhConTrongNhayKep() {
+        assertTrue(DongLenh.kiemTra("echo \"\$(reboot -p)\"").any { it.ma == "tat-han" })
+        assertTrue(DongLenh.kiemTra("echo \"`reboot -p`\"").any { it.ma == "tat-han" })
+        assertTrue(DongLenh.cacLenh("r=\"\$(pm uninstall --user 0 com.android.tv.settings)\"").any { it.ten == "pm" })
+        assertTrue(DongLenh.kiemTra("echo \"\$(getprop ro.product.model)\"").isEmpty())
+    }
+
     @Test fun caiDat() {
         assertEquals(listOf("proxy"), ma("settings put global http_proxy 10.0.0.2:8080"))
         assertEquals(listOf("tro-nang"), ma("settings put secure enabled_accessibility_services a.b/.Dv"))
