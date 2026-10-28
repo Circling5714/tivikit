@@ -335,6 +335,8 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
         }
         if (ngay.isEmpty()) { vm.loi = t("Chọn ít nhất một ngày.", "Pick at least one day."); return false }
         khung += Khung(a, b, ngay)
+        // Thêm được thì bỏ lời báo sai giờ của lần trước (thử trên TX3 28/10/2026: vẫn hiện sau khi đã thêm).
+        vm.loi = ""
         return true
     }
 
