@@ -10,6 +10,13 @@ MÃ NGUỒN MỞ / OPEN SOURCE
    The Inter Project Authors — https://github.com/rsms/inter — SIL Open Font License 1.1 (mục C / section C)
 4. Dữ liệu thời tiết / Weather data: Open-Meteo.com — https://open-meteo.com — CC BY 4.0
    (chữ và mã thời tiết theo Weather.java của Home sạch / labels and codes follow the clean Home's Weather.java, MIT)
+5. Kinh Pháp Cú (Dhammapada), 423 câu, bản thơ lục bát của cư sĩ Tâm Minh Ngô Tằng Giao (2003), theo bản lưu hành trên
+   niemphat.vn — https://www.niemphat.vn/tim-hieu-kinh-phap-cu — câu kinh mỗi ngày dưới đồng hồ (assets/phap-cu.txt).
+   The Dhammapada (423 verses) in Vietnamese lục bát verse by Tâm Minh Ngô Tằng Giao (2003), as published on niemphat.vn:
+   the daily verse under the clock. Dịch giả giữ mọi quyền với bản dịch / The translator keeps all rights to the translation.
+6. Lịch chi tiết (can chi ngày / tháng, giờ hoàng đạo, tiết khí) theo lịch vạn niên của Hồ Ngọc Đức; 12 thần trực nhật,
+   trực và ngày kiêng theo cách xem ngày dân gian. / Day details (stems and branches, auspicious hours, solar terms) follow
+   Hồ Ngọc Đức's perpetual calendar; the 12 day spirits, trực and taboo days follow folk almanac rules.
 
 ======================================================================
 A. MIT License (CleanTV, CleanYourTV)

@@ -1,5 +1,6 @@
 package vn.tivikit.launcher
 
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ComponentCallbacks2
 import android.content.Context
@@ -11,6 +12,7 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.util.DisplayMetrics
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +23,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.math.max
@@ -55,6 +58,19 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     private var phien: MediaController? = null
     /** false = chưa được cho phép đọc phiên phát (thử lại mỗi lần màn Home hiện ra: TiviKit có thể vừa cấp quyền). */
     @Volatile private var docDuocDangPhat = true
+    /** Câu kinh đang hiện ứng với ngày / tên bộ / file bộ riêng nào (khác thì đọc lại), và ngày đã xét. */
+    private var khoaCau: String? = null
+    private var ngayCau: LocalDate? = null
+
+    /** Khoá trẻ em ngay (menu ⏻): app Khoá trẻ em khoá tivi rồi trả kết quả; không khoá được thì báo vì sao. */
+    private val khoaNgay = act.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        if (r.resultCode == Activity.RESULT_OK) return@registerForActivityResult
+        bao(when (r.data?.getStringExtra("loi")) {
+            "chua-co-ma" -> t("Khoá trẻ em chưa có mã: cài mã bằng TiviKit trước", "The Kids lock has no code yet: set one up in TiviKit first")
+            "dich-vu" -> t("Dịch vụ Khoá trẻ em đang tắt: mở Khoá trẻ em trong TiviKit để bật lại", "The Kids lock service is off: open Kids lock in TiviKit to turn it back on")
+            else -> t("Không khoá được: cập nhật Khoá trẻ em bằng TiviKit", "Couldn't lock: update the Kids lock with TiviKit")
+        })
+    }
 
     fun batDau() {
         tt.coDonRam = HeThong.donDuocRam()
@@ -77,6 +93,7 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
 
     fun hien() {
         docDuocDangPhat = true
+        tt.coKhoa = runCatching { pm.getPackageInfo(GOI_KHOA, 0); true }.getOrDefault(false)
         docApp()
         chayNhip()
     }
@@ -86,11 +103,13 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         nhip = null
         if (tt.dangDoi != null) xongDoi()
         tt.menu = null
+        tt.menuNguon = false
     }
 
     /** Bấm Home khi đang ở màn Home (hoặc quay về bằng nút Home): đóng mọi thứ đè lên, chọn ô đầu dock. */
     fun veDau() {
         tt.menu = null
+        tt.lich = false; tt.xemCau = false; tt.menuNguon = false
         if (tt.dangDoi != null) xongDoi()
         if (tt.thuVien) { tt.thuVien = false; giuAnhDock() }
         tt.traChon = null
@@ -146,12 +165,35 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             xemThoiTiet()
         }
         capNhatDock()
+        napCau(j)
+    }
+
+    /**
+     * Câu kinh hôm nay (TrangThaiHome.cau): bộ riêng TiviKit gửi (cau.txt) hay Kinh Pháp Cú đi kèm. Đọc lại khi sang ngày,
+     * khi bật / tắt hay đổi bộ ("cau" trong cấu hình, file cau.txt); cấu hình đổi vì việc khác thì thôi.
+     */
+    private fun napCau(j: JSONObject = ch.doc()) {
+        val ngay = LocalDate.now()
+        ngayCau = ngay
+        if (!CauHinh.cauBat(j)) { khoaCau = null; tt.cau = null; tt.xemCau = false; return }
+        val f = File(ctx.filesDir, CauHinhProvider.CAU)
+        val ten = CauHinh.tenCau(j)
+        val khoa = "$ngay|$ten|${f.length()}|${f.lastModified()}"
+        if (khoa == khoaCau) return
+        khoaCau = khoa
+        scope.launch {
+            val (rieng, bo) = withContext(Dispatchers.IO) { runCatching { CauHinhProvider.docBoCau(ctx) }.getOrNull() } ?: return@launch
+            if (khoa != khoaCau || bo.isEmpty()) return@launch
+            tt.cau = CauHomNay(if (rieng) ten else null, bo[CauMoiNgay.chiSo(ngay.toEpochDay(), bo.size)])
+        }
     }
 
     private fun docApp() {
         scope.launch {
             val ds = withContext(Dispatchers.IO) { runCatching { DanhSachApp.doc(pm, setOf(ctx.packageName)) }.getOrNull() } ?: return@launch
-            suDung = withContext(Dispatchers.IO) { HeThong.dungGanDay(ctx) }
+            // Khoá trẻ em: màn KhoaNgay / XacNhan chớp qua (trong suốt, menu ⏻ hay Cast xin mã) cũng tính là vừa dùng app, nên
+            // bỏ khỏi phần gần đây theo thống kê; mở nó từ launcher thì vẫn vào gần đây (lichSu).
+            suDung = withContext(Dispatchers.IO) { HeThong.dungGanDay(ctx) }.filter { it != GOI_KHOA }
             goiHome = withContext(Dispatchers.IO) { HeThong.goiHome(pm) }
             dsGoc = ds
             datApps()
@@ -250,6 +292,7 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             var dem = 0
             while (isActive) {
                 tt.bayGio = LocalDateTime.now()
+                if (tt.bayGio.toLocalDate() != ngayCau) napCau()
                 if (dem % 2 == 0) xemDangPhat()
                 if (dem % 60 == 0) xemThoiTiet()
                 if (dem % 5 == 0) {
@@ -426,7 +469,41 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         if (c.playbackState?.state == PlaybackState.STATE_PLAYING) c.transportControls.pause() else c.transportControls.play()
         scope.launch { delay(500); xemDangPhat() }
     }
+
+    override fun tatTivi() {
+        dongMenuNguon()
+        if (!NguonDichVu.tatTivi()) baoNguon()
+    }
+
+    override fun khoiDongLai() {
+        dongMenuNguon()
+        if (!NguonDichVu.menuNguon()) baoNguon()
+    }
+
+    override fun khoaTreEm() {
+        dongMenuNguon()
+        try {
+            khoaNgay.launch(Intent().setClassName(GOI_KHOA, "$GOI_KHOA.KhoaNgay"))
+        } catch (_: ActivityNotFoundException) {
+            bao(t("Cần cập nhật Khoá trẻ em bằng TiviKit", "Update the Kids lock with TiviKit first"))
+        } catch (_: SecurityException) {
+            bao(t("Cần cập nhật Khoá trẻ em bằng TiviKit", "Update the Kids lock with TiviKit first"))
+        }
+    }
+
+    private fun dongMenuNguon() {
+        tt.menuNguon = false
+        tt.traChon = TrangThaiHome.NGUON
+    }
+
+    /** Dịch vụ Nút nguồn chưa bật (TiviKit bật khi cài / cập nhật launcher), hay tivi Android 8 không có lệnh tắt màn hình. */
+    private fun baoNguon() = bao(
+        if (!NguonDichVu.chay) t("Cần bật Nút nguồn của launcher: cập nhật TiviKit Launcher bằng TiviKit", "Turn on the launcher's power button: update TiviKit Launcher with TiviKit")
+        else t("Tivi này không cho app tắt: bấm nút nguồn trên remote", "This TV can't be turned off by an app: use the remote's power button")
+    )
 }
+
+private const val GOI_KHOA = "vn.tivikit.khoa"
 
 /** Ảnh app giữ tối đa lúc cuộn thư viện app (banner chừng 150 KB một ảnh), và khi thiếu RAM. */
 private const val ANH_TOI_DA = 60

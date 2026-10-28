@@ -30,6 +30,8 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <!-- Mục "Khoá trẻ em ngay" của menu ⏻ chỉ hiện khi tivi có app Khoá trẻ em của TiviKit. -->
+        <package android:name="vn.tivikit.khoa" />
     </queries>
 
     <!-- Không có ô trong danh sách app: cài, chọn làm Home và chỉnh ở TiviKit trên điện thoại. -->
@@ -76,7 +78,18 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
-        <!-- Cấu hình (tên lời chào, dock, ngôn ngữ, nơi xem thời tiết) chỉ đặt được từ ADB (TiviKit). -->
+        <!-- Menu ⏻: tắt tivi, mở menu nguồn (NguonDichVu). TiviKit bật nó trong danh sách trợ năng khi cài launcher. -->
+        <service
+            android:name=".NguonDichVu"
+            android:exported="true"
+            android:label="@string/ten_nguon"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/nguon_tro_nang" />
+        </service>
+        <!-- Cấu hình (tên lời chào, dock, ngôn ngữ, nơi xem thời tiết, câu kinh) chỉ đặt được từ ADB (TiviKit). -->
         <provider
             android:name=".CauHinhProvider"
             android:authorities="${applicationId}"

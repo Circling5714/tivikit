@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Cấu hình màn Home trong cau-hinh.json (thư mục riêng của app). TiviKit ghi qua CauHinhProvider (ten, dock, ngon_ngu,
- * noi, ten_app); màn Home ghi dock khi người dùng sửa ngay trên tivi và lịch sử app vừa mở (gan_day).
+ * noi, ten_app, cau); màn Home ghi dock khi người dùng sửa ngay trên tivi và lịch sử app vừa mở (gan_day).
  */
 class CauHinh(ctx: Context) {
     private val file = File(ctx.filesDir, "cau-hinh.json")
@@ -58,7 +58,8 @@ class CauHinh(ctx: Context) {
         /**
          * Ghép cấu hình TiviKit gửi ([moi]) vào [cu]: chỉ nhận "ten" (chữ, tối đa 40 ký tự, "" = bỏ tên), "dock" (mảng tên
          * gói hợp lệ), "ngon_ngu" ("vi" / "en" / "" = theo tivi), "noi" (nơi xem thời tiết {ten, lat, lon}; sai / rỗng =
-         * bỏ) và "ten_app" (tên riêng {gói: tên}, gộp vào tên đã có; "" = bỏ tên riêng của gói đó). Trả các khoá đã nhận.
+         * bỏ), "ten_app" (tên riêng {gói: tên}, gộp vào tên đã có; "" = bỏ tên riêng của gói đó) và "cau" (câu kinh mỗi
+         * ngày {bat, ten}: bật / tắt, tên bộ câu riêng; "" = bỏ tên). Trả các khoá đã nhận.
          */
         fun tron(cu: JSONObject, moi: JSONObject): List<String> {
             val nhan = mutableListOf<String>()
@@ -91,8 +92,21 @@ class CauHinh(ctx: Context) {
                 if (ten.length() == 0) cu.remove("ten_app") else cu.put("ten_app", ten)
                 nhan += "ten_app"
             }
+            moi.optJSONObject("cau")?.let { o ->
+                val c = cu.optJSONObject("cau") ?: JSONObject()
+                if (o.has("bat")) c.put("bat", o.optBoolean("bat", true))
+                if (o.has("ten")) o.optString("ten").trim().take(TEN_TOI_DA).let { if (it.isEmpty()) c.remove("ten") else c.put("ten", it) }
+                if (c.length() == 0) cu.remove("cau") else cu.put("cau", c)
+                nhan += "cau"
+            }
             return nhan
         }
+
+        /** Câu kinh mỗi ngày có bật không (mặc định bật). */
+        fun cauBat(j: JSONObject): Boolean = j.optJSONObject("cau")?.optBoolean("bat", true) ?: true
+
+        /** Tên bộ câu riêng TiviKit gửi kèm cau.txt ("" nếu không có). */
+        fun tenCau(j: JSONObject): String = j.optJSONObject("cau")?.optString("ten").orEmpty()
 
         /** Tên riêng TiviKit đặt cho app ("ten_app", như tên kênh của các ô Kênh nhanh): gói → tên. */
         fun tenApp(j: JSONObject): Map<String, String> {

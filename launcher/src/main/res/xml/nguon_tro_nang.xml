@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Không đọc nội dung màn hình, không lọc phím, không nghe sự kiện: chỉ để menu ⏻ tắt tivi và mở menu nguồn. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canRetrieveWindowContent="false"
+    android:notificationTimeout="1000"
+    android:description="@string/mo_ta_nguon" />

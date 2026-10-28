@@ -32,13 +32,23 @@ class TrangThaiHome {
     var thoiTiet by mutableStateOf<ThoiTiet.HienTai?>(null)
     /** Bài / video đang phát hay tạm dừng trên tivi (thẻ Đang phát); null = không có. */
     var dangPhat by mutableStateOf<BaiDangPhat?>(null)
+    /** Câu kinh hôm nay dưới âm lịch; null = đã tắt / chưa đọc xong. */
+    var cau by mutableStateOf<CauHomNay?>(null)
+    /** Tivi có app Khoá trẻ em của TiviKit: menu ⏻ có mục Khoá trẻ em ngay. */
+    var coKhoa by mutableStateOf(false)
 
     var thuVien by mutableStateOf(false)
     /** Gói đang mở menu (giữ OK). */
     var menu by mutableStateOf<String?>(null)
+    /** Lớp đè lên màn Home: bảng lịch (OK ở đồng hồ), cả câu kinh (OK ở thẻ câu), menu ⏻. */
+    var lich by mutableStateOf(false)
+    var xemCau by mutableStateOf(false)
+    var menuNguon by mutableStateOf(false)
+    /** Có lớp đè (thư viện, menu, bảng lịch…): các ô bên dưới không nhận lựa chọn. */
+    val coLopDe: Boolean get() = thuVien || menu != null || lich || xemCau || menuNguon
     /** Gói đang dời chỗ trong dock. */
     var dangDoi by mutableStateOf<String?>(null)
-    /** Ô cần nhận lại lựa chọn sau khi đóng menu / thư viện (tên gói, hoặc [TAT_CA]). */
+    /** Ô cần nhận lại lựa chọn sau khi đóng menu / thư viện / lớp đè (tên gói, hoặc [TAT_CA], [GIO], [CAU], [NGUON]). */
     var traChon by mutableStateOf<String?>(null)
     /** Tăng mỗi lần bấm Home: chọn lại ô đầu dock. */
     var lanVeDau by mutableIntStateOf(0)
@@ -48,8 +58,14 @@ class TrangThaiHome {
 
     companion object {
         const val TAT_CA = "*tat-ca*"
+        const val GIO = "*gio*"
+        const val CAU = "*cau*"
+        const val NGUON = "*nguon*"
     }
 }
+
+/** Câu kinh của hôm nay: [ten] tên bộ TiviKit gửi kèm bộ riêng (null = Kinh Pháp Cú đi kèm, "" = bộ riêng không tên). */
+class CauHomNay(val ten: String?, val cau: CauMoiNgay.Cau)
 
 /** Việc màn Home nhờ làm (mở app, sửa dock…); mặc định không làm gì để ảnh xem trước dựng được. */
 interface HanhDong {
@@ -71,4 +87,8 @@ interface HanhDong {
     fun moDangPhat() {}
     /** Tạm dừng / phát tiếp bài đang phát. */
     fun dungPhat() {}
+    /** Menu ⏻: tắt tivi như nút nguồn, mở menu nguồn của tivi (khởi động lại), khoá trẻ em ngay. */
+    fun tatTivi() {}
+    fun khoiDongLai() {}
+    fun khoaTreEm() {}
 }

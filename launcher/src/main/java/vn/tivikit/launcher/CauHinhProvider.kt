@@ -3,6 +3,7 @@ package vn.tivikit.launcher
 import android.content.ComponentName
 import android.content.ContentProvider
 import android.content.ContentValues
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Binder
@@ -24,6 +25,8 @@ import java.io.FileNotFoundException
  *   content write --uri content://vn.tivikit.launcher/anh-nen.jpg < ảnh.jpg   (ảnh nền riêng; content delete để về ảnh mặc định)
  *   content write --uri content://vn.tivikit.launcher/anh-app/vn.tivikit.kenh.jpg < logo.jpg   (ảnh thay banner của một app:
  *     logo kênh của ô Kênh nhanh, như app_banners của Home sạch; content delete để về banner của app)
+ *   content write --uri content://vn.tivikit.launcher/cau.txt < bo-cau.txt   (bộ câu riêng thay Kinh Pháp Cú đi kèm, bản 1.4
+ *     trở đi; content delete để về Kinh Pháp Cú; bật / tắt và tên bộ: dat {"cau":{"bat":true,"ten":"…"}})
  * bat-home / tat-home bật / tắt bí danh .Home (bộ lọc HOME): ADB không đổi được trạng thái từng thành phần của app thường
  * ("Shell cannot change component state", chỉ đổi được cả gói), còn app thì tự đổi được thành phần của mình.
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được.
@@ -68,8 +71,13 @@ class CauHinhProvider : ContentProvider() {
                 // Ảnh riêng của từng app đang giữ: gói → cỡ file (TiviKit biết launcher nhận ảnh riêng, bản 1.1 trở đi).
                 val anhApp = JSONObject()
                 File(ctx.filesDir, ANH_APP).listFiles()?.filter { it.name.endsWith(".jpg") }?.forEach { anhApp.put(it.name.removeSuffix(".jpg"), it.length()) }
-                val o = JSONObject().put("ban", pi.versionName).put("ma", ma).put("homeBat", homeBat).put("cauHinh", ch.doc())
-                    .put("nen", File(ctx.filesDir, ANH_NEN).length()).put("anhApp", anhApp).put("dangPhat", dangPhat)
+                // Câu kinh mỗi ngày (bản 1.4 trở đi): bật không, bộ riêng hay Kinh Pháp Cú đi kèm, có bao nhiêu câu.
+                val cj = ch.doc()
+                val (rieng, bo) = runCatching { docBoCau(ctx) }.getOrDefault(false to emptyList())
+                val cau = JSONObject().put("bat", CauHinh.cauBat(cj)).put("ten", CauHinh.tenCau(cj)).put("rieng", rieng)
+                    .put("so", bo.sumOf { it.soLuong }).put("co", File(ctx.filesDir, CAU).length())
+                val o = JSONObject().put("ban", pi.versionName).put("ma", ma).put("homeBat", homeBat).put("cauHinh", cj)
+                    .put("nen", File(ctx.filesDir, ANH_NEN).length()).put("anhApp", anhApp).put("dangPhat", dangPhat).put("cau", cau)
                 kq.putString("json", o.toString())
             }
             "bat-home", "tat-home" -> {
@@ -90,6 +98,7 @@ class CauHinhProvider : ContentProvider() {
      */
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         chiAdb()
+        if (uri.pathSegments == listOf(CAU)) return moCau(mode)
         val goi = goiAnhApp(uri)
         val dich = fileCua(uri, goi) ?: throw FileNotFoundException(uri.toString())
         if (!mode.contains('w')) return ParcelFileDescriptor.open(dich, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -100,6 +109,19 @@ class CauHinhProvider : ContentProvider() {
         return ParcelFileDescriptor.open(tam, ghi, Handler(Looper.getMainLooper())) { loi ->
             if (loi == null && tam.length() in 1..toiDa && AnhNen.hopLe(tam) && tam.renameTo(dich)) daDoi(goi)
             else tam.delete()
+        }
+    }
+
+    /** Bộ câu riêng: như ảnh, ghi vào file tạm, đóng xong mới kiểm (không quá 1 MB, tách ra được ít nhất một câu) rồi thay. */
+    private fun moCau(mode: String): ParcelFileDescriptor {
+        val dich = File(context!!.filesDir, CAU)
+        if (!mode.contains('w')) return ParcelFileDescriptor.open(dich, ParcelFileDescriptor.MODE_READ_ONLY)
+        val tam = File(dich.path + ".tmp")
+        val ghi = ParcelFileDescriptor.MODE_WRITE_ONLY or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE
+        return ParcelFileDescriptor.open(tam, ghi, Handler(Looper.getMainLooper())) { loi ->
+            val ok = loi == null && tam.length() in 1..CAU_TOI_DA &&
+                runCatching { CauMoiNgay.tach(CauMoiNgay.giaiMa(tam.readBytes())).isNotEmpty() }.getOrDefault(false)
+            if (ok && tam.renameTo(dich)) CauHinh.lanDoi.value++ else tam.delete()
         }
     }
 
@@ -129,17 +151,32 @@ class CauHinhProvider : ContentProvider() {
         const val ANH_NEN = "anh-nen.jpg"
         /** Thư mục ảnh riêng của từng app (logo kênh của ô Kênh nhanh) TiviKit gửi. */
         const val ANH_APP = "anh-app"
+        /** Bộ câu kinh riêng TiviKit gửi, thay Kinh Pháp Cú đi kèm (assets/phap-cu.txt). */
+        const val CAU = "cau.txt"
+        private const val CAU_TOI_DA = 1024L * 1024
 
         fun anhApp(dir: File, goi: String) = File(File(dir, ANH_APP), "$goi.jpg")
+
+        /** Bộ câu đang dùng: bộ riêng (cau.txt) nếu đọc được, không thì Kinh Pháp Cú đi kèm; true = bộ riêng. */
+        fun docBoCau(ctx: Context): Pair<Boolean, List<CauMoiNgay.Cau>> {
+            val f = File(ctx.filesDir, CAU)
+            if (f.isFile) runCatching { CauMoiNgay.tach(CauMoiNgay.giaiMa(f.readBytes())) }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return true to it }
+            return false to ctx.assets.open("phap-cu.txt").use { CauMoiNgay.tach(CauMoiNgay.giaiMa(it.readBytes())) }
+        }
     }
 
     override fun query(u: Uri, p: Array<out String>?, s: String?, a: Array<out String>?, o: String?) = null
     override fun getType(u: Uri): String? = null
     override fun insert(u: Uri, v: ContentValues?): Uri? = null
 
-    /** Bỏ ảnh nền riêng (về ảnh mặc định), hoặc ảnh riêng của một app (về banner của app). */
+    /** Bỏ ảnh nền riêng (về ảnh mặc định), ảnh riêng của một app (về banner của app), hay bộ câu riêng (về Kinh Pháp Cú). */
     override fun delete(u: Uri, s: String?, a: Array<out String>?): Int {
         chiAdb()
+        if (u.pathSegments == listOf(CAU)) {
+            val xoa = File(context!!.filesDir, CAU).delete()
+            CauHinh(context!!).sua { j -> j.optJSONObject("cau")?.let { it.remove("ten"); if (it.length() == 0) j.remove("cau") } }
+            return if (xoa) 1 else 0
+        }
         val goi = goiAnhApp(u)
         val f = fileCua(u, goi) ?: return 0
         val xoa = f.delete()

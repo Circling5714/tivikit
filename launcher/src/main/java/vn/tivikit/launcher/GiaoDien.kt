@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -61,18 +63,23 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val Inter = FontFamily(
+internal val Inter = FontFamily(
+    Font(R.font.inter_light, FontWeight.Light),
     Font(R.font.inter_regular, FontWeight.Normal),
     Font(R.font.inter_medium, FontWeight.Medium),
     Font(R.font.inter_semibold, FontWeight.SemiBold),
 )
-private val XanhChon = Color(0xFF6CB8FF)
-private val BongChu = Shadow(Color(0x80000000), Offset(0f, 1.5f), 8f)
-private val PHIM_OK = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
+internal val XanhChon = Color(0xFF6CB8FF)
+/** Vàng nhạt (âm lịch, mùng 1 / rằm, ngày hoàng đạo) và đỏ nhạt (ngày lễ, Chủ Nhật). */
+internal val Vang = Color(0xFFFFD58A)
+internal val DoNhat = Color(0xFFFF8A80)
+internal val BongChu = Shadow(Color(0x80000000), Offset(0f, 1.5f), 8f)
+internal val PHIM_OK = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 /**
- * Màn Home của TiviKit Launcher: ảnh nền, lời chào + đồng hồ + âm lịch + thông số ở góc trái, ba nút kính ở góc phải,
- * dock kính mờ ở dưới (app ghim | app mở gần đây | Tất cả ứng dụng), trang Tất cả ứng dụng và menu app đè lên.
+ * Màn Home của TiviKit Launcher: ảnh nền, lời chào + đồng hồ + âm lịch + thông số + câu kinh mỗi ngày ở góc trái, các nút
+ * kính ở góc phải (Dọn RAM, mạng, Cài đặt, ⏻), dock kính mờ ở dưới (app ghim | app mở gần đây | Tất cả ứng dụng); trang
+ * Tất cả ứng dụng, menu app, bảng lịch, cả câu kinh và menu ⏻ đè lên.
  */
 @Composable
 fun ManHinhChinh(tt: TrangThaiHome) {
@@ -82,8 +89,9 @@ fun ManHinhChinh(tt: TrangThaiHome) {
         CompositionLocalProvider(LocalNen provides tt.nen) {
             Box(Modifier.fillMaxSize().background(Color.Black)) {
                 Nen(tt.nen)
-                CompositionLocalProvider(LocalKhoaChon provides (tt.thuVien || tt.menu != null)) {
-                    KhoiGio(tt, Modifier.align(Alignment.TopStart).padding(start = 46.dp, top = 28.dp))
+                CompositionLocalProvider(LocalKhoaChon provides tt.coLopDe) {
+                    // Đồng hồ và thẻ câu là ô bấm được, có lề trong 14 dp: lề ngoài 32 dp để chữ vẫn thẳng hàng 46 dp.
+                    KhoiGio(tt, Modifier.align(Alignment.TopStart).padding(start = 32.dp, top = 24.dp))
                     HangNut(tt, Modifier.align(Alignment.TopEnd).padding(end = 46.dp, top = 34.dp))
                     Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         val loi = when {
@@ -103,6 +111,9 @@ fun ManHinhChinh(tt: TrangThaiHome) {
                 }
                 if (tt.thuVien) CompositionLocalProvider(LocalKhoaChon provides (tt.menu != null)) { ThuVien(tt) }
                 tt.menu?.let { MenuApp(tt, it) }
+                if (tt.lich) BangLich(tt)
+                if (tt.xemCau) tt.cau?.let { XemCau(tt, it) }
+                if (tt.menuNguon) MenuNguon(tt)
             }
         }
     }
@@ -126,24 +137,22 @@ private fun Nen(nen: NenKinh?) {
 }
 
 @Composable
-private fun Nhan(s: String, co: TextUnit, dam: FontWeight, mau: Color, modifier: Modifier = Modifier, gian: TextUnit = TextUnit.Unspecified,
+internal fun Nhan(s: String, co: TextUnit, dam: FontWeight, mau: Color, modifier: Modifier = Modifier, gian: TextUnit = TextUnit.Unspecified,
                  dong: Int = 1, bong: Boolean = true) {
     BasicText(s, modifier, style = TextStyle(color = mau, fontSize = co, fontWeight = dam, fontFamily = Inter, letterSpacing = gian,
         shadow = if (bong) BongChu else null), maxLines = dong, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
-private fun Hinh(v: ImageVector, co: Int, mau: Color = Color.White) =
+internal fun Hinh(v: ImageVector, co: Int, mau: Color = Color.White) =
     Image(v, null, Modifier.size(co.dp), colorFilter = ColorFilter.tint(mau))
 
 @Composable
 private fun KhoiGio(tt: TrangThaiHome, modifier: Modifier) {
     val viet = NgonNgu.tiengViet
     val luc = tt.bayGio
-    val ngay = luc.toLocalDate()
-    val amLich = remember(ngay, viet) { AmLich.chu(ngay, viet) }
     Column(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Nhan(Chu.loiChao(luc.hour, tt.ten, viet), 14.sp, FontWeight.Medium, Color.White.copy(alpha = 0.92f), gian = 0.8.sp)
             Spacer(Modifier.width(7.dp))
             when (Chu.buoi(luc.hour)) {
@@ -152,28 +161,61 @@ private fun KhoiGio(tt: TrangThaiHome, modifier: Modifier) {
                 Chu.Buoi.DEM -> Hinh(Icons.Rounded.NightsStay, 16, Color(0xFFCBD5FF))
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        DongHo(tt)
+        if (tt.ramTrong > 0) Nhan(Chu.thongSo(tt.ramTrong, tt.boNhoTrong, viet), 14.sp, FontWeight.SemiBold, Color.White.copy(alpha = 0.95f),
+            modifier = Modifier.padding(start = 14.dp))
+        tt.cau?.let {
+            Spacer(Modifier.height(14.dp))
+            TheCau(tt, it)
+        }
+    }
+}
+
+/**
+ * Đồng hồ + ngày + âm lịch + thời tiết: một ô bấm được, OK mở bảng lịch. Lúc được chọn thì tấm kính viền xanh hiện dần
+ * phía sau (lúc thường chữ nằm thẳng trên ảnh nền như cũ).
+ */
+@Composable
+private fun DongHo(tt: TrangThaiHome) {
+    val viet = NgonNgu.tiengViet
+    val luc = tt.bayGio
+    val ngay = luc.toLocalDate()
+    val amLich = remember(ngay, viet) { AmLich.chu(ngay, viet) }
+    val fr = remember { FocusRequester() }
+    var chon by remember { mutableStateOf(false) }
+    val to by animateFloatAsState(if (chon) 1.03f else 1f, tween(160), label = "dong-ho")
+    val hienKinh by animateFloatAsState(if (chon) 1f else 0f, tween(160), label = "kinh-dong-ho")
+    val khoa = LocalKhoaChon.current
+    LaunchedEffect(tt.traChon, khoa) { if (tt.traChon == TrangThaiHome.GIO && !khoa) { runCatching { fr.requestFocus() }; tt.traChon = null } }
+    val vien = RoundedCornerShape(24.dp)
+    Box(Modifier.focusRequester(fr)
+        .nutTv({ tt.lich = true }, onChon = { chon = it })
+        .graphicsLayer { scaleX = to; scaleY = to; transformOrigin = TransformOrigin(0f, 0.5f) }) {
+        Box(Modifier.matchParentSize().graphicsLayer { alpha = hienKinh }
+            .kinh(LocalNen.current, vien, toi = 0.06f, sang = 0.16f).border(2.dp, XanhChon, vien))
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Inter Light, số đều nhau (tnum): đồng hồ không xê dịch khi đổi phút.
             BasicText("%02d:%02d".format(luc.hour, luc.minute), style = TextStyle(color = Color.White, fontSize = 64.sp,
-                fontWeight = FontWeight.Light, fontFamily = FontFamily.SansSerif, letterSpacing = (-1).sp, shadow = BongChu))
+                fontWeight = FontWeight.Light, fontFamily = Inter, letterSpacing = (-1.5).sp, fontFeatureSettings = "tnum", shadow = BongChu))
             Spacer(Modifier.width(18.dp))
             Box(Modifier.width(1.dp).height(46.dp).background(Color.White.copy(alpha = 0.42f)))
             Spacer(Modifier.width(16.dp))
+            // Ngày, âm lịch, thời tiết mỗi thứ một dòng: khối đồng hồ (và tấm kính lúc chọn) không lấn sang hàng nút bên phải.
             Column {
+                val nhat = Color.White.copy(alpha = 0.88f)
                 Nhan(Chu.ngay(ngay, viet), 17.sp, FontWeight.SemiBold, Color.White, gian = 2.4.sp)
-                Spacer(Modifier.height(5.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val nhat = Color.White.copy(alpha = 0.86f)
-                    Nhan(amLich, 12.5.sp, FontWeight.Medium, nhat)
-                    tt.thoiTiet?.let { h ->
-                        Nhan("  ·  ", 12.5.sp, FontWeight.Medium, nhat)
-                        Hinh(hinhThoiTiet(h.ma, luc.hour), 14, Color.White.copy(alpha = 0.92f))
-                        Spacer(Modifier.width(4.dp))
-                        Nhan(ThoiTiet.dong(h, viet), 12.5.sp, FontWeight.Medium, nhat)
+                Spacer(Modifier.height(4.dp))
+                Nhan(amLich, 13.5.sp, FontWeight.Medium, nhat)
+                tt.thoiTiet?.let { h ->
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Hinh(hinhThoiTiet(h.ma, luc.hour), 15, Color.White.copy(alpha = 0.92f))
+                        Spacer(Modifier.width(5.dp))
+                        Nhan(ThoiTiet.dong(h, viet), 13.5.sp, FontWeight.Medium, nhat)
                     }
                 }
             }
         }
-        if (tt.ramTrong > 0) Nhan(Chu.thongSo(tt.ramTrong, tt.boNhoTrong, viet), 14.sp, FontWeight.SemiBold, Color.White.copy(alpha = 0.95f))
     }
 }
 
@@ -181,7 +223,7 @@ private fun KhoiGio(tt: TrangThaiHome, modifier: Modifier) {
 private fun HangNut(tt: TrangThaiHome, modifier: Modifier) {
     val viet = NgonNgu.tiengViet
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-        if (tt.coDonRam) NutKinh(Icons.Rounded.RocketLaunch, if (tt.dangDon) t("Đang dọn…", "Cleaning…") else t("Dọn RAM", "Free RAM")) { tt.hd.donRam() }
+        if (tt.coDonRam) NutTron(Icons.Rounded.RocketLaunch, if (tt.dangDon) t("Đang dọn…", "Cleaning…") else t("Dọn RAM", "Free RAM")) { tt.hd.donRam() }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val m = tt.mang
             val (hinh, chu) = when (m?.loai) {
@@ -193,11 +235,12 @@ private fun HangNut(tt: TrangThaiHome, modifier: Modifier) {
             NutKinh(hinh, chu) { tt.hd.moMang() }
             if (tt.tocXuong >= 0) {
                 Spacer(Modifier.height(7.dp))
-                Nhan("↓ ${Chu.tocDo(tt.tocXuong, viet)} · ↑ ${Chu.tocDo(tt.tocLen.coerceAtLeast(0), viet)}", 11.5.sp, FontWeight.Medium,
-                    Color.White.copy(alpha = 0.86f))
+                Nhan("↓ ${Chu.tocDo(tt.tocXuong, viet)} · ↑ ${Chu.tocDo(tt.tocLen.coerceAtLeast(0), viet)}", 12.sp, FontWeight.Medium,
+                    Color.White.copy(alpha = 0.88f))
             }
         }
-        NutKinh(Icons.Rounded.Settings, t("Cài đặt", "Settings")) { tt.hd.moCaiDat() }
+        NutTron(Icons.Rounded.Settings, t("Cài đặt", "Settings")) { tt.hd.moCaiDat() }
+        NutTron(Icons.Rounded.PowerSettingsNew, t("Nguồn", "Power"), TrangThaiHome.NGUON, tt) { tt.menuNguon = true }
     }
 }
 
@@ -215,6 +258,34 @@ private fun NutKinh(hinh: ImageVector, chu: String, onClick: () -> Unit) {
         Hinh(hinh, 18)
         Spacer(Modifier.width(9.dp))
         Nhan(chu, 15.sp, FontWeight.Medium, Color.White, modifier = Modifier.widthIn(max = 190.dp))
+    }
+}
+
+/**
+ * Nút tròn bằng kính chỉ có biểu tượng (Dọn RAM, Cài đặt, ⏻): chọn thì sáng lên, viền xanh, tên hiện nhỏ bên dưới như tvOS.
+ * [traChon]: nhận lại lựa chọn khi lớp đè của nút đóng (TrangThaiHome.traChon).
+ */
+@Composable
+private fun NutTron(hinh: ImageVector, ten: String, traChon: String? = null, tt: TrangThaiHome? = null, onClick: () -> Unit) {
+    val fr = remember { FocusRequester() }
+    var chon by remember { mutableStateOf(false) }
+    val to by animateFloatAsState(if (chon) 1.08f else 1f, tween(140), label = "nut-tron")
+    val khoa = LocalKhoaChon.current
+    if (traChon != null && tt != null) LaunchedEffect(tt.traChon, khoa) {
+        if (tt.traChon == traChon && !khoa) { runCatching { fr.requestFocus() }; tt.traChon = null }
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.focusRequester(fr).graphicsLayer { scaleX = to; scaleY = to }
+            .nutTv(onClick, onChon = { chon = it })
+            .kinh(LocalNen.current, CircleShape, toi = if (chon) 0.04f else 0.20f, sang = if (chon) 0.22f else 0.07f)
+            .then(if (chon) Modifier.border(2.dp, XanhChon, CircleShape) else Modifier)
+            .size(40.dp), contentAlignment = Alignment.Center) {
+            Hinh(hinh, 19)
+        }
+        if (chon) {
+            Spacer(Modifier.height(7.dp))
+            Nhan(ten, 12.sp, FontWeight.Medium, Color.White.copy(alpha = 0.92f))
+        }
     }
 }
 

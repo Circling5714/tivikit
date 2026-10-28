@@ -12,8 +12,8 @@ import kotlin.math.sin
 object AmLich {
     data class Ngay(val ngay: Int, val thang: Int, val nam: Int, val nhuan: Boolean)
 
-    private val CAN = listOf("Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý")
-    private val CHI = listOf("Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi")
+    internal val CAN = listOf("Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý")
+    internal val CHI = listOf("Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi")
     // Con giáp kiểu Việt Nam: Mão là mèo, Sửu là trâu.
     private val CON_GIAP = listOf("Rat", "Buffalo", "Tiger", "Cat", "Dragon", "Snake", "Horse", "Goat", "Monkey", "Rooster", "Dog", "Pig")
 
@@ -94,7 +94,10 @@ object AmLich {
     }
 
     /** Mặt trời đang ở cung 30 độ nào (0–11) lúc đầu ngày. */
-    internal fun kinhDoMatTroi(jdn: Long, tz: Double): Int {
+    internal fun kinhDoMatTroi(jdn: Long, tz: Double): Int = floor(kinhDoRad(jdn, tz) / PI * 6).toInt()
+
+    /** Kinh độ mặt trời (radian, 0–2π) lúc đầu ngày [jdn] giờ địa phương; tiết khí và trực của LichNgay cũng tính theo nó. */
+    internal fun kinhDoRad(jdn: Long, tz: Double): Double {
         val t = (jdn - 2451545.5 - tz / 24) / 36525
         val t2 = t * t
         val dr = PI / 180
@@ -104,7 +107,7 @@ object AmLich {
         dl += (0.019993 - 0.000101 * t) * sin(dr * 2 * m) + 0.000290 * sin(dr * 3 * m)
         var l = (l0 + dl) * dr
         l -= PI * 2 * floor(l / (PI * 2))
-        return floor(l / PI * 6).toInt()
+        return l
     }
 
     /** Ngày đầu tháng 11 âm lịch (tháng có đông chí) của năm dương lịch [yy]. */

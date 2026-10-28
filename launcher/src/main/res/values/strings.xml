@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ten_nguon">Nút nguồn (TiviKit Launcher)</string>
+    <string name="mo_ta_nguon">Cho menu ⏻ của TiviKit Launcher tắt tivi và mở menu nguồn (khởi động lại). Không đọc nội dung màn hình, không bắt phím remote.</string>
+</resources>
