@@ -10,6 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -115,9 +119,18 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
         Phu(t("Hẹn giờ bật chỉ chạy khi tivi tắt bằng remote vào chế độ chờ; tivi rút điện hay tắt sâu thì không app nào bật lại được. Thử một lần cho chắc.",
             "Timed power-on only works when the remote puts the TV in standby; if it's unplugged or powers down deeply, no app can turn it back on. Test it once."))
         NutPhu(t("Thử: tivi tự bật sau 2 phút", "Test: the TV turns on in 2 minutes"), Icons.Rounded.Timer, enabled = !vm.dangBan) { h.thu() }
-        TextButton(onClick = { h.go() }, enabled = !vm.dangBan) {
+        var hoiGo by remember { mutableStateOf(false) }
+        TextButton(onClick = { hoiGo = true }, enabled = !vm.dangBan) {
             Icon(Icons.Rounded.DeleteOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(t("Gỡ Hẹn giờ khỏi tivi", "Remove the Timer from the TV"))
         }
+        if (hoiGo) AlertDialog(
+            onDismissRequest = { hoiGo = false },
+            icon = { Icon(Icons.Rounded.DeleteOutline, null, tint = Cam) },
+            title = { Text(t("Gỡ Hẹn giờ?", "Remove the Timer?")) },
+            text = { Text(t("Mọi giờ bật / tắt / mở app đã hẹn trên tivi bị xoá.", "Every scheduled power on / off / app opening on the TV is deleted.")) },
+            confirmButton = { TextButton(onClick = { hoiGo = false; h.go() }) { Text(t("Gỡ", "Remove"), color = Cam) } },
+            dismissButton = { TextButton(onClick = { hoiGo = false }) { Text(t("Thôi", "Cancel")) } },
+        )
     }
     Phu(t("Lưu lên tivi sẽ cài app nhỏ \"Hẹn giờ (TiviKit)\", cho nó báo thức đúng giờ và bật dịch vụ trợ năng của nó (để tắt tivi và mở màn hình đúng giờ; không đọc màn hình, không bắt phím). Thấy và tắt được trong Cài đặt → Trợ năng của tivi; Gỡ hoặc Khôi phục tivi là xoá hết. Tivi có sẵn hẹn giờ bật / tắt của hãng thì dùng song song được.",
         "Saving installs the small \"Timer (TiviKit)\" app, allows it exact alarms and turns on its accessibility service (to turn the TV off and bring up screens on time; it doesn't read the screen or catch keys). It's visible and can be turned off in the TV's Settings → Accessibility; Remove or Restore deletes everything. The TV's own on / off timers keep working alongside."))

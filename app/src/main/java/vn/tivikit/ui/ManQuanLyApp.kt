@@ -175,17 +175,20 @@ private fun HangApp(vm: PhienLamViec, ql: QuanLyApp, a: QuanLyApp.App, hoi: (Str
                 if (a.dangTat) ChonChip(t("Bật lại", "Re-enable"), true) { lam { ql.batLaiApp(a) } }
                 else {
                     ChonChip(t("Mở", "Open"), false) { lam { ql.moApp(a) } }
-                    // Buộc dừng app khoá là tắt luôn dịch vụ khoá (Android bỏ nó khỏi danh sách trợ năng): không cho ở đây.
-                    if (!ql.laKhoa(a)) ChonChip(t("Buộc dừng", "Force stop"), false) { lam { ql.dung(a) } }
+                    // Buộc dừng app của TiviKit là tắt luôn dịch vụ của nó (Android bỏ khỏi danh sách trợ năng, Hẹn giờ mất báo
+                    // thức): không cho ở đây.
+                    if (!ql.baoVe(a)) ChonChip(t("Buộc dừng", "Force stop"), false) { lam { ql.dung(a) } }
                 }
                 ChonChip(t("Xoá cache", "Clear cache"), false) { lam { ql.xoaCache(a) } }
                 if (!ql.baoVe(a)) ChonChip(t("Xoá dữ liệu", "Clear data"), false) { lam { hoi("xoa") } }
                 ChonChip(t("Lưu APK", "Save APK"), false) { lam { ql.chuanBiLuu(a) } }
                 if (!a.dangTat && ql.duocTat(a)) ChonChip(t("Tắt app", "Disable"), false) { lam { hoi("tat") } }
-                if (!a.heThong && !ql.baoVe(a)) ChonChip(t("Gỡ", "Uninstall"), false) { lam { hoi("go") } }
+                if (!a.heThong && !ql.baoVe(a) && !ql.laHome(a)) ChonChip(t("Gỡ", "Uninstall"), false) { lam { hoi("go") } }
             }
-            if (ql.baoVe(a)) Phu(t("App của TiviKit: gỡ / xoá dữ liệu ở mục Home sạch, Khoá trẻ em, Kênh nhanh, Hẹn giờ hoặc Khôi phục.",
-                "Part of TiviKit: remove it from the clean Home, Kids lock, Quick channel, Timer or Restore screens."))
+            if (!a.heThong && !ql.baoVe(a) && ql.laHome(a)) Phu(t("Đang là màn Home: muốn gỡ thì đổi Home ở Quản lý launcher trước.",
+                "This is the Home screen: change Home under Launchers before removing it."))
+            if (ql.baoVe(a)) Phu(t("App của TiviKit: gỡ / xoá dữ liệu ở mục Home sạch, Khoá trẻ em, Kênh nhanh, Hẹn giờ, Quản lý launcher, Cast SmartTube hoặc Khôi phục.",
+                "Part of TiviKit: remove it from the clean Home, Kids lock, Quick channel, Timer, Launchers, Cast to SmartTube or Restore screens."))
         }
     }
 }

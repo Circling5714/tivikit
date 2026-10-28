@@ -66,12 +66,19 @@ class QuanLyApp(private val vm: PhienLamViec) {
 
     /**
      * Gói của chính app này (Home sạch, Khoá trẻ em — cả bản trước khi đổi tên gói, đang chờ cài mã OTP — Kênh nhanh,
-     * Hẹn giờ, bộ gõ tiếng Việt, Cast SmartTube, TiviKit khi chạy trên tivi): không gỡ / xoá dữ liệu ở đây.
+     * Hẹn giờ, bộ gõ tiếng Việt, Cast SmartTube, TiviKit Launcher, TiviKit khi chạy trên tivi): không gỡ / xoá dữ liệu / buộc
+     * dừng ở đây (buộc dừng làm Android bỏ dịch vụ trợ năng của chúng, Hẹn giờ mất báo thức).
      */
     fun baoVe(a: App) = a.tv.pkg in ThaoTacTv.HOME_SACH || laKhoa(a) ||
         vn.tivikit.dulieu.KenhNhanh.laGoiKenh(a.tv.pkg) || a.tv.pkg == vn.tivikit.dulieu.HenGio.GOI || a.tv.pkg == vn.tivikit.dulieu.GoChu.GOI ||
-        a.tv.pkg == vn.tivikit.dulieu.CastSmartTube.GOI ||
+        a.tv.pkg == vn.tivikit.dulieu.CastSmartTube.GOI || a.tv.pkg == vn.tivikit.dulieu.TiviKitLauncher.GOI ||
         a.tv.pkg == vm.ctx.packageName
+
+    /**
+     * Launcher nút Home đang mở (Home mặc định, hay launcher Home sạch mở đè lên): gỡ ở đây thì tivi có thể không còn màn Home
+     * nào (Home của hãng đã tắt lúc đặt launcher này, 28/10/2026). Đổi Home ở Quản lý launcher trước.
+     */
+    fun laHome(a: App) = a.tv.pkg == vm.trangThai?.homeHienTai || a.tv.pkg == vm.qlLauncher.tt?.homeMo
 
     /** App Khoá trẻ em (bản mới hay bản trước khi đổi tên gói): cũng không buộc dừng ở đây (28/10/2026). */
     fun laKhoa(a: App) = a.tv.pkg == ThaoTacTv.PKG_KHOA || a.tv.pkg == vn.tivikit.dulieu.GoiCu.KHOA
@@ -169,6 +176,7 @@ class QuanLyApp(private val vm: PhienLamViec) {
     }
 
     fun dung(a: App) = vm.chay(t("Đang buộc dừng ${a.tenHien}…", "Force-stopping ${a.tenHien}…")) {
+        if (baoVe(a)) error(t("${a.tenHien} là app của TiviKit, không buộc dừng ở đây.", "${a.tenHien} is part of TiviKit; it can't be force-stopped here."))
         vm.damBaoKetNoi()
         vm.io { tvApp.dung(a.tv.pkg) }
         bao = t("Đã buộc dừng ${a.tenHien}.", "${a.tenHien} force-stopped.")
@@ -220,6 +228,8 @@ class QuanLyApp(private val vm: PhienLamViec) {
     }
 
     fun go(a: App) = vm.chay(t("Đang gỡ ${a.tenHien}…", "Uninstalling ${a.tenHien}…")) {
+        if (baoVe(a) || laHome(a)) error(t("${a.tenHien} đang là màn Home hoặc là app của TiviKit: đổi Home / gỡ ở Quản lý launcher trước.",
+            "${a.tenHien} is the Home screen or part of TiviKit: change Home / remove it under Launchers first."))
         vm.damBaoKetNoi()
         val out = vm.io { vm.tv.goApp(a.tv.pkg) }
         if (!out.contains("Success")) error(t("Gỡ không được: ${out.trim()}", "Uninstall failed: ${out.trim()}"))

@@ -9,6 +9,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,9 +98,19 @@ internal fun ManCast(vm: PhienLamViec) = Cuon {
             "A TV in standby must be turned on with the remote first. Phones linked earlier with a TV code keep working as before."))
     }
 
-    if (c.daCai) TextButton(onClick = { c.go() }, enabled = !vm.dangBan) {
+    var hoiGo by remember { mutableStateOf(false) }
+    if (c.daCai) TextButton(onClick = { hoiGo = true }, enabled = !vm.dangBan) {
         Icon(Icons.Rounded.DeleteOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(t("Gỡ Cast SmartTube khỏi tivi", "Remove Cast to SmartTube from the TV"))
     }
+    if (hoiGo) AlertDialog(
+        onDismissRequest = { hoiGo = false },
+        icon = { Icon(Icons.Rounded.DeleteOutline, null, tint = Cam) },
+        title = { Text(t("Gỡ Cast SmartTube?", "Remove Cast to SmartTube?")) },
+        text = { Text(t("Mọi điện thoại đã liên kết bằng mã TV mất tivi, danh sách điện thoại xoá hết. Cài lại thì phải liên kết lại.",
+            "Every phone linked with a TV code loses the TV and the phone list is cleared. After reinstalling, phones must link again.")) },
+        confirmButton = { TextButton(onClick = { hoiGo = false; c.go() }) { Text(t("Gỡ", "Remove"), color = Cam) } },
+        dismissButton = { TextButton(onClick = { hoiGo = false }) { Text(t("Thôi", "Cancel")) } },
+    )
     Phu(t("Bật sẽ cài app nhỏ \"Cast SmartTube (TiviKit)\", bật dịch vụ trợ năng của nó (để chạy suốt, được mở SmartTube và biết app nào đang hiện để SmartTube đang nghe nền thì giữ nghe nền; không đọc nội dung màn hình, không bắt phím), cho nó đọc thống kê dùng app (cũng để biết app nào đang hiện) và phiên phát của SmartTube (để đồng bộ khi bấm remote tivi và biết tên bài; tivi ít RAM không cho thì bỏ qua). App nói chuyện với máy chủ YouTube như app YouTube trên tivi (giao thức không công khai của YouTube: YouTube đổi thì có thể hỏng tới khi TiviKit cập nhật). Ai cùng Wi-Fi cũng cast được, như Chromecast. Gỡ hoặc Khôi phục tivi là xoá hết.",
         "Turning it on installs the small \"Cast SmartTube (TiviKit)\" app, turns on its accessibility service (to keep running, be allowed to open SmartTube and know which app is showing, so SmartTube playing in the background stays there; it doesn't read what's on screen or catch keys) and lets it read app usage stats (also to know which app is showing) and SmartTube's playback session (to stay in sync when you use the TV remote and to know the title; skipped on low-RAM TVs that don't allow it). It talks to YouTube's servers the way the YouTube TV app does (YouTube's private protocol: if YouTube changes it, this may break until TiviKit is updated). Anyone on the same Wi-Fi can cast, as with a Chromecast. Remove or Restore deletes everything."))
 }
