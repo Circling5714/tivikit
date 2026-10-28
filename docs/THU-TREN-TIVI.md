@@ -163,13 +163,14 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 | SmartTube đang nghe nền (bấm Home lúc đang phát), gửi video khác từ điện thoại | SmartTube hiện lên mở video mới rồi tự về lại launcher đang dùng, video mới phát nền |
 | Tivi có Cast của hãng (Skyworth Google TV): mở màn Cast SmartTube | Thẻ "Liên kết bằng mã TV" báo tivi có Cast của hãng chen trước |
 | Lấy mã TV, nhập trên điện thoại: YouTube → nút Cast → Thêm thiết bị / Liên kết bằng mã TV | Nút Cast có tên tivi (không mờ), chọn là nối; cả khi SmartTube chưa mở |
-| Cast một video, xem thẻ Đang phát trên TiviKit Launcher và ở màn Điều khiển của TiviKit (tivi cho đọc phiên phát) | Hiện tên video và kênh, không chỉ "SmartTube" |
+| Cast một video (cả video nhạc tắt quyền nhúng), xem thẻ Đang phát trên TiviKit Launcher và ở màn Điều khiển của TiviKit (tivi cho đọc phiên phát) | Hiện tên video và kênh, không chỉ "SmartTube" |
 | Trên tivi: mở app "Cast SmartTube" trong danh sách app | Mã TV chữ to đủ 12 số, đếm ngược tới mã mới; danh sách điện thoại đã cast |
 | Một điện thoại chưa từng cast (khách) cast lần đầu | Tivi hỏi Cho phép luôn / tới hết hôm nay / 24 giờ / Chặn; chưa trả lời thì chưa phát; Back thì bỏ qua lần này |
+| Tivi đang ở màn bảo vệ, máy lạ cast | Màn bảo vệ tắt, hộp hỏi hiện |
 | Cho khách "tới hết hôm nay", sang 0 giờ cast lại | Tivi bỏ qua video, báo khách đã hết hạn; danh sách ghi "Khách đã hết hạn" |
 | Chặn một máy (trên tivi hay ở TiviKit), máy đó cast | Tivi bỏ qua video và cả lệnh tạm dừng / tua của máy đó, báo nhỏ trên tivi |
 | Tắt "Nhận cast", cast từ máy đã được phép | Tivi bỏ qua, báo đang tạm ngừng; bật lại thì cast được |
-| Huỷ mọi liên kết | Mọi điện thoại mất tivi, phải nhập mã TV mới (mã cũ trên màn đổi sau vài giây) |
+| Huỷ mọi liên kết (trên tivi hay ở TiviKit), nhập mã TV mới vào điện thoại rồi cast | Mọi điện thoại mất tivi; lúc tivi nối lại thì màn ghi "Đang lấy mã…" chứ không hiện mã cũ, TiviKit tự xin mã mới; nhập mã mới thì cast tới tivi, tivi hỏi lại như máy lạ |
 | Tivi có Khoá trẻ em đang bật: chặn / cho phép / huỷ liên kết / đổi tên trên tivi | Hiện lớp "Cần mã của bố mẹ"; đúng mã thì làm, Back thì không đổi gì; xem mã TV thì không hỏi |
 | Gỡ Cast SmartTube | Nút Cast trên điện thoại không còn tivi đó |
 
