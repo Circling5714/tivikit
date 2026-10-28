@@ -44,7 +44,8 @@ class XinPhep : ManCoMa() {
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
-        // Tivi đang tắt màn / màn bảo vệ: bật lên cho người trong nhà thấy (Android 14+ cần TURN_SCREEN_ON, TiviKit đã cấp).
+        // Tivi đang tắt màn: bật lên cho người trong nhà thấy (Android 14+ cần TURN_SCREEN_ON, TiviKit đã cấp; màn bảo
+        // vệ thì mo() đã tắt).
         if (Build.VERSION.SDK_INT >= 27) { setTurnScreenOn(true); setShowWhenLocked(true) }
         else @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         nhan(intent)
@@ -116,6 +117,9 @@ class XinPhep : ManCoMa() {
 
         /** Mở hộp hỏi cho máy [d] gửi video [video] (máy nhận gọi, từ dịch vụ trợ năng nên mở được khi chạy nền). */
         fun mo(ctx: Context, d: DienThoai, video: String) = runCatching {
+            // setTurnScreenOn không tắt màn bảo vệ (28/10/2026, TX3 Android 9: hộp hỏi mở phía sau màn bảo vệ, không ai
+            // thấy, hết 60 giây là bỏ video).
+            TrinhPhat.danhThuc(ctx)
             ctx.startActivity(Intent(ctx, XinPhep::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .putExtra(ID, d.id).putExtra(TEN, d.tenHien.orEmpty()).putExtra(VIDEO, video))
         }

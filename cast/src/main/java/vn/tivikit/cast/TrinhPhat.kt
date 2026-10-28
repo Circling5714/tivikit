@@ -38,6 +38,16 @@ class TrinhPhat(private val ctx: Context) {
         private val MA_VIDEO = Regex("^[A-Za-z0-9_-]{11}$")
 
         fun so(d: Double): String = String.format(Locale.US, "%.3f", d)
+
+        /**
+         * Bật màn hình như bấm remote: tắt màn bảo vệ (không thì video hay hộp hỏi XinPhep hiện phía sau nó), tivi đang
+         * chờ thì bật lên như app YouTube gốc. Android 14+ cần quyền TURN_SCREEN_ON (TiviKit cấp qua ADB).
+         */
+        @Suppress("DEPRECATION")
+        fun danhThuc(ctx: Context) = runCatching {
+            ctx.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE, "tivikit:cast").acquire(5_000)
+        }
     }
 
     private val am = ctx.getSystemService(AudioManager::class.java)
@@ -202,20 +212,9 @@ class TrinhPhat(private val ctx: Context) {
     private fun goiSmartTube(): String? =
         GOI_SMARTTUBE.firstOrNull { p -> runCatching { ctx.packageManager.getPackageInfo(p, 0) }.isSuccess }
 
-    /**
-     * Bật màn hình như bấm remote: tắt màn bảo vệ (không thì video phát phía sau nó), tivi đang chờ thì bật lên như app
-     * YouTube gốc. Android 14+ cần quyền TURN_SCREEN_ON (TiviKit cấp qua ADB).
-     */
-    @Suppress("DEPRECATION")
-    private fun danhThuc() = runCatching {
-        ctx.getSystemService(PowerManager::class.java).newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
-            "tivikit:cast").acquire(5_000)
-    }
-
     /** Mở [id] từ giây [tu]: SmartTube nếu có, không thì app nào mở được link YouTube. */
     private fun mo(id: String, tu: Double): Boolean {
-        danhThuc()
+        danhThuc(ctx)
         val uri = Uri.parse("https://www.youtube.com/watch?v=$id" + if (tu >= 1) "&t=${tu.toInt()}s" else "")
         val i = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         goiSmartTube()?.let { i.setPackage(it) }
