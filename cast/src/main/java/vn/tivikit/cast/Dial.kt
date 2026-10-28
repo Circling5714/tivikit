@@ -216,7 +216,8 @@ class Dial(
             val g = DatagramPacket(buf, buf.size)
             try {
                 s.receive(g)
-                // Trả lời ngay rồi mới ghi nhật ký: tivi có máy DIAL của hãng cùng IP thì app YouTube chỉ lấy máy trả lời trước.
+                // Trả lời ngay: tivi có máy DIAL của hãng cùng IP thì app YouTube chỉ lấy máy trả lời trước. Không ghi log từng
+                // lượt dò (điện thoại, máy trong nhà dò vài giây một lần: đẩy trôi mất nhật ký cần xem).
                 val ip = ipNhanh(g.address)
                 val goiTin = String(g.data, 0, g.length, Charsets.UTF_8)
                 if (ip != null && (!im || ip == g.address.hostAddress)) {
@@ -225,7 +226,6 @@ class Dial(
                         s.send(DatagramPacket(b, b.size, g.address, g.port))
                     }
                 }
-                if (goiTin.startsWith("M-SEARCH", true)) Log.d(NHAN, "SSDP M-SEARCH từ ${g.address.hostAddress}")
             } catch (_: SocketTimeoutException) {
             } catch (e: Exception) {
                 if (!chay) break

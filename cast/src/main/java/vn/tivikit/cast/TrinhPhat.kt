@@ -15,6 +15,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 import org.json.JSONObject
 import java.util.Locale
@@ -122,22 +123,28 @@ class TrinhPhat(private val ctx: Context) {
         }.getOrDefault(false)
     }
 
+    /** App có màn lên trước cuối cùng ([goi], lúc [luc] theo giờ máy) và launcher lên trước cuối cùng. */
+    private class LenTruoc(val goi: String, val luc: Long, val launcher: String?)
+
     /**
-     * App đang ở trước màn hình theo thống kê dùng app (app lên trước cuối cùng), khi dịch vụ trợ năng chưa thấy lần đổi cửa
-     * sổ nào từ lúc bật (vừa cài, vừa khởi động lại: 28/10/2026 trên Skyworth, video mới tới lúc đang nghe nền mà SmartTube
-     * ở luôn trên màn hình). Cần GET_USAGE_STATS (TiviKit cấp qua ADB); không có thì null.
+     * App lên trước màn hình cuối cùng từ [tu] (giờ máy, ms) tới giờ, theo thống kê dùng app; null nếu không có lần nào
+     * trong khoảng đó hay không đọc được (thiếu GET_USAGE_STATS, TiviKit cấp qua ADB). Thống kê ghi đúng từng lần một màn
+     * lên trước; sự kiện cửa sổ của dịch vụ trợ năng thì gộp trong 100 ms và có lúc lệch khi launcher và SmartTube đổi nhau
+     * nhanh (28/10/2026 trên Skyworth: cập nhật launcher, bấm Home, launcherx tự lên — máy nhận tưởng SmartTube đang hiện
+     * nên không đưa video mới về nghe nền).
      */
     @Suppress("DEPRECATION")
-    private fun appTuThongKe(): String? = runCatching {
-        val bay = System.currentTimeMillis()
-        val ds = ctx.getSystemService(UsageStatsManager::class.java).queryEvents(bay - 24 * 3_600_000L, bay)
+    private fun lenTruoc(tu: Long): LenTruoc? = runCatching {
+        val ds = ctx.getSystemService(UsageStatsManager::class.java).queryEvents(tu, System.currentTimeMillis())
         val e = UsageEvents.Event()
-        var goi: String? = null
+        var kq: LenTruoc? = null
         while (ds.hasNextEvent()) {
             ds.getNextEvent(e)
-            if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) goi = e.packageName
+            if (e.eventType != UsageEvents.Event.MOVE_TO_FOREGROUND) continue
+            val goi = e.packageName ?: continue
+            kq = LenTruoc(goi, e.timeStamp, if (laHome(goi)) goi else kq?.launcher)
         }
-        goi
+        kq
     }.getOrNull()
 
     /**
@@ -167,23 +174,27 @@ class TrinhPhat(private val ctx: Context) {
     /**
      * Video mới tới lúc SmartTube đang phát nền: SmartTube phải lên màn hình để mở video, chờ video [id] phát (có phiên media
      * thì chờ phiên báo đúng mã video: video cast sang không có tên bài để so) rồi cho SmartTube rời màn hình như người xem bấm
-     * Home (cách nghe nền của SmartTube chạy lúc đó), về launcher [ve]. Quá 12 giây thì cứ về.
+     * Home (cách nghe nền của SmartTube chạy lúc đó), về launcher [ve]. Quá 12 giây thì cứ về. SmartTube lên trước màn hình
+     * từ lúc nào: theo thống kê dùng app từ [tu] (giờ máy) nếu [coThongKe], không thì theo dịch vụ trợ năng.
      */
-    private fun choVeNen(ve: String?, id: String) {
-        val het = SystemClock.elapsedRealtime() + 12_000
+    private fun choVeNen(ve: String?, id: String, tu: Long, coThongKe: Boolean) {
+        val batDau = SystemClock.elapsedRealtime()
         tay.postDelayed(object : Runnable {
             override fun run() {
                 val bay = SystemClock.elapsedRealtime()
-                val tren = goiTren in GOI_SMARTTUBE
+                // SmartTube đã ở trước màn hình bao lâu (ms); -1 = chưa lên, hay người xem đã sang app khác.
+                val daLen = if (coThongKe) lenTruoc(tu)?.takeIf { it.goi in GOI_SMARTTUBE }?.let { System.currentTimeMillis() - it.luc } ?: -1L
+                    else if (goiTren in GOI_SMARTTUBE) bay - mocTren else -1L
                 val p = phien()
                 val daPhat = if (p != null) p.playbackState?.state == PlaybackState.STATE_PLAYING &&
                         p.metadata?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID).let { it == null || it == id }
-                    else am.isMusicActive && bay - mocTren > 2_500
-                when {
-                    tren && daPhat && bay - mocTren > 1_000 -> veHome?.invoke(ve)
-                    bay > het -> if (tren) veHome?.invoke(ve)
-                    else -> tay.postDelayed(this, 500)
-                }
+                    else am.isMusicActive && daLen > 2_500
+                val ve12 = bay - batDau > 12_000
+                if (daLen > 1_000 && (daPhat || ve12)) {
+                    Log.i(Dial.NHAN, "cho SmartTube về nghe nền sau ${bay - batDau} ms (${if (daPhat) "video mới đã phát" else "quá 12 giây"}), mở ${ve ?: "Home"}")
+                    veHome?.invoke(ve)
+                } else if (!ve12) tay.postDelayed(this, 500)
+                else Log.i(Dial.NHAN, "thôi chờ về nghe nền: SmartTube không còn ở trước màn hình")
             }
         }, 1_000)
     }
@@ -233,11 +244,14 @@ class TrinhPhat(private val ctx: Context) {
 
     @Synchronized fun phat(id: String, tu: Double): Boolean {
         if (!MA_VIDEO.matches(id)) return false
-        // Trước khi mở: SmartTube có đang nghe nền không, và launcher nào để về lại (màn bảo vệ đang che thì launcher hiện
-        // gần nhất).
-        val tren = goiTren ?: appTuThongKe()
+        // Trước khi mở: app nào đang ở trước (theo thống kê dùng app; không đọc được thì theo dịch vụ trợ năng), SmartTube có
+        // đang nghe nền không, và launcher nào để về lại (màn bảo vệ không phải app: vẫn là launcher bên dưới).
+        val luc = System.currentTimeMillis()
+        val tk = lenTruoc(luc - 24 * 3_600_000L)
+        val tren = tk?.goi ?: goiTren
         val nen = dangNgheNen(tren, daCast = videoId != null)
-        val ve = tren?.takeIf { laHome(it) } ?: launcherCuoi
+        val ve = tren?.takeIf { laHome(it) } ?: tk?.launcher ?: launcherCuoi
+        Log.i(Dial.NHAN, "video mới: đang hiện $tren (${if (tk != null) "thống kê" else "trợ năng"}), nghe nền: $nen, về: $ve")
         videoId = id
         viTriGoc = tu
         moc = SystemClock.elapsedRealtime()
@@ -247,7 +261,7 @@ class TrinhPhat(private val ctx: Context) {
         // SmartTube tạo / đổi phiên media khi bắt đầu phát.
         tay.postDelayed({ theoDoi() }, 3_000)
         val ok = mo(id, tu)
-        if (ok && nen) choVeNen(ve, id)
+        if (ok && nen) choVeNen(ve, id, luc - 500, coThongKe = tk != null)
         return ok
     }
 
