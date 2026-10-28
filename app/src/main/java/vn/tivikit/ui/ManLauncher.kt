@@ -145,7 +145,45 @@ private fun TuyChinhTkl(vm: PhienLamViec, ql: QuanLyLauncher, k: TiviKitLauncher
     NutPhu(t("Ảnh từ điện thoại", "Photo from the phone"), Icons.Rounded.AddPhotoAlternate, enabled = !vm.dangBan) {
         runCatching { chonAnh.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
     }
+    CauMoiNgayTkl(vm, ql, k)
     NutChinh(t("Áp dụng lên tivi", "Apply to the TV"), enabled = !vm.dangBan, icon = Icons.Rounded.Check) { ql.apDungTkl() }
+}
+
+/**
+ * Câu kinh mỗi ngày dưới đồng hồ (launcher 1.4): hiện / ẩn, bộ câu riêng từ file chữ trên điện thoại (ngôn ngữ nào cũng
+ * được) hay Kinh Pháp Cú đi kèm. Gửi khi Áp dụng.
+ */
+@Composable
+private fun CauMoiNgayTkl(vm: PhienLamViec, ql: QuanLyLauncher, k: TiviKitLauncher.TrangThai) {
+    Text(t("Câu kinh mỗi ngày", "Daily verse"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    val c = k.cau
+    if (c == null) {
+        Phu(t("Cần bản TiviKit Launcher mới: bấm Cập nhật ở trên.", "Needs a newer TiviKit Launcher: tap Update above."), Cam)
+        return
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ChonChip(t("Hiện dưới đồng hồ", "Show under the clock"), ql.cauBat) { ql.cauBat = true }
+        ChonChip(t("Không hiện", "Hide"), !ql.cauBat) { ql.cauBat = false }
+    }
+    Phu(when {
+        ql.cauFile != null -> t("Sẽ gửi “${ql.cauTenFile}” (${(ql.cauFile?.size ?: 0) / 1024 + 1} KB).", "Will send “${ql.cauTenFile}” (${(ql.cauFile?.size ?: 0) / 1024 + 1} KB).")
+        ql.cauVePhapCu -> t("Sẽ về Kinh Pháp Cú đi kèm.", "Will go back to the built-in Dhammapada.")
+        c.rieng -> t("Tivi đang dùng bộ riêng “${c.ten.ifBlank { "không tên" }}” (${c.so} câu), mỗi ngày một câu.",
+            "The TV shows your own collection “${c.ten.ifBlank { "untitled" }}” (${c.so} verses), one a day.")
+        else -> t("Tivi đang dùng Kinh Pháp Cú (${c.so} câu, thơ lục bát), mỗi ngày một câu; OK ở thẻ để đọc cả câu.",
+            "The TV shows the Dhammapada (${c.so} verses, in Vietnamese verse), one a day; OK on the card shows the whole verse.")
+    })
+    if (ql.cauFile != null) OutlinedTextField(ql.cauTen, { ql.cauTen = it.take(40) }, label = { Text(t("Tên bộ câu (hiện trên thẻ)", "Collection name (shown on the card)")) },
+        singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+    val chonFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) ql.chonCau(uri) }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        NutPhu(t("Bộ câu riêng (.txt)", "Own verses (.txt)"), Icons.Rounded.Description, enabled = !vm.dangBan) {
+            runCatching { chonFile.launch(arrayOf("text/plain")) }
+        }
+        if (c.rieng || ql.cauFile != null) NutPhu(t("Về Kinh Pháp Cú", "Back to the Dhammapada"), Icons.Rounded.Restore, enabled = !vm.dangBan) { ql.vePhapCu() }
+    }
+    Phu(t("File chữ (.txt) tối đa 1 MB, ngôn ngữ nào cũng được: các câu cách nhau một dòng trống, hoặc đánh số (1), (2)… như Kinh Pháp Cú.",
+        "A text file (.txt) of up to 1 MB, in any language: verses separated by a blank line, or numbered (1), (2)… like the Dhammapada."))
 }
 
 /** Ảnh nền có sẵn, thu nhỏ để chọn. */

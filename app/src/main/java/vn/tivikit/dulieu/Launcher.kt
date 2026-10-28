@@ -195,7 +195,9 @@ object Launcher {
         // Home sạch mở đè: mở launcher nó được báo (home_target) nếu launcher đó còn bật, không thì chính nó.
         val dichMo = dichHome.substringBefore('/').takeIf { g -> g != goiHomeSach && muc[g]?.dangTat == false }
         val homeMo = if (homeSachBat && phimHome && chuyenDe.isNotEmpty() && chuyenDe == goiMacDinh) dichMo ?: goiHomeSach else goiMacDinh
-        val troNangKhac = dichVu.map { it.substringBefore('/') }.distinct().filter { g -> muc[g]?.let { it.loai != Loai.HOME_SACH && !it.dangTat } == true }
+        // Dịch vụ Nút nguồn của TiviKit Launcher (menu ⏻) không bắt phím nào: không tính là launcher tự bắt nút Home.
+        val troNangKhac = dichVu.filter { dayDu(it) != TiviKitLauncher.DICH_VU }.map { it.substringBefore('/') }.distinct()
+            .filter { g -> muc[g]?.let { it.loai != Loai.HOME_SACH && !it.dangTat } == true }
         val troNangCua = phan(chu, "TN").orEmpty().lines().map { it.trim() }.filter { THANH_PHAN.matches(it) }.map { dayDu(it) }
             .groupBy { it.substringBefore('/') }.filterKeys { g -> muc[g]?.let { it.loai != Loai.HOME_SACH } == true }
 

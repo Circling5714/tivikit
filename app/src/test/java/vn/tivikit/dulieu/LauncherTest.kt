@@ -262,6 +262,16 @@ class LauncherTest {
         assertEquals("com.gathin.tvhome", tat.homeMo)
     }
 
+    /** TiviKit Launcher 1.4 bật dịch vụ Nút nguồn (menu ⏻): không bắt phím, không bị coi là launcher tự bắt nút Home. */
+    @Test fun nutNguonTklKhongBatPhimHome() {
+        val chu = coProjectivy.replace("com.spocky.projengmenu/.ui.home.MainActivity", "vn.tivikit.launcher/.Home")
+            .replace("com.spocky.projengmenu/com.spocky.projengmenu.services.ProjectivyAccessibilityService", TiviKitLauncher.DICH_VU)
+        val tt = Launcher.tuChu(chu, "com.gathin.tvhome", homeSach)
+        assertTrue(tt.ds.any { it.goi == TiviKitLauncher.GOI })
+        assertTrue(tt.troNangKhac.isEmpty())
+        assertTrue(TiviKitLauncher.DICH_VU in tt.troNangDangBat)
+    }
+
     @Test fun troNangCuaLauncher() {
         val chu = coProjectivy.replace("@@SETUP\n", "@@SETUP\n@@TN\ncom.spocky.projengmenu/.services.ProjectivyAccessibilityService\ncom.gathin.tvhome/.HomeKeyService\nvn.tivikit.hengio/.HenGioDichVu\n")
         val tt = Launcher.tuChu(chu, "com.gathin.tvhome", homeSach)

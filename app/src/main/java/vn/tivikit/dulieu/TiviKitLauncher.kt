@@ -20,11 +20,47 @@ object TiviKitLauncher {
      */
     const val HOME = "$GOI/.Home"
 
+    /**
+     * Dịch vụ trợ năng Nút nguồn (bản 1.4 trở đi): menu ⏻ của launcher tắt tivi và mở menu nguồn nhờ nó. TiviKit bật khi
+     * cài / cập nhật, bỏ khỏi danh sách trợ năng khi gỡ.
+     */
+    const val DICH_VU = "$GOI/$GOI.NguonDichVu"
+
     const val LENH_BAT_HOME = "content call --uri content://$GOI --method bat-home"
     const val LENH_DOC = "content call --uri content://$GOI --method doc"
 
     /** Ảnh nền riêng của launcher: content write để gửi, content delete để về ảnh mặc định. */
     const val URI_NEN = "content://$GOI/anh-nen.jpg"
+
+    /**
+     * Bộ câu riêng thay Kinh Pháp Cú đi kèm launcher (câu kinh mỗi ngày dưới đồng hồ, bản 1.4 trở đi): content write để
+     * gửi, content delete để về Kinh Pháp Cú.
+     */
+    const val URI_CAU = "content://$GOI/cau.txt"
+    /** Cỡ tối đa của bộ câu riêng (launcher cũng kiểm). */
+    const val CAU_TOI_DA = 1024 * 1024
+
+    /** Cấu hình câu kinh mỗi ngày: [bat] hiện / ẩn; [ten] tên bộ riêng (null = giữ tên đang có, "" = bỏ). Gửi bằng [lenhDat]. */
+    fun cauHinhCau(bat: Boolean, ten: String? = null): String {
+        val o = JSONObject().put("bat", bat)
+        if (ten != null) o.put("ten", boNhay(ten).trim().take(40))
+        return chiAscii(JSONObject().put("cau", o).toString())
+    }
+
+    /**
+     * Chữ của file bộ câu người dùng chọn → UTF-8 không BOM (Notepad lưu "Unicode" là UTF-16 có BOM); null nếu rỗng, quá
+     * [CAU_TOI_DA] hay không phải chữ (có byte 0 ngoài UTF-16).
+     */
+    fun chuBoCau(b: ByteArray): ByteArray? {
+        val chu = when {
+            b.size >= 2 && b[0] == 0xFF.toByte() && b[1] == 0xFE.toByte() -> String(b, 2, b.size - 2, Charsets.UTF_16LE)
+            b.size >= 2 && b[0] == 0xFE.toByte() && b[1] == 0xFF.toByte() -> String(b, 2, b.size - 2, Charsets.UTF_16BE)
+            b.contains(0.toByte()) -> return null
+            else -> String(b, Charsets.UTF_8).removePrefix("\uFEFF")
+        }
+        if (chu.isBlank()) return null
+        return chu.toByteArray(Charsets.UTF_8).takeIf { it.size <= CAU_TOI_DA }
+    }
 
     /**
      * Ảnh thay banner của app [goi] trên launcher (bản 1.1 trở đi; logo kênh của ô Kênh nhanh, như app_banners của Home
@@ -138,17 +174,25 @@ object TiviKitLauncher {
      * đi kèm; tên lời chào, nơi xem thời tiết, có ảnh nền riêng (để điền sẵn phần Tuỳ chỉnh).
      */
     data class TrangThai(val ban: String?, val homeBat: Boolean = false, val canCapNhat: Boolean = false, val ten: String = "",
-                         val noi: ThanhPho? = null, val coNenRieng: Boolean = false, val khongDocDuocDangPhat: Boolean = false) {
+                         val noi: ThanhPho? = null, val coNenRieng: Boolean = false, val khongDocDuocDangPhat: Boolean = false,
+                         val cau: Cau? = null) {
         val daCai: Boolean get() = ban != null
     }
+
+    /**
+     * Câu kinh mỗi ngày trên launcher (null = bản cũ chưa có): [bat] đang hiện, [rieng] dùng bộ riêng [ten] (không thì Kinh
+     * Pháp Cú đi kèm), [so] số câu của bộ đang dùng, [co] cỡ file bộ riêng.
+     */
+    data class Cau(val bat: Boolean, val ten: String, val rieng: Boolean, val so: Int, val co: Long)
 
     /** Trạng thái từ kết quả `doc` của launcher ([j] null = không đọc được). */
     fun trangThai(j: JSONObject?, canCapNhat: Boolean): TrangThai {
         val ch = j?.optJSONObject("cauHinh")
         val n = ch?.optJSONObject("noi")
         val noi = n?.let { ThanhPho(it.optString("ten"), it.optDouble("lat"), it.optDouble("lon")) }?.takeIf { !it.lat.isNaN() && !it.lon.isNaN() }
+        val cau = j?.optJSONObject("cau")?.let { Cau(it.optBoolean("bat", true), it.optString("ten"), it.optBoolean("rieng"), it.optInt("so"), it.optLong("co")) }
         return TrangThai(j?.optString("ban")?.takeIf { it.isNotBlank() } ?: "?", j?.optBoolean("homeBat") == true, canCapNhat,
-            ch?.optString("ten").orEmpty(), noi, (j?.optLong("nen") ?: 0L) > 0, j?.optString("dangPhat") == "khong-co-quyen")
+            ch?.optString("ten").orEmpty(), noi, (j?.optLong("nen") ?: 0L) > 0, j?.optString("dangPhat") == "khong-co-quyen", cau)
     }
 
     /** Đọc kết quả `content call … doc` của launcher ("Result: Bundle[{json={…}}]"); null nếu không đọc được. */

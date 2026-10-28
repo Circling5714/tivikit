@@ -50,6 +50,18 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         private set
     var nenTklRieng by mutableStateOf<ByteArray?>(null)
         private set
+    /**
+     * Câu kinh mỗi ngày trên launcher (bản 1.4): hiện / ẩn; bộ câu riêng vừa chọn (đã đổi về UTF-8, chưa gửi), tên file và
+     * tên bộ hiện trên thẻ; hay về lại Kinh Pháp Cú đi kèm.
+     */
+    var cauBat by mutableStateOf(true)
+    var cauFile by mutableStateOf<ByteArray?>(null)
+        private set
+    var cauTenFile by mutableStateOf("")
+        private set
+    var cauTen by mutableStateOf("")
+    var cauVePhapCu by mutableStateOf(false)
+        private set
 
     sealed interface Hoi {
         /**
@@ -95,6 +107,7 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
     fun quen() {
         tt = null; ban = emptyMap(); homeSachMoi = false; dangMo = null; bao = ""; daThu = null; hoi = null
         tkl = null; tklMo = false; nenTklAsset = null; nenTklRieng = null
+        cauBat = true; cauFile = null; cauTenFile = ""; cauTen = ""; cauVePhapCu = false
     }
 
     // ---------- TiviKit Launcher (27/10/2026) ----------
@@ -149,6 +162,41 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         if (tklMo) {
             if (vm.tenChao.isBlank()) vm.tenChao = k.ten
             if (vm.thanhPho == null) vm.thanhPho = k.noi
+            cauBat = k.cau?.bat ?: true
+            cauFile = null; cauTenFile = ""; cauTen = k.cau?.ten.orEmpty(); cauVePhapCu = false
+        }
+    }
+
+    /** Bộ câu riêng từ điện thoại (file chữ): đọc, đổi về UTF-8, kiểm cỡ; tên bộ điền sẵn theo tên file. */
+    fun chonCau(uri: android.net.Uri) = vm.chay(t("Đang đọc file…", "Reading the file…")) {
+        val cr = vm.ctx.contentResolver
+        val ten = vm.io {
+            runCatching {
+                cr.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            }.getOrNull()
+        }.orEmpty()
+        // UTF-16 dài gấp đôi UTF-8: đọc tối đa 3 lần cỡ cho phép rồi mới đổi và kiểm.
+        val b = vm.io { cr.openInputStream(uri)?.use { docToiDa(it, TiviKitLauncher.CAU_TOI_DA * 3) } }
+        val chu = b?.let { TiviKitLauncher.chuBoCau(it) }
+            ?: error(t("File này không dùng được: cần file chữ (.txt) không rỗng, tối đa 1 MB.", "This file can't be used: it must be a non-empty text file (.txt) of at most 1 MB."))
+        cauFile = chu
+        cauTenFile = ten.ifBlank { "?" }
+        cauTen = ten.substringBeforeLast('.').trim().take(40)
+        cauVePhapCu = false
+    }
+
+    /** Về lại Kinh Pháp Cú đi kèm launcher (gửi khi Áp dụng). */
+    fun vePhapCu() { cauFile = null; cauTenFile = ""; cauTen = ""; cauVePhapCu = true }
+
+    /** Đọc hết [i], quá [toiDa] byte thì null. */
+    private fun docToiDa(i: java.io.InputStream, toiDa: Int): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val dem = ByteArray(16 * 1024)
+        while (true) {
+            val n = i.read(dem)
+            if (n < 0) return out.toByteArray()
+            if (out.size() + n > toiDa) return null
+            out.write(dem, 0, n)
         }
     }
 
@@ -175,6 +223,17 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
                 "TiviKit Launcher didn't take the wallpaper. Tap Update on the card and try again."))
             nenTklAsset = null
             nenTklRieng = null
+        }
+        // Câu kinh mỗi ngày (launcher 1.4 trở đi): gửi bộ riêng vừa chọn / về Kinh Pháp Cú trước, rồi hiện / ẩn và tên bộ.
+        if (tkl?.cau != null) {
+            val file = cauFile
+            if (file != null || cauVePhapCu) {
+                vm.thongBao = t("Đang gửi bộ câu…", "Sending the verses…")
+                if (!vm.io { vm.tv.datCauTkl(file) }) error(t("TiviKit Launcher không nhận file này: không tách ra được câu nào.",
+                    "TiviKit Launcher didn't take this file: no verses could be read from it."))
+            }
+            vm.io { vm.tv.datCauHinhTkl(TiviKitLauncher.cauHinhCau(cauBat, if (file != null) cauTen else null)) }
+            cauFile = null; cauTenFile = ""; cauVePhapCu = false
         }
         doc()
         bao = t("Đã gửi lên TiviKit Launcher: màn Home trên tivi đổi ngay.", "Sent to TiviKit Launcher: the TV's Home changes right away.")

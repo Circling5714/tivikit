@@ -65,6 +65,10 @@ TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the followi
 16. Cách nói chuyện với YouTube cho Cast SmartTube (kênh Lounge, ghép đôi qua DIAL; mã của TiviKit tự viết) theo /
     YouTube cast receiver protocol details for Cast to SmartTube (Lounge channel, DIAL pairing; TiviKit's own code) from:
     yt-cast-receiver — Patrick Kan — https://github.com/patrickkfkan/yt-cast-receiver — MIT License
+17. Kinh Pháp Cú (Dhammapada), 423 câu, bản thơ lục bát của cư sĩ Tâm Minh Ngô Tằng Giao (2003), theo bản lưu hành trên
+    niemphat.vn — https://www.niemphat.vn/tim-hieu-kinh-phap-cu — câu kinh mỗi ngày trên TiviKit Launcher. Dịch giả giữ
+    mọi quyền với bản dịch. / The Dhammapada (423 verses) in Vietnamese lục bát verse by Tâm Minh Ngô Tằng Giao (2003),
+    as published on niemphat.vn: TiviKit Launcher's daily verse. The translator keeps all rights to the translation.
 
 Tên các hãng tivi chỉ dùng để nói tivi nào chạy được; TiviKit không liên quan tới các hãng đó.
 TV brand names are only used to describe compatibility; TiviKit is not affiliated with them.
