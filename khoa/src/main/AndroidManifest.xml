@@ -25,6 +25,12 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- App khác của TiviKit (Cast SmartTube) xin mã bố mẹ trước việc quản lý; chỉ nhận app ký cùng khoá (XacNhan). -->
+        <activity
+            android:name=".XacNhan"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <service
             android:name=".KhoaDichVu"
             android:exported="true"
