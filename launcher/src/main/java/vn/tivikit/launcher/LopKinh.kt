@@ -60,7 +60,6 @@ import java.time.YearMonth
 private val DoIos = Color(0xFFFF453A)
 private val CamIos = Color(0xFFFF9F0A)
 private val XanhIos = Color(0xFF0A84FF)
-private val ChuToi = Color(0xFF15171C)
 private val NGAY_DAU = LocalDate.of(1901, 1, 1)
 private val NGAY_CUOI = LocalDate.of(2199, 12, 31)
 
@@ -84,53 +83,48 @@ private fun LopPhu(toi: Float, canh: Alignment = Alignment.Center, goc: Transfor
 
 // ---------- Menu ⏻ ----------
 
-private class MucNguon(val hinh: ImageVector, val mau: Color, val chu: String, val phu: String, val canhBao: Boolean, val lam: () -> Unit)
+private class MucNguon(val hinh: ImageVector, val mau: Color, val ten: String, val lam: () -> Unit)
 
-/** Menu ⏻ (bật ra từ nút ở góc phải): tắt tivi, khởi động lại, khoá trẻ em ngay (khi tivi có app Khoá trẻ em). */
+/**
+ * Menu ⏻ (bật ra dưới nút ở góc phải): hàng nút tròn chỉ có biểu tượng như Trung tâm điều khiển của iPhone — tắt tivi,
+ * khởi động lại, khoá trẻ em ngay (khi tivi có app Khoá trẻ em); tên nút đang chọn hiện nhỏ bên dưới. ◀ ▶ để chọn. Dịch
+ * vụ Nút nguồn chưa chạy thì bấm sẽ báo cần cập nhật launcher (DieuKhien.baoNguon).
+ */
 @Composable
 internal fun MenuNguon(tt: TrangThaiHome) {
     val dau = remember { FocusRequester() }
-    // Dịch vụ Nút nguồn chưa chạy (launcher cài trước bản 1.4, hay TiviKit chưa bật): báo ngay trong menu.
-    val chay = remember { NguonDichVu.chay }
+    var dangChon by remember { mutableStateOf(0) }
     BackHandler { tt.menuNguon = false; tt.traChon = TrangThaiHome.NGUON }
     LaunchedEffect(Unit) { runCatching { dau.requestFocus() } }
-    val canBat = t("Cần cập nhật launcher bằng TiviKit", "Update the launcher with TiviKit")
     val muc = buildList {
-        add(MucNguon(Icons.Rounded.PowerSettingsNew, DoIos, t("Tắt tivi", "Turn off the TV"),
-            if (chay) t("Như bấm nút nguồn trên remote", "Like the remote's power button") else canBat, !chay) { tt.hd.tatTivi() })
-        add(MucNguon(Icons.Rounded.RestartAlt, CamIos, t("Khởi động lại…", "Restart…"),
-            if (chay) t("Mở menu nguồn của tivi", "Opens the TV's power menu") else canBat, !chay) { tt.hd.khoiDongLai() })
-        if (tt.coKhoa) add(MucNguon(Icons.Rounded.Lock, XanhIos, t("Khoá trẻ em ngay", "Kids lock now"),
-            t("Mở lại bằng mã của bố mẹ", "Unlock with a parent's code"), false) { tt.hd.khoaTreEm() })
+        add(MucNguon(Icons.Rounded.PowerSettingsNew, DoIos, t("Tắt tivi", "Turn off")) { tt.hd.tatTivi() })
+        add(MucNguon(Icons.Rounded.RestartAlt, CamIos, t("Khởi động lại", "Restart")) { tt.hd.khoiDongLai() })
+        if (tt.coKhoa) add(MucNguon(Icons.Rounded.Lock, XanhIos, t("Khoá trẻ em ngay", "Kids lock now")) { tt.hd.khoaTreEm() })
     }
-    LopPhu(toi = 0.28f, canh = Alignment.TopEnd, goc = TransformOrigin(1f, 0f), modifier = Modifier.padding(top = 86.dp, end = 46.dp)) {
-        Column(Modifier.width(310.dp).kinh(LocalNen.current, RoundedCornerShape(24.dp), toi = 0.30f, sang = 0.12f).padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            muc.forEachIndexed { i, m -> DongNguon(m, if (i == 0) dau else null) }
+    LopPhu(toi = 0.28f, canh = Alignment.TopEnd, goc = TransformOrigin(1f, 0f), modifier = Modifier.padding(top = 84.dp, end = 46.dp)) {
+        Column(Modifier.kinh(LocalNen.current, RoundedCornerShape(30.dp), toi = 0.30f, sang = 0.12f)
+            .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                muc.forEachIndexed { i, m -> NutMenuNguon(m, if (i == 0) dau else null) { if (it) dangChon = i } }
+            }
+            Spacer(Modifier.height(8.dp))
+            Nhan(muc.getOrNull(dangChon)?.ten.orEmpty(), 12.sp, FontWeight.Medium, Color.White.copy(alpha = 0.85f), bong = false)
         }
     }
 }
 
+/** Nút tròn của menu ⏻: thường là vòng màu trong, chọn thì thành vòng trắng, biểu tượng màu, to ra một chút. */
 @Composable
-private fun DongNguon(m: MucNguon, dau: FocusRequester?) {
+private fun NutMenuNguon(m: MucNguon, dau: FocusRequester?, onChon: (Boolean) -> Unit) {
     val fr = dau ?: remember { FocusRequester() }
     var chon by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().focusRequester(fr)
-        .nutTv(m.lam, onChon = { chon = it })
-        .clip(RoundedCornerShape(17.dp)).background(if (chon) Color.White.copy(alpha = 0.94f) else Color.Transparent)
-        .padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(34.dp).clip(CircleShape).background(m.mau.copy(alpha = if (chon) 0.16f else 0.30f)), contentAlignment = Alignment.Center) {
-            Hinh(m.hinh, 19, if (chon) m.mau else Color.White)
-        }
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Nhan(m.chu, 15.sp, FontWeight.SemiBold, if (chon) ChuToi else Color.White, bong = false)
-            Nhan(m.phu, 11.5.sp, FontWeight.Medium, when {
-                m.canhBao -> if (chon) Color(0xFFB25E00) else Vang
-                chon -> ChuToi.copy(alpha = 0.6f)
-                else -> Color.White.copy(alpha = 0.66f)
-            }, bong = false)
-        }
+    val to by animateFloatAsState(if (chon) 1.1f else 1f, tween(140), label = "nut-nguon")
+    Box(Modifier.focusRequester(fr)
+        .nutTv(m.lam, onChon = { chon = it; onChon(it) })
+        .graphicsLayer { scaleX = to; scaleY = to }
+        .size(54.dp).clip(CircleShape).background(if (chon) Color.White.copy(alpha = 0.95f) else m.mau.copy(alpha = 0.32f)),
+        contentAlignment = Alignment.Center) {
+        Hinh(m.hinh, 26, if (chon) m.mau else Color.White)
     }
 }
 
