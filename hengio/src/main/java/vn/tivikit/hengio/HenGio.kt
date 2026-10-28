@@ -24,6 +24,10 @@ object HenGio {
     /** Đặt báo thức cho lần kế tiếp; gọi sau mỗi lần đổi lịch, chạy việc, tivi khởi động, đổi giờ / múi giờ. */
     fun datBaoThuc(ctx: Context) {
         val kho = Kho(ctx)
+        // Đặt lại đúng trong phút báo trước của một lần tắt (tivi vừa khởi động lại, đổi giờ): báo ngay, mỗi lần tắt một lần.
+        Lich.tatLoBao(kho.lich, System.currentTimeMillis(), ZoneId.systemDefault())?.let { tat ->
+            if (kho.daBaoTat != tat) { kho.daBaoTat = tat; baoTat(ctx, kho, "bao-tre") }
+        }
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
         val ke = Lich.keTiep(kho.lich, kho.motLan(), System.currentTimeMillis(), ZoneId.systemDefault())
         val i = Intent(ctx, BaoThuc::class.java).setAction(BAO)
@@ -54,12 +58,18 @@ object HenGio {
             } else {
                 v.goi?.let { moApp(ctx, it) }; kho.ghi(if (laThu) "thu" else "bat", "dang-bat")
             }
-            Viec.TAT -> if (dangBat) { moManHinh(ctx, Intent(ctx, BaoTat::class.java)); kho.ghi("tat", "bao-truoc") } else kho.ghi("tat", "da-tat-san")
+            Viec.TAT -> { kho.daBaoTat = luc + Lich.BAO_TRUOC_MS; baoTat(ctx, kho, "bao-truoc") }
             Viec.MO -> {
                 val goi = v.goi ?: continue
                 kho.ghi("mo:$goi", if (!dangBat) "tivi-dang-tat" else if (moApp(ctx, goi)) "ok" else "khong-mo-duoc")
             }
         }
+    }
+
+    /** Báo sắp tắt tivi (màn BaoTat đếm ngược rồi tắt); tivi đã ở chế độ chờ thì thôi. */
+    private fun baoTat(ctx: Context, kho: Kho, ghiChu: String) {
+        val dangBat = ctx.getSystemService(PowerManager::class.java)?.isInteractive == true
+        if (dangBat) { moManHinh(ctx, Intent(ctx, BaoTat::class.java)); kho.ghi("tat", ghiChu) } else kho.ghi("tat", "da-tat-san")
     }
 
     /**

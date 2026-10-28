@@ -66,6 +66,25 @@ object Lich {
     private fun bao(v: Viec, lan: ZonedDateTime): Long = lan.toInstant().toEpochMilli() - if (v.loai == Viec.TAT) BAO_TRUOC_MS else 0
 
     /**
+     * Việc tắt tivi đang ở giữa phút báo trước: giờ báo (sớm hơn BAO_TRUOC_MS) đã qua mà chưa tới giờ tắt, vì báo thức vừa
+     * được đặt lại đúng lúc đó (tivi khởi động lại, đổi giờ). keTiep bỏ qua lần này (giờ báo đã qua) nên phải báo ngay, không
+     * thì lỡ cả ngày (28/10/2026). Trả giờ tắt (ms) của lần đó, null nếu không có.
+     */
+    fun tatLoBao(ds: List<Viec>, tu: Long, zone: ZoneId): Long? {
+        val homNay = Instant.ofEpochMilli(tu).atZone(zone).toLocalDate()
+        for (v in ds) if (v.bat && v.loai == Viec.TAT) {
+            // Hôm nay hay ngày mai: tắt lúc 00:00 thì phút báo trước còn ở ngày hôm trước.
+            for (d in 0L..1L) {
+                val ngay = homNay.plusDays(d)
+                if (ngay.dayOfWeek.value !in v.ngay) continue
+                val tat = ZonedDateTime.of(ngay, LocalTime.of(v.gio, v.phut), zone).toInstant().toEpochMilli()
+                if (tat - BAO_TRUOC_MS <= tu && tu < tat) return tat
+            }
+        }
+        return null
+    }
+
+    /**
      * Lần báo thức kế tiếp sau [tu] (ms, không tính đúng [tu]) theo múi giờ [zone], cho các việc đang bật trong [ds] và
      * các việc một lần [motLan] (luc, việc: hoãn tắt, thử đánh thức). Các việc trùng thời điểm đi chung một lần báo.
      */

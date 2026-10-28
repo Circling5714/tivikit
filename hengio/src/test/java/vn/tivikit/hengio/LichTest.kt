@@ -79,4 +79,19 @@ class LichTest {
         // Tắt tivi không mang gói theo.
         assertNull(Lich.docJson("""[{"gio":23,"phut":0,"ngay":[1],"loai":"tat","goi":"a.b"}]""")!!.single().goi)
     }
+
+    /** Đặt lại báo thức giữa phút báo trước của lần tắt (tivi khởi động lại 21:59:30, tắt 22:00): báo ngay (28/10/2026). */
+    @Test fun tatLoBao_trongPhutBaoTruoc() {
+        val tat = Viec(22, 0, moiNgay, Viec.TAT)
+        assertEquals(luc(2026, 10, 25, 22, 0), Lich.tatLoBao(listOf(tat), luc(2026, 10, 25, 21, 59, 30), vn))
+        assertNull(Lich.tatLoBao(listOf(tat), luc(2026, 10, 25, 21, 58, 59), vn))
+        assertNull(Lich.tatLoBao(listOf(tat), luc(2026, 10, 25, 22, 0), vn))
+        assertNull(Lich.tatLoBao(listOf(tat.copy(bat = false)), luc(2026, 10, 25, 21, 59, 30), vn))
+        // Tắt lúc 00:00 thứ Hai (26/10): phút báo trước là 23:59 Chủ Nhật.
+        val nuaDem = Viec(0, 0, setOf(1), Viec.TAT)
+        assertEquals(luc(2026, 10, 26, 0, 0), Lich.tatLoBao(listOf(nuaDem), luc(2026, 10, 25, 23, 59, 20), vn))
+        // Việc bật không tính.
+        assertNull(Lich.tatLoBao(listOf(Viec(22, 0, moiNgay, Viec.BAT)), luc(2026, 10, 25, 21, 59, 30), vn))
+    }
 }
+

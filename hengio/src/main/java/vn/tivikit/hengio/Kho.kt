@@ -22,6 +22,11 @@ class Kho(ctx: Context) {
         get() = p.getLong("thu_den", 0)
         set(v) { p.edit().putLong("thu_den", v).apply() }
 
+    /** Giờ tắt (ms) của lần tắt gần nhất đã báo trước: không báo hai lần cho cùng một lần tắt (Lich.tatLoBao). */
+    var daBaoTat: Long
+        get() = p.getLong("da_bao_tat", 0)
+        set(v) { p.edit().putLong("da_bao_tat", v).apply() }
+
     /** Báo thức đang đặt (ms); 0 = không có việc nào. */
     var keTiep: Long
         get() = p.getLong("ke_tiep", 0)
