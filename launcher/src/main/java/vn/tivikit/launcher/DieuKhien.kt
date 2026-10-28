@@ -97,13 +97,32 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         tt.lanVeDau++
     }
 
+    /**
+     * Thiếu RAM: thư viện app đóng thì chỉ giữ ảnh dock và gần đây; đang mở thì giữ ảnh nạp gần nhất (đang thấy), ô nào mất
+     * ảnh mà đang hiện thì tự nạp lại (28/10/2026: trước đây thư viện mở là không bỏ ảnh nào).
+     */
     fun botAnh(muc: Int) {
-        if (muc >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW && !tt.thuVien) giuAnhDock()
+        if (muc < ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) return
+        if (tt.thuVien) gioiHanAnh(ANH_KHI_THIEU_RAM) else giuAnhDock()
     }
 
     private fun giuAnhDock() {
         val giu = (tt.dock + tt.ganDay).toSet()
         tt.anh.keys.retainAll(giu)
+        thuTuAnh.retainAll(giu)
+    }
+
+    /** Thứ tự nạp ảnh (cũ trước), để bỏ ảnh nạp lâu nhất khi cuộn hết thư viện app trên hộp ít RAM. */
+    private val thuTuAnh = LinkedHashSet<String>()
+
+    /** Bớt ảnh còn [toiDa] (không tính ảnh dock / gần đây), bỏ ảnh nạp lâu nhất trước. */
+    private fun gioiHanAnh(toiDa: Int) {
+        val giu = (tt.dock + tt.ganDay).toSet()
+        val it = thuTuAnh.iterator()
+        while (tt.anh.size > toiDa && it.hasNext()) {
+            val g = it.next()
+            if (g !in giu) { it.remove(); tt.anh.remove(g) }
+        }
     }
 
     private fun apCauHinh() {
@@ -312,7 +331,11 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             val a = withContext(Dispatchers.IO) { runCatching { DanhSachApp.anh(pm, goi, rongBanner, coBieuTuong, rieng) }.getOrNull() }
             dangTai.remove(goi)
             if (CauHinh.lanAnh.value != lan) return@launch taiAnh(goi, lai = true)
-            if (a != null) tt.anh[goi] = a
+            if (a != null) {
+                tt.anh[goi] = a
+                thuTuAnh.remove(goi); thuTuAnh.add(goi)
+                gioiHanAnh(ANH_TOI_DA)
+            }
         }
     }
 
@@ -404,3 +427,7 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         scope.launch { delay(500); xemDangPhat() }
     }
 }
+
+/** Ảnh app giữ tối đa lúc cuộn thư viện app (banner chừng 150 KB một ảnh), và khi thiếu RAM. */
+private const val ANH_TOI_DA = 60
+private const val ANH_KHI_THIEU_RAM = 24

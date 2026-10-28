@@ -375,8 +375,9 @@ private fun NutTatCa(tt: TrangThaiHome) {
 /** Banner của app, hoặc ô màu lấy từ biểu tượng (biểu tượng + tên) cho app không có banner. */
 @Composable
 private fun AnhO(tt: TrangThaiHome, app: AppTv, modifier: Modifier) {
-    LaunchedEffect(app.goi, app.capNhat) { tt.hd.canAnh(app.goi) }
     val a = tt.anh[app.goi]
+    // Ảnh bị bỏ cho đỡ RAM (DieuKhien.gioiHanAnh) lúc ô còn hiện thì nạp lại.
+    LaunchedEffect(app.goi, app.capNhat, a == null) { tt.hd.canAnh(app.goi) }
     val vien = RoundedCornerShape(10.dp)
     val banner = a?.banner
     if (banner != null) {
