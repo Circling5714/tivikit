@@ -4,7 +4,9 @@ package vn.tivikit.dulieu
  * Kịch bản khôi phục dùng bằng máy tính (24/10/2026, học cleanyourtv-app "Save a copy"): mất điện thoại, gỡ CleanTV
  * hay app hỏng vẫn đưa được tivi về như cũ chỉ với adb. Mỗi dòng là một lệnh adb thuần, không dùng tính năng riêng
  * của shell nào, nên cùng một file chạy được trên Windows (đuôi .bat) lẫn Mac / Linux (`sh file.bat`). Dòng chú thích
- * bắt đầu bằng ": " — Windows coi là nhãn, sh coi là lệnh rỗng — nên cả hai đều bỏ qua.
+ * bắt đầu bằng ": # " — Windows coi là nhãn, sh coi là lệnh rỗng kèm chú thích — nên cả hai đều bỏ qua. Phải có "# ": sh
+ * vẫn đọc các chữ sau ":" như lệnh, ngoặc hay nháy đơn ("TiviKit's", "(Android platform-tools)") làm hỏng cả file
+ * (28/10/2026). Xuống dòng chỉ bằng LF: cmd.exe đọc được, còn CR làm sh thêm "\r" vào cuối mỗi lệnh.
  */
 object KichBanKhoiPhuc {
     private val HOME_SACH = listOf("com.gathin.tvhome", "com.ts.launcher")
@@ -15,7 +17,9 @@ object KichBanKhoiPhuc {
     fun tao(sl: BanSaoLuu, vi: Boolean): String {
         fun t(v: String, e: String) = if (vi) v else e
         val dong = mutableListOf<String>()
-        fun chu(s: String) { dong += ": $s" }
+        fun chu(s: String) { dong += ": # " + s.replace('\r', ' ').replace('\n', ' ') }
+        // Lệnh để sẵn mà chưa chạy: người dùng bỏ ": " ở đầu dòng là thành lệnh.
+        fun lenhTat(s: String) { dong += ": $s" }
         chu(t("TiviKit: kịch bản khôi phục cho ${sl.ten}", "TiviKit: restore script for ${sl.ten}"))
         chu(t("Cần adb (Android platform-tools). Windows: bấm đúp file này. Mac / Linux: sh tên-file.bat",
             "Needs adb (Android platform-tools). Windows: double-click this file. Mac / Linux: sh file-name.bat"))
@@ -35,7 +39,7 @@ object KichBanKhoiPhuc {
             dong += if (tc.isBlank() || tc == "null" || !Regex("^[A-Za-z0-9_.:/$]+$").matches(tc)) "adb shell settings delete secure enabled_accessibility_services"
             else "adb shell settings put secure enabled_accessibility_services $tc"
             chu(t("Muốn gỡ luôn Home sạch thì bỏ \": \" ở đầu dòng dưới", "To also uninstall the clean Home, remove the \": \" at the start of the next line"))
-            HOME_SACH.forEach { chu("adb uninstall $it") }
+            HOME_SACH.forEach { lenhTat("adb uninstall $it") }
         }
         if (sl.dnsDaDoi) {
             chu(t("Trả DNS như cũ", "Restore DNS"))
@@ -52,6 +56,6 @@ object KichBanKhoiPhuc {
             .forEach { dong += "adb uninstall $it" }
         dong += "adb shell input keyevent KEYCODE_HOME"
         chu(t("Xong. Nên tắt Gỡ lỗi USB trên tivi.", "Done. Turn USB debugging off on the TV."))
-        return dong.joinToString("\r\n", postfix = "\r\n")
+        return dong.joinToString("\n", postfix = "\n")
     }
 }

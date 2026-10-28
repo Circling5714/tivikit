@@ -16,8 +16,12 @@ class KichBanKhoiPhucTest {
     )
 
     @Test fun moiDongLaLenhAdbHoacChuThich() {
-        val ds = KichBanKhoiPhuc.tao(sl(), vi = true).trimEnd().split("\r\n")
+        val s = KichBanKhoiPhuc.tao(sl(), vi = true)
+        assertFalse(s.contains('\r'))
+        val ds = s.trimEnd().split("\n")
         ds.forEach { assertTrue(it, it.startsWith("adb ") || it.startsWith(": ")) }
+        // Chú thích là ": # …" (sh bỏ qua cả ngoặc, nháy đơn); dòng ": adb …" là lệnh để sẵn, không có ký tự lạ.
+        ds.filter { it.startsWith(": ") && !it.startsWith(": # ") }.forEach { d -> assertTrue(d, d.startsWith(": adb ") && d.none { it in "()&|<>'\"%;`" }) }
         // Không có ký tự mà cmd.exe hay sh hiểu khác nhau.
         ds.filter { it.startsWith("adb ") }.forEach { d -> assertFalse(d, d.any { it in "&|<>'\"%;`" }) }
     }
