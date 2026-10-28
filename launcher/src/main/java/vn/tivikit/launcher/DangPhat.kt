@@ -48,17 +48,22 @@ object DangPhat {
         val c = ds[i]
         val md = c.metadata
         val ten = tenApp(c.packageName)
-        // SmartTube trên Skyworth phát mà không gửi tên bài (metadata chỉ có thời lượng, ảnh…): thẻ ghi tên app.
-        val tieuDeBai = (md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) ?: md?.getString(MediaMetadata.METADATA_KEY_TITLE))?.trim()
-        val tieuDe = tieuDeBai?.takeIf { it.isNotBlank() } ?: ten
-        val phu = if (tieuDeBai.isNullOrBlank()) null else md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)
+        var tieuDeBai = (md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) ?: md?.getString(MediaMetadata.METADATA_KEY_TITLE))?.trim()
+            ?.takeIf { it.isNotBlank() }
+        var phu = if (tieuDeBai == null) null else md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)
             ?: md?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM)
+        // SmartTube mở video từ đường link (video cast sang) không gửi tên bài, chỉ có mã video: tra tên theo mã. Chưa tra
+        // được thì thẻ ghi tên app.
+        if (tieuDeBai == null && c.packageName in TenVideo.GOI_SMARTTUBE) {
+            md?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)?.let { TenVideo.lay(it) }?.let { (t, k) -> tieuDeBai = t; phu = k }
+        }
+        val tieuDe = tieuDeBai ?: ten
         val anh = if (cu != null && cu.goi == c.packageName && cu.tieuDe == tieuDe) cu.anh else md?.let { m ->
             listOf(MediaMetadata.METADATA_KEY_ART, MediaMetadata.METADATA_KEY_ALBUM_ART, MediaMetadata.METADATA_KEY_DISPLAY_ICON)
                 .firstNotNullOfOrNull { k -> runCatching { m.getBitmap(k) }.getOrNull() }
         }?.let { b -> runCatching { thu(b).asImageBitmap() }.getOrNull() }
         val dangPhat = c.playbackState?.state == PlaybackState.STATE_PLAYING
-        return BaiDangPhat(c.packageName, tieuDe, if (tieuDeBai.isNullOrBlank()) "" else dongPhu(ten, phu), dangPhat, anh) to c
+        return BaiDangPhat(c.packageName, tieuDe, if (tieuDeBai == null) "" else dongPhu(ten, phu), dangPhat, anh) to c
     }
 
     /** Ảnh bìa có thể rất to (ảnh nền video): thu về tối đa 128 điểm ảnh. */

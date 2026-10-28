@@ -163,6 +163,7 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 | SmartTube đang nghe nền (bấm Home lúc đang phát), gửi video khác từ điện thoại | SmartTube hiện lên mở video mới rồi tự về lại launcher đang dùng, video mới phát nền |
 | Tivi có Cast của hãng (Skyworth Google TV): mở màn Cast SmartTube | Thẻ "Liên kết bằng mã TV" báo tivi có Cast của hãng chen trước |
 | Lấy mã TV, nhập trên điện thoại: YouTube → nút Cast → Thêm thiết bị / Liên kết bằng mã TV | Nút Cast có tên tivi (không mờ), chọn là nối; cả khi SmartTube chưa mở |
+| Cast một video, xem thẻ Đang phát trên TiviKit Launcher và ở màn Điều khiển của TiviKit (tivi cho đọc phiên phát) | Hiện tên video và kênh, không chỉ "SmartTube" |
 | Gỡ Cast SmartTube | Nút Cast trên điện thoại không còn tivi đó |
 
 ## 10. Các tính năng còn lại

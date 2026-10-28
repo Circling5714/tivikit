@@ -13,6 +13,7 @@ import org.json.JSONObject
  *   content call --uri content://vn.tivikit.cast --method doc
  *   content call --uri content://vn.tivikit.cast --method dat --arg '{"ten":"SmartTube phòng khách"}'   ("" = tên mặc định)
  *   content call --uri content://vn.tivikit.cast --method ma-tv   (mã TV 12 số để liên kết điện thoại, sống 5 phút)
+ *   content call --uri content://vn.tivikit.cast --method dang-phat   (bài SmartTube đang phát: mã video, tên, kênh)
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root.
  */
 class CauHinhProvider : ContentProvider() {
@@ -44,6 +45,7 @@ class CauHinhProvider : ContentProvider() {
             }
             "thu-tim" -> kq.putString("json", CastDichVu.dangChay?.may?.thuTim()?.toString() ?: "[]")
             "ma-tv" -> kq.putString("ma", CastDichVu.dangChay?.may?.xinMaTv().orEmpty())
+            "dang-phat" -> kq.putString("json", CastDichVu.dangChay?.may?.baiDangPhat()?.toString() ?: "{}")
             else -> kq.putString("loi", "khong biet $method")
         }
         return kq

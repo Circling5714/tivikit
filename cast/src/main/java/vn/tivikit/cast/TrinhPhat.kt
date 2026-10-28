@@ -122,6 +122,19 @@ class TrinhPhat(private val ctx: Context) {
 
     private fun tieuDe(p: MediaController?): String? = p?.metadata?.description?.title?.toString()
 
+    /**
+     * Bài SmartTube đang phát (provider dang-phat, cho thẻ Đang phát của TiviKit): mã video, tên, kênh. Phiên của SmartTube
+     * thiếu tên bài (video mở từ đường link) thì tra theo mã (TenVideo). Rỗng nếu tivi không cho đọc phiên phát.
+     */
+    fun baiDangPhat(): JSONObject {
+        val md = phien()?.metadata ?: return JSONObject()
+        val id = md.getString(MediaMetadata.METADATA_KEY_MEDIA_ID).orEmpty()
+        val ten = md.getString(MediaMetadata.METADATA_KEY_TITLE)?.trim().orEmpty()
+        val (tieuDe, kenh) = if (ten.isNotEmpty()) ten to md.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
+            else TenVideo.lay(id) ?: ("" to "")
+        return JSONObject().put("videoId", id).put("tieuDe", tieuDe).put("kenh", kenh)
+    }
+
     /** SmartTube đang phát mà không ở trên màn hình: người xem đã bấm Home để nghe nền. */
     private fun dangNgheNen(): Boolean {
         val tren = goiTren ?: return false

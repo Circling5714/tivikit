@@ -9,6 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import vn.tivikit.dulieu.CastSmartTube
 import vn.tivikit.dulieu.DangPhat
 
 /**
@@ -34,6 +35,13 @@ class DangPhatTv(private val vm: PhienLamViec) {
      */
     private val moc = HashMap<String, Pair<Long, Long>>()
 
+    /**
+     * Tên bài app Cast SmartTube tra cho phiên SmartTube không gửi tên (video mở từ đường link, như video cast sang — 28/10/2026):
+     * mốc cập nhật của phiên lúc hỏi và (tên, kênh), null = app Cast không trả lời (chưa cài / bản cũ). Phiên đổi trạng thái
+     * (bài mới, tạm dừng…) thì hỏi lại.
+     */
+    private var tenCast: Pair<Long, Pair<String, String>?>? = null
+
     /** Màn hiện: đọc mỗi 2 giây. */
     fun mo() {
         if (viec?.isActive == true) return
@@ -53,6 +61,7 @@ class DangPhatTv(private val vm: PhienLamViec) {
         viec = null
         bai = null
         moc.clear()
+        tenCast = null
     }
 
     private suspend fun doc(lanDau: Boolean) {
@@ -72,7 +81,20 @@ class DangPhatTv(private val vm: PhienLamViec) {
         // Chỉ có phiên đang dừng: hiện khi app của nó đang ở trước màn hình (rời app đang dừng thì phiên vẫn còn).
         if (p == null && ds.any { it.hoatDong && it.tt == DangPhat.DUNG }) p = DangPhat.chon(ds, vm.io { vm.tv.goiDangHien() })
         if (p == null) { bai = null; return }
+        var tieuDe = p.tieuDe
+        var phu = p.phu
+        if (tieuDe == null && p.goi in CastSmartTube.SMARTTUBE) {
+            val daHoi = tenCast?.takeIf { it.first == p.capNhat }
+            val tra = if (daHoi != null) daHoi.second else {
+                val j = runCatching { vm.io { vm.tv.baiCast() } }.getOrNull()
+                val kq = j?.optString("tieuDe")?.takeIf { it.isNotEmpty() }?.let { it to j.optString("kenh") }
+                // Có tên, hay app Cast không trả lời: nhớ tới lần phiên đổi. Đang tra tên (rỗng): lần đọc sau hỏi tiếp.
+                if (j == null || kq != null) tenCast = p.capNhat to kq
+                kq
+            }
+            tra?.let { (t, k) -> tieuDe = t; phu = k.ifEmpty { null } }
+        }
         val tu = moc[p.goi]?.second ?: p.capNhat
-        bai = Bai(p.goi, p.tt, p.tieuDe, p.phu, DangPhat.viTriLuc(p, bayGio, tu), p.tocDo, SystemClock.elapsedRealtime())
+        bai = Bai(p.goi, p.tt, tieuDe, phu, DangPhat.viTriLuc(p, bayGio, tu), p.tocDo, SystemClock.elapsedRealtime())
     }
 }

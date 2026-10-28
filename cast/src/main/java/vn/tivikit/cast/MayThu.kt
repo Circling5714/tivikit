@@ -42,6 +42,9 @@ class MayThu(private val ctx: Context) {
     /** App vừa lên màn hình (dịch vụ trợ năng báo). */
     fun doiTren(goi: String) = tp.doiTren(goi)
 
+    /** Bài SmartTube đang phát, có tên cả khi SmartTube không gửi (provider dang-phat). */
+    fun baiDangPhat() = tp.baiDangPhat()
+
     /** Tên hiện trong nút Cast của app YouTube. */
     fun tenHien(): String = kho.ten ?: "SmartTube · ${tenTivi()}"
 

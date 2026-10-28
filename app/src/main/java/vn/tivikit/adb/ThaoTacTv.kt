@@ -1804,6 +1804,12 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /** Mã TV mới (12 số, sống chừng 5 phút) để điện thoại liên kết thủ công; "" nếu máy nhận chưa nối được YouTube. */
     fun maTvCast(): String = CastSmartTube.maTv(sh("${CastSmartTube.LENH_MA_TV} 2>&1"))
 
+    /**
+     * Bài SmartTube đang phát theo app Cast SmartTube ({videoId, tieuDe, kenh}; tên tra theo mã video khi SmartTube không gửi);
+     * null nếu không có app Cast hay bản cũ chưa biết.
+     */
+    fun baiCast(): org.json.JSONObject? = docQua(CastSmartTube.GOI, "dang-phat")
+
     /** Gỡ app Cast SmartTube: bỏ dịch vụ trợ năng và quyền nghe thông báo rồi gỡ. */
     fun goCast() {
         if (!castDaCai()) return
