@@ -53,7 +53,8 @@ class Lounge(
     @Volatile private var dangNghe: HttpURLConnection? = null
     private var luong: Thread? = null
 
-    val daNoi: Boolean get() = sid != null
+    /** Đã mở phiên với YouTube bằng screen đang giữ (vừa huỷ mọi liên kết thì đợi phiên bằng screen mới). */
+    val daNoi: Boolean get() = sid != null && screenPhien.let { it != null && it == kho.screenId }
 
     fun batDau() {
         chay = true
@@ -97,12 +98,18 @@ class Lounge(
      * xong thì điện thoại nhớ luôn (screen giữ nguyên), máy nhận chạy suốt nên không cần mở SmartTube trước.
      */
     fun xinMaTv(): String? {
-        val id = kho.screenId ?: return null
+        // Chỉ xin cho screen của phiên đang mở, khi screen đó chưa bị huỷ. 28/10/2026 trên Skyworth: màn Cast xin mã
+        // ngay sau khi bấm Huỷ mọi liên kết, lúc luồng phụ chưa kịp bỏ screen cũ, nên ra mã của screen cũ; iPhone nhập
+        // mã đó là liên kết với tivi đã chết (cast không tới, tên mới không hiện).
+        if (!daNoi) return null
+        val id = screenPhien ?: return null
         val tk = token ?: return null
         val (ma, than) = goi(URL_MA_TV, thamSo(mapOf(
             "access_type" to "permanent", "app" to APP, "lounge_token" to tk, "screen_id" to id,
             "screen_name" to ten(), "device_id" to kho.maThietBi)))
         val so = than.trim()
+        // Bấm huỷ đúng lúc đang chờ YouTube trả mã: mã này thuộc screen vừa bỏ.
+        if (id != kho.screenId) return null
         return so.takeIf { ma == 200 && it.length in 6..16 && it.all(Char::isDigit) }?.also { ghi("xin mã TV để liên kết điện thoại") }
     }
 
@@ -111,17 +118,24 @@ class Lounge(
      * hay qua Wi-Fi đều giữ screen đó nên mất tivi), vòng chạy xin screen mới rồi mở phiên lại. Điện thoại muốn dùng lại
      * thì nhập mã TV mới (tivi tìm được qua Wi-Fi thì tự ghép lại như lần đầu).
      */
-    fun doiScreen() = thread(isDaemon = true) {
-        if (sid != null) runCatching { guiNgay(listOf("loungeScreenDisconnected" to emptyMap()), null) }
-        lanDoiScreen++
+    fun doiScreen() {
+        // Bỏ screen ngay trên luồng gọi, không đợi luồng phụ: từ lúc này mã TV và "đã nối" chỉ tính cho phiên mở bằng
+        // screen mới.
         kho.screenId = null
-        token = null; tokenHet = 0; sid = null
-        runCatching { dangNghe?.disconnect() }
-        ghi("huỷ mọi liên kết: xin screen mới")
+        lanDoiScreen++
+        val sidCu = sid
+        thread(isDaemon = true) {
+            if (sidCu != null) runCatching { guiNgay(listOf("loungeScreenDisconnected" to emptyMap()), null) }
+            // Đóng phiên cũ cho vòng chạy mở phiên bằng screen mới (vòng chạy đã tự mở phiên khác thì thôi).
+            if (sid == sidCu) { token = null; tokenHet = 0; sid = null; runCatching { dangNghe?.disconnect() } }
+            ghi("huỷ mọi liên kết: xin screen mới")
+        }
     }
 
     /** Tăng mỗi lần đổi screen: phiên đang mở dở bằng screen cũ thì bỏ (moPhien). */
     @Volatile private var lanDoiScreen = 0
+    /** Screen của phiên mở gần nhất (moPhien). */
+    @Volatile private var screenPhien: String? = null
 
     // ---------- Vòng chạy ----------
 
@@ -173,6 +187,7 @@ class Lounge(
         capNhat(ds)
         if (sid == null || gsid == null) throw PhienHong("thiếu SID", tokenHong = true)
         if (lan != lanDoiScreen) throw PhienHong("vừa huỷ mọi liên kết", tokenHong = true)
+        screenPhien = id
         ghi("đã nối kênh YouTube")
         ds.filter { it.ten !in setOf("c", "S", "noop") }.takeIf { it.isNotEmpty() }?.let(nhan)
     }

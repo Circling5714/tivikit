@@ -96,12 +96,13 @@ class ManCast : ManCoMa() {
                 delay(1_000)
             }
         }
-        // Mã TV sống chừng 5 phút: lấy mã mới mỗi 4,5 phút; chưa nối được YouTube thì thử lại sau 5 giây.
+        // Mã TV sống chừng 5 phút: lấy mã mới mỗi 4,5 phút; chưa nối được YouTube (hay vừa huỷ mọi liên kết, đang đổi
+        // screen) thì thử lại sau 2 giây.
         LaunchedEffect(lanLayMa) {
             ma = ""
             while (true) {
                 val m = withContext(Dispatchers.IO) { runCatching { CastDichVu.dangChay?.may?.xinMaTv() }.getOrNull() }
-                if (m != null) { ma = m; maLuc = System.currentTimeMillis(); delay(270_000) } else delay(5_000)
+                if (m != null) { ma = m; maLuc = System.currentTimeMillis(); delay(270_000) } else delay(2_000)
             }
         }
         LaunchedEffect(Unit) { delay(300); runCatching { frDau.requestFocus() } }
@@ -158,6 +159,8 @@ class ManCast : ManCoMa() {
             doiTen = false
             kho.ten = moi.trim().take(60).ifEmpty { null }
             ten = CastDichVu.dangChay?.may?.tenHien() ?: kho.ten.orEmpty()
+            // Mã đang hiện xin theo tên cũ (YouTube gửi tên kèm mã cho máy nhập mã): xin mã mới theo tên mới.
+            lanLayMa++
             bao(t("Đã đổi tên. Điện thoại thấy tên mới ở lần mở nút Cast sau.", "Renamed. Phones see the new name next time they open Cast."))
         }
     }

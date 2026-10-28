@@ -147,6 +147,8 @@ class MayThu(private val ctx: Context) {
     fun huyLienKet() {
         lounge.doiScreen()
         kho.dienThoai = emptyList()
+        // Máy nào liên kết lại cũng phải hỏi: thôi tự cho phép theo tên trong nhật ký cũ (lên bản 2.0, batDau).
+        kho.tenMayCu = emptySet()
         dienThoai.clear(); ganNhat = null; choDuyet = null
         kho.ghi("huỷ mọi liên kết")
     }

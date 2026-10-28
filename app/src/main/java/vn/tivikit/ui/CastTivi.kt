@@ -83,6 +83,8 @@ class CastTivi(private val vm: PhienLamViec) {
     fun luuTen() = vm.chay(t("Đang đổi tên…", "Renaming…")) {
         vm.damBaoKetNoi()
         vm.io { vm.tv.datTenCast(ten) }
+        // Mã đang hiện xin theo tên cũ (YouTube gửi tên kèm mã cho máy nhập mã).
+        maTv = ""; maTvLuc = 0L
         docLai()
         bao = t("Đã đổi tên thành \"${trangThai?.ten.orEmpty()}\". Điện thoại thấy tên mới ở lần bấm nút Cast sau (có thể cần mở lại YouTube).",
             "Renamed to \"${trangThai?.ten.orEmpty()}\". Phones see the new name next time they open the Cast button (reopening YouTube may help).")
@@ -144,8 +146,17 @@ class CastTivi(private val vm: PhienLamViec) {
         vm.damBaoKetNoi()
         if (!vm.io { vm.tv.huyLienKetCast() }) error(t("Dịch vụ Cast trên tivi đang tắt.", "The Cast service on the TV is off."))
         maTv = ""; maTvLuc = 0L
-        docTrangThai()
-        bao = t("Đã huỷ mọi liên kết. Điện thoại muốn cast lại thì nhập mã TV mới (đợi vài giây cho tivi nối lại YouTube rồi Lấy mã TV).",
+        // Tivi bỏ screen cũ, xin screen mới rồi mới nối lại YouTube: chờ tối đa chừng 12 giây rồi xin luôn mã TV mới
+        // (mã xin trước lúc đó là của screen cũ, điện thoại nhập vào là liên kết với tivi đã chết).
+        for (i in 1..8) {
+            delay(1_500)
+            docTrangThai()
+            if (trangThai?.daNoi == true) break
+        }
+        if (trangThai?.daNoi == true) { maTv = vm.io { vm.tv.maTvCast() }; maTvLuc = System.currentTimeMillis() }
+        bao = if (maTv.isNotEmpty()) t("Đã huỷ mọi liên kết. Điện thoại muốn cast lại thì nhập mã TV mới bên dưới.",
+            "All phones are unlinked. Phones need the new TV code below to cast again.")
+        else t("Đã huỷ mọi liên kết. Điện thoại muốn cast lại thì nhập mã TV mới (đợi vài giây cho tivi nối lại YouTube rồi Lấy mã TV).",
             "All phones are unlinked. Phones need a new TV code to cast again (wait a few seconds for the TV to reconnect, then Get a TV code).")
     }
 
