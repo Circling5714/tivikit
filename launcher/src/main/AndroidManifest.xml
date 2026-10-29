@@ -32,6 +32,8 @@
         </intent>
         <!-- Mục "Khoá trẻ em ngay" của menu ⏻ chỉ hiện khi tivi có app Khoá trẻ em của TiviKit. -->
         <package android:name="vn.tivikit.khoa" />
+        <!-- Tivi MediaTek: menu nguồn của Android khởi động lại thành tắt hẳn, nên Khởi động lại dẫn vào Cài đặt khi không có ADB. -->
+        <package android:name="com.mediatek.tv.service" />
     </queries>
 
     <!-- Không có ô trong danh sách app: cài, chọn làm Home và chỉnh ở TiviKit trên điện thoại. -->

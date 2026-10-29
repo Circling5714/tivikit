@@ -7,8 +7,8 @@ import android.view.accessibility.AccessibilityEvent
 
 /**
  * Dịch vụ trợ năng nhỏ của menu ⏻ (28/10/2026): tắt tivi như bấm nút nguồn (khoá màn hình, Android 9+) và mở menu nguồn
- * của tivi để khởi động lại (app thường không tự khởi động lại tivi được). Không đọc màn hình, không nhận sự kiện nào.
- * TiviKit bật nó khi cài / cập nhật launcher.
+ * của tivi (Khởi động lại khi tivi không mở ADB qua mạng; có ADB thì khởi động lại bằng AdbNoiBo, 29/10/2026). Không đọc
+ * màn hình, không nhận sự kiện nào. TiviKit bật nó khi cài / cập nhật launcher.
  */
 class NguonDichVu : AccessibilityService() {
     override fun onServiceConnected() { dangChay = this }

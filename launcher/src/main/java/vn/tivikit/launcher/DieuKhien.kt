@@ -8,9 +8,11 @@ import android.content.Intent
 import android.media.session.MediaController
 import android.media.session.PlaybackState
 import android.net.Uri
+import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.DisplayMetrics
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
@@ -61,6 +63,8 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
     /** Câu kinh đang hiện ứng với ngày / tên bộ / file bộ riêng nào (khác thì đọc lại), và ngày đã xét. */
     private var khoaCau: String? = null
     private var ngayCau: LocalDate? = null
+    /** Đang gửi lệnh khởi động lại (có thể đang chờ người dùng cho phép gỡ lỗi trên tivi): bấm lại thì thôi. */
+    private var dangKhoiDong = false
 
     /** Khoá trẻ em ngay (menu ⏻): app Khoá trẻ em khoá tivi rồi trả kết quả; không khoá được thì báo vì sao. */
     private val khoaNgay = act.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
@@ -477,7 +481,42 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
 
     override fun khoiDongLai() {
         dongMenuNguon()
-        if (!NguonDichVu.menuNguon()) baoNguon()
+        if (dangKhoiDong) return
+        dangKhoiDong = true
+        scope.launch {
+            val kq = withContext(Dispatchers.IO) {
+                AdbNoiBo.khoiDongLai(ctx.filesDir) {
+                    // Hộp "Cho phép gỡ lỗi?" của tivi đè lên Home: lời nhắc giữ tới khi có kết quả.
+                    scope.launch {
+                        tatBao?.cancel()
+                        tt.bao = t("Tivi đang hỏi cho phép gỡ lỗi: chọn Luôn cho phép rồi OK để khởi động lại",
+                            "The TV is asking to allow debugging: choose Always allow, then OK to restart")
+                    }
+                }
+            }
+            dangKhoiDong = false
+            when (kq) {
+                AdbNoiBo.KetQua.DA_GUI -> bao(t("Đang khởi động lại tivi…", "Restarting the TV…"))
+                AdbNoiBo.KetQua.CHUA_CHO_PHEP -> bao(t("Chưa khởi động lại: tivi chưa cho phép gỡ lỗi", "Not restarted: debugging wasn't allowed on the TV"))
+                else -> khoiDongLaiTay()
+            }
+        }
+    }
+
+    /**
+     * Tivi không mở ADB qua mạng: chọn Khởi động lại trong menu nguồn của tivi. Riêng tivi MediaTek, mục đó tắt hẳn tivi
+     * (xem AdbNoiBo) nên mở Cài đặt và chỉ tới mục Khởi động lại ở đó (lệnh reboot của Cài đặt không bị đổi thành tắt).
+     */
+    private fun khoiDongLaiTay() {
+        if (runCatching { pm.getPackageInfo(GOI_TV_MEDIATEK, 0) }.isFailure) {
+            if (!NguonDichVu.menuNguon()) baoNguon()
+            return
+        }
+        val duong = if (Build.VERSION.SDK_INT >= 30) t("Hệ thống → Khởi động lại", "System → Restart")
+        else t("Tuỳ chọn thiết bị → Giới thiệu → Khởi động lại", "Device Preferences → About → Restart")
+        // Lời nhắc trong Home bị Cài đặt che mất: dùng Toast.
+        Toast.makeText(ctx, t("Trong Cài đặt chọn $duong", "In Settings choose $duong"), Toast.LENGTH_LONG).show()
+        moManHinh(Intent(Settings.ACTION_SETTINGS))
     }
 
     override fun khoaTreEm() {
@@ -504,6 +543,9 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
 }
 
 private const val GOI_KHOA = "vn.tivikit.khoa"
+
+/** TvServices của tivi MediaTek: cho tivi về chờ khi menu nguồn của Android tắt / khởi động lại (AdbNoiBo). */
+private const val GOI_TV_MEDIATEK = "com.mediatek.tv.service"
 
 /** Ảnh app giữ tối đa lúc cuộn thư viện app (banner chừng 150 KB một ảnh), và khi thiếu RAM. */
 private const val ANH_TOI_DA = 60
