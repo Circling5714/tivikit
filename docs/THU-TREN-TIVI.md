@@ -175,6 +175,28 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 | Tivi có Khoá trẻ em đang bật: chặn / cho phép / huỷ liên kết / đổi tên trên tivi | Hiện lớp "Cần mã của bố mẹ"; đúng mã thì làm, Back thì không đổi gì; xem mã TV thì không hỏi |
 | Gỡ Cast SmartTube | Hỏi chắc trước; gỡ xong nút Cast trên điện thoại không còn tivi đó |
 
+## 9c. Map Voice
+
+Cần remote có mic (nút Trợ lý Google) và SmartTube trên tivi; muốn thử kênh thì cần VTVgo hay TV360 bản tivi.
+
+| Thử | Đạt khi |
+| --- | --- |
+| Tiện ích → Map Voice → Bật Map Voice | Tivi hiện "Cho phép gỡ lỗi?" (lần đầu); chọn Luôn cho phép rồi OK; Làm mới thì ghi "Đang nghe câu nói" |
+| Bấm mic, nói "mở nhạc piano trên YouTube" | Trợ lý đóng lại, tivi báo nhỏ "Map Voice: …", SmartTube phát video đầu tiên (YouTube gốc có thể hiện chừng một giây) |
+| Nói "tìm hoạt hình trên YouTube" | SmartTube mở trang kết quả tìm "hoạt hình", không tự phát |
+| Nói "nhạc Trịnh Công Sơn" (không nói YouTube) | SmartTube mở trang tìm kiếm; tắt "Cả câu không nói YouTube" rồi Lưu thì câu này về Trợ lý |
+| Nói "thời tiết hôm nay", "mở Netflix" | Trợ lý làm như thường, Map Voice không chen vào |
+| Nói tên một bài hát mà Trợ lý tự mở YouTube gốc | Vài giây sau tivi chuyển sang SmartTube tìm đúng câu đó |
+| Nói "mở VTV3" (App mở kênh: VTVgo) rồi "xem kênh VTV3 trên TV360" | Lần đầu mở VTV3 trong VTVgo, lần sau trong TV360 |
+| Nói "mở HTV7" khi chọn VTVgo | VTVgo không có HTV7 nên mở bằng TV360 |
+| Màn Map Voice → Câu vừa nghe | Có đúng các câu vừa nói và việc đã làm |
+| Thử một câu → gõ "mo VTV3" → Xem Map Voice hiểu thế nào, rồi Chạy trên tivi | Hiện "Mở kênh VTV3 bằng …"; Chạy thì tivi mở kênh đó |
+| Khởi động lại tivi, nói lại một câu | Map Voice tự chạy và nghe lại, không hỏi cho phép lần nữa |
+| Tắt Gỡ lỗi USB / ADB qua mạng trên tivi, mở màn Map Voice | Báo tivi không mở ADB qua mạng; bật lại rồi Nối lại thì nghe lại |
+
+- **Hỏng thì:** tắt công tắc Bật Map Voice rồi Lưu (câu nói về Trợ lý như cũ), hay Gỡ Map Voice khỏi tivi. Trợ lý Google không
+  nghe gì nữa: Cài đặt → Ứng dụng → Google (katniss) → Buộc dừng, hay khởi động lại tivi. Gửi kèm nội dung mục Câu vừa nghe.
+
 ## 10. Các tính năng còn lại
 
 | Thử | Đạt khi |
