@@ -1,7 +1,6 @@
 package vn.tivikit.launcher
 
 import java.io.DataInputStream
-import java.io.EOFException
 import java.io.File
 import java.io.IOException
 import java.math.BigInteger
@@ -15,6 +14,7 @@ import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.Signature
 import java.security.interfaces.RSAPrivateCrtKey
+import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.RSAKeyGenParameterSpec
@@ -44,6 +44,8 @@ object AdbNoiBo {
     private const val AUTH = 0x48545541
     private const val OPEN = 0x4e45504f
     private const val OKAY = 0x59414b4f
+    private const val WRTE = 0x45545257
+    private const val CLSE = 0x45534c43
     private const val STLS = 0x534c5453
     /** Bản giao thức bỏ qua tổng kiểm (Android 9+); gói nào cũng ghi tổng kiểm nên adbd cũ hơn vẫn nhận. */
     private const val PHIEN_BAN = 0x01000001
@@ -90,19 +92,35 @@ object AdbNoiBo {
                     if (!daKy) {
                         daKy = true
                         gui(AUTH, CHU_KY, ky(k, g.du))
-                    } else if (!daHoi) {
-                        // Tivi chưa biết khoá: gửi khoá công khai, tivi hiện hộp "Cho phép gỡ lỗi?" và chờ người dùng.
+                        continue
+                    }
+                    // Tivi chưa biết khoá: gửi khoá công khai, tivi hiện hộp "Cho phép gỡ lỗi?" và chờ người dùng. Token tới
+                    // sau đó (adbd chưa nối được phần hiện hộp hỏi thì hỏi lại khi nối được) cũng trả bằng khoá, như adb.
+                    gui(AUTH, KHOA_CONG_KHAI, khoaCongKhai(k.public as RSAPublicKey))
+                    if (!daHoi) {
                         daHoi = true
-                        gui(AUTH, KHOA_CONG_KHAI, khoaCongKhai(k.public as RSAPublicKey))
                         s.soTimeout = choToiDa
                         dangHoi()
                     }
                 }
                 s.soTimeout = 5000
                 gui(OPEN, 1, (lenh + "\u0000").toByteArray())
-                // Tivi tắt nhanh đến mức đóng kết nối trước khi kịp trả lời cũng là đã nhận lệnh.
-                val g = try { docGoi(vao) } catch (_: EOFException) { return KetQua.DA_GUI }
-                return if (g.lenh == OKAY) KetQua.DA_GUI else KetQua.LOI
+                // Giữ kết nối tới khi lệnh chạy xong (CLSE) hay tivi tắt (mất kết nối): đóng ngay khi có OKAY thì adbd giết
+                // lệnh reboot trước khi nó kịp chạy (thấy trên TX3).
+                var daNhan = false
+                val het = System.currentTimeMillis() + 15_000
+                try {
+                    while (System.currentTimeMillis() < het) {
+                        val g = docGoi(vao)
+                        when (g.lenh) {
+                            OKAY -> daNhan = true
+                            WRTE -> gui(OKAY, 1, ByteArray(0), g.a0) // báo đã nhận để adbd gửi tiếp
+                            CLSE -> break
+                        }
+                    }
+                } catch (_: IOException) {
+                }
+                return if (daNhan) KetQua.DA_GUI else KetQua.LOI
             } catch (_: IOException) {
                 return if (daHoi) KetQua.CHUA_CHO_PHEP else KetQua.LOI
             } catch (_: GeneralSecurityException) {
@@ -111,13 +129,18 @@ object AdbNoiBo {
         }
     }
 
-    /** Khoá ADB của launcher: RSA 2048, tạo lần đầu, giữ dạng PKCS#8 ở [thuMuc]/adbkey. */
+    /** Khoá ADB của launcher: RSA 2048 số mũ F4, tạo lần đầu, giữ dạng PKCS#8 ở [thuMuc]/adbkey. */
     internal fun khoa(thuMuc: File): KeyPair {
         val f = File(thuMuc, "adbkey")
         val kf = KeyFactory.getInstance("RSA")
         if (f.isFile) {
-            val rieng = runCatching { kf.generatePrivate(PKCS8EncodedKeySpec(f.readBytes())) as RSAPrivateCrtKey }.getOrNull()
-            if (rieng != null) return KeyPair(kf.generatePublic(RSAPublicKeySpec(rieng.modulus, rieng.publicExponent)), rieng)
+            // Conscrypt (Android) đọc ra RSAPrivateKey không kèm số mũ công khai, khác Java trên máy tính: đòi
+            // RSAPrivateCrtKey thì đọc hỏng, mỗi lần bấm một khoá mới và tivi hỏi cho phép mãi (TX3). Khoá nào cũng tạo với F4.
+            val rieng = runCatching { kf.generatePrivate(PKCS8EncodedKeySpec(f.readBytes())) as RSAPrivateKey }.getOrNull()
+            if (rieng != null) {
+                val mu = (rieng as? RSAPrivateCrtKey)?.publicExponent ?: RSAKeyGenParameterSpec.F4
+                return KeyPair(kf.generatePublic(RSAPublicKeySpec(rieng.modulus, mu)), rieng)
+            }
         }
         val kp = KeyPairGenerator.getInstance("RSA").apply { initialize(RSAKeyGenParameterSpec(2048, RSAKeyGenParameterSpec.F4)) }
             .generateKeyPair()

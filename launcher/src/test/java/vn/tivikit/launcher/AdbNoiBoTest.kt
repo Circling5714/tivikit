@@ -2,6 +2,7 @@ package vn.tivikit.launcher
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -14,7 +15,10 @@ import java.math.BigInteger
 import java.net.ServerSocket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.KeyFactory
+import java.security.interfaces.RSAPrivateCrtKey
 import java.security.interfaces.RSAPublicKey
+import java.security.spec.RSAPrivateKeySpec
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
@@ -27,6 +31,8 @@ class AdbNoiBoTest {
     private val AUTH = 0x48545541
     private val OPEN = 0x4e45504f
     private val OKAY = 0x59414b4f
+    private val WRTE = 0x45545257
+    private val CLSE = 0x45534c43
     private val STLS = 0x534c5453
 
     @Test
@@ -41,6 +47,23 @@ class AdbNoiBoTest {
         val c = AdbNoiBo.khoa(thuMuc)
         assertTrue((c.public as RSAPublicKey).modulus != (a.public as RSAPublicKey).modulus)
         assertEquals((c.public as RSAPublicKey).modulus, (AdbNoiBo.khoa(thuMuc).public as RSAPublicKey).modulus)
+    }
+
+    @Test
+    fun khoaKhongKemThamSoCrtVanDungLai() {
+        // Conscrypt trên tivi đọc PKCS#8 ra RSAPrivateKey (không CRT): trước đây đọc hỏng nên mỗi lần một khoá mới (TX3).
+        val goc = AdbNoiBo.khoa(tam.newFolder())
+        val crt = goc.private as RSAPrivateCrtKey
+        val khongCrt = KeyFactory.getInstance("RSA").generatePrivate(RSAPrivateKeySpec(crt.modulus, crt.privateExponent))
+        assertFalse(khongCrt is RSAPrivateCrtKey)
+        val thuMuc = tam.newFolder()
+        val f = File(thuMuc, "adbkey").apply { writeBytes(khongCrt.encoded) }
+        val truoc = f.readBytes()
+        val k = AdbNoiBo.khoa(thuMuc)
+        assertArrayEquals(truoc, f.readBytes())
+        assertEquals(goc.public, k.public)
+        val token = ByteArray(20) { it.toByte() }
+        assertTrue(moChuKy(k.public as RSAPublicKey, AdbNoiBo.ky(k, token)).takeLast(20).toByteArray().contentEquals(token))
     }
 
     @Test
@@ -133,6 +156,32 @@ class AdbNoiBoTest {
     }
 
     @Test
+    fun adbdHoiLaiThiGuiLaiKhoaCongKhai() {
+        // adbd của Android 9 nhận khoá lúc phần hiện hộp hỏi chưa nối ("Client not connected", thấy trên TX3): nối được
+        // thì gửi token mới, adb trả lời bằng khoá công khai lần nữa.
+        val thuMuc = tam.newFolder()
+        val k = AdbNoiBo.khoa(thuMuc).public as RSAPublicKey
+        val gia = AdbdGia { vao, ra ->
+            doc(vao)
+            gui(ra, AUTH, 1, 0, ByteArray(20))
+            doc(vao)
+            gui(ra, AUTH, 1, 0, ByteArray(20))
+            assertEquals(3, doc(vao).a0)
+            gui(ra, AUTH, 1, 0, ByteArray(20) { 5 })
+            val lai = doc(vao)
+            assertEquals(3, lai.a0)
+            assertArrayEquals(AdbNoiBo.khoaCongKhai(k), lai.du)
+            gui(ra, CNXN, 0x01000001, 4096, "device::\u0000".toByteArray())
+            val mo = doc(vao)
+            gui(ra, OKAY, 7, mo.a0, ByteArray(0))
+        }
+        var hoi = 0
+        assertEquals(AdbNoiBo.KetQua.DA_GUI, AdbNoiBo.chay(thuMuc, "shell:reboot", { hoi++ }, cong = gia.cong))
+        gia.xong()
+        assertEquals(1, hoi)
+    }
+
+    @Test
     fun nguoiDungKhongChoPhep() {
         val thuMuc = tam.newFolder()
         val gia = AdbdGia { vao, ra ->
@@ -161,15 +210,44 @@ class AdbNoiBoTest {
     }
 
     @Test
-    fun tiviTatNgaySauLenhVanLaDaGui() {
+    fun giuKetNoiToiKhiLenhChayXong() {
+        // TX3 (29/10/2026): đóng kết nối ngay khi có OKAY thì adbd giết lệnh reboot trước khi nó kịp chạy.
         val thuMuc = tam.newFolder()
         val gia = AdbdGia { vao, ra ->
             doc(vao)
             gui(ra, CNXN, 0x01000001, 4096, "device::\u0000".toByteArray()) // tivi không đòi xác thực (ro.adb.secure=0)
-            assertEquals(OPEN, doc(vao).lenh)
+            val mo = doc(vao)
+            assertEquals(OPEN, mo.lenh)
+            gui(ra, OKAY, 7, mo.a0, ByteArray(0))
+            Thread.sleep(200) // lệnh đang chạy
+            gui(ra, WRTE, 7, mo.a0, "xong\n".toByteArray())
+            val nhan = doc(vao) // client còn nối và báo đã nhận
+            assertEquals(OKAY, nhan.lenh)
+            assertEquals(mo.a0, nhan.a0)
+            assertEquals(7, nhan.a1)
+            gui(ra, CLSE, 7, mo.a0, ByteArray(0))
         }
         assertEquals(AdbNoiBo.KetQua.DA_GUI, AdbNoiBo.chay(thuMuc, "shell:reboot", {}, cong = gia.cong))
         gia.xong()
+    }
+
+    @Test
+    fun tiviTatSauOkayLaDaGuiConDongTruocOkayLaLoi() {
+        val thuMuc = tam.newFolder()
+        val tat = AdbdGia { vao, ra ->
+            doc(vao)
+            gui(ra, CNXN, 0x01000001, 4096, "device::\u0000".toByteArray())
+            gui(ra, OKAY, 7, doc(vao).a0, ByteArray(0)) // rồi mất kết nối: tivi đang tắt
+        }
+        assertEquals(AdbNoiBo.KetQua.DA_GUI, AdbNoiBo.chay(thuMuc, "shell:reboot", {}, cong = tat.cong))
+        tat.xong()
+        val dong = AdbdGia { vao, ra ->
+            doc(vao)
+            gui(ra, CNXN, 0x01000001, 4096, "device::\u0000".toByteArray())
+            assertEquals(OPEN, doc(vao).lenh) // không trả lời lệnh
+        }
+        assertEquals(AdbNoiBo.KetQua.LOI, AdbNoiBo.chay(thuMuc, "shell:reboot", {}, cong = dong.cong))
+        dong.xong()
     }
 
     /** adbd giả nhận một kết nối ở cổng ngẫu nhiên; kịch bản chạy xong thì đóng kết nối. */
