@@ -145,8 +145,10 @@ class PhienAdb(private val thuMuc: File, private val may: String = "127.0.0.1", 
                     WRTE -> {
                         if (l == null) continue
                         if (l.xa == 0) l.xa = g.a0
+                        // Báo đã nhận trước (để adbd gửi tiếp) rồi mới xử lý: dòng logcat có thể làm luồng khác mở lệnh mới
+                        // ngay, gói OPEN đó phải đi sau gói báo nhận này.
+                        gui(OKAY, g.a1, ByteArray(0), g.a0)
                         nhan(l, g.du)
-                        gui(OKAY, g.a1, ByteArray(0), g.a0) // báo đã nhận để adbd gửi tiếp
                     }
                     CLSE -> if (l != null) {
                         dsLuong.remove(g.a1)
