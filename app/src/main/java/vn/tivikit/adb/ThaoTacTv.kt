@@ -12,6 +12,7 @@ import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.KhoSaoLuu
 import vn.tivikit.dulieu.Launcher
+import vn.tivikit.dulieu.MapVoice
 import vn.tivikit.dulieu.PhanApk
 import vn.tivikit.dulieu.PhimRieng
 import vn.tivikit.dulieu.ThongTinTv
@@ -1453,6 +1454,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         oKenhDaCai().takeIf { it.isNotEmpty() }?.let { ds -> bao(t("Gỡ Kênh nhanh…", "Removing Quick channel…")); ds.forEach { runCatching { goKenh(it) } } }
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
         if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
+        if (mapVoiceDaCai()) { bao(t("Gỡ Map Voice…", "Removing Map Voice…")); runCatching { goMapVoice() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { goTklHet() } }
@@ -1525,6 +1527,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         oKenhDaCai().takeIf { it.isNotEmpty() }?.let { ds -> bao(t("Gỡ Kênh nhanh…", "Removing Quick channel…")); ds.forEach { runCatching { goKenh(it) } } }
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
         if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
+        if (mapVoiceDaCai()) { bao(t("Gỡ Map Voice…", "Removing Map Voice…")); runCatching { goMapVoice() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { goTklHet() } }
@@ -1846,6 +1849,58 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (!castDaCai()) return
         boTroNang(CastSmartTube.DICH_VU)
         sh("cmd notification disallow_listener ${CastSmartTube.NGHE} 2>/dev/null; pm uninstall ${CastSmartTube.GOI}")
+    }
+
+    // ---------- Map Voice (app vn.tivikit.mapvoice, 29/10/2026) ----------
+
+    fun mapVoiceDaCai(): Boolean = coGoi(MapVoice.GOI)
+
+    /** Trạng thái app Map Voice (vòng nghe ADB, cấu hình, câu vừa nghe); null nếu chưa cài. */
+    fun docMapVoice(): org.json.JSONObject? = if (!mapVoiceDaCai()) null else docQua(MapVoice.GOI)
+
+    /** Gói đang bật trên tivi (pm list packages -e), để biết app nào dùng được: SmartTube, VTVgo, TV360, Trợ lý, app trùng việc. */
+    fun goiDangBat(): Set<String> = sh("pm list packages -e").lines().mapNotNull { l ->
+        l.trim().removePrefix("package:").takeIf { TEN_GOI.matches(it) }
+    }.toSet()
+
+    /** [pkg] có cài mà đang tắt (VD Trợ lý Google tắt lúc dọn tivi hay làm nhẹ máy). */
+    fun goiDangTat(pkg: String): Boolean = coGoi(pkg, "-d")
+
+    /**
+     * Cài / cập nhật app Map Voice, cho nó tắt màn bảo vệ khi mở app (Android 14+), gửi [cauHinh] và danh sách kênh [kenh]
+     * (MapVoice.dsKenh; "" = giữ danh sách cũ), bật dịch vụ trợ năng. Dịch vụ vừa bật thì nối ADB của tivi: tivi chưa biết
+     * khoá của Map Voice thì hỏi "Cho phép gỡ lỗi?" trên màn hình.
+     */
+    fun caiMapVoice(apk: ByteArray, cauHinh: MapVoice.CauHinh, kenh: String, bao: (String) -> Unit) {
+        caiAppPhu(MapVoice.GOI, apk) { bao(t("Cài app Map Voice lên tivi…", "Installing Map Voice on the TV…")) }
+        sh("cmd appops set ${MapVoice.GOI} TURN_SCREEN_ON allow 2>/dev/null; true")
+        bao(t("Gửi cài đặt…", "Sending the settings…"))
+        if (!datMapVoice(cauHinh)) error(t("Tivi không nhận cài đặt của Map Voice.", "The TV rejected the Map Voice settings."))
+        if (kenh.isNotEmpty()) guiKenhMapVoice(kenh)
+        bao(t("Bật dịch vụ Map Voice…", "Turning the Map Voice service on…"))
+        val dv = MapVoice.DICH_VU
+        sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$dv*) ;; null|'') settings put secure enabled_accessibility_services $dv ;; *) settings put secure enabled_accessibility_services \"\$s:$dv\" ;; esac; settings put secure accessibility_enabled 1")
+    }
+
+    fun datMapVoice(c: MapVoice.CauHinh): Boolean = sh(MapVoice.lenhDat(c)).contains("ok=1")
+
+    /** Gửi danh sách kênh (MapVoice.dsKenh); false nếu tivi không nhận (danh sách rỗng / hỏng). */
+    fun guiKenhMapVoice(json: String): Boolean = sh(MapVoice.lenhKenh(json)).contains("ok=1")
+
+    /** Map Voice hiểu câu [cau] thế nào (chưa làm gì); null kèm lỗi nếu app phụ không trả lời. */
+    fun xemMapVoice(cau: String): Pair<MapVoice.Viec?, String> = sh(MapVoice.lenhXem(cau)).let { MapVoice.viecTrong(it) to MapVoice.loiTrong(it) }
+
+    /** Làm câu [cau] trên tivi như vừa nói vào mic. */
+    fun thuMapVoice(cau: String): Pair<MapVoice.Viec?, String> = sh(MapVoice.lenhThu(cau)).let { MapVoice.viecTrong(it) to MapVoice.loiTrong(it) }
+
+    /** Bảo Map Voice nối lại ADB ngay (sau khi người dùng đã từ chối hộp hỏi trên tivi); false nếu dịch vụ đang tắt. */
+    fun noiLaiMapVoice(): Boolean = sh(MapVoice.LENH_NOI_LAI).contains("ok=1")
+
+    /** Gỡ app Map Voice: bỏ dịch vụ trợ năng rồi gỡ (khoá ADB của nó trên tivi mất theo, adbd vẫn nhớ đã cho phép). */
+    fun goMapVoice() {
+        if (!mapVoiceDaCai()) return
+        boTroNang(MapVoice.DICH_VU)
+        sh("pm uninstall ${MapVoice.GOI}")
     }
 
     // ---------- Gõ tiếng Việt (app vn.tivikit.go, 25/10/2026) ----------
@@ -2272,7 +2327,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
          * phát, thời tiết). Cách tv-remote giữ app của nó trên box RAM thấp (họ đo trên box FPT Play, Android 14): thêm vào danh
          * sách bỏ qua tối ưu pin (Doze), xếp nhóm "đang dùng" (App Standby), cho chạy nền.
          */
-        val GIU_SONG: Set<String> get() = HOME_SACH + setOf(PKG_KHOA, vn.tivikit.dulieu.HenGio.GOI, TiviKitLauncher.GOI, CastSmartTube.GOI)
+        val GIU_SONG: Set<String> get() = HOME_SACH + setOf(PKG_KHOA, vn.tivikit.dulieu.HenGio.GOI, TiviKitLauncher.GOI, CastSmartTube.GOI, MapVoice.GOI)
 
         /**
          * Lệnh giữ [goi] chạy nền (xem GIU_SONG). Mỗi lệnh im lặng khi lỗi (Android 8 chưa có set-standby-bucket, gói vừa gỡ):

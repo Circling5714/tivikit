@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ten_app">Map Voice (TiviKit)</string>
+    <string name="mo_ta">Speak into the remote\'s mic as usual: music and video searches open in SmartTube instead of the official YouTube, and channel requests open in VTVgo / TV360. Reads what the Google Assistant just heard through the TV\'s own ADB and only knows which app just appeared; it doesn\'t read the screen or catch remote keys.</string>
+    <string name="dang_hoi">Map Voice: the TV is asking \"Allow debugging?\". Choose Always allow, then OK, so Map Voice can hear what you say.</string>
+    <string name="mo_youtube">Map Voice: \"%1$s\" → %2$s</string>
+    <string name="mo_app">Map Voice: opening %1$s</string>
+    <string name="mo_kenh">Map Voice: %1$s → %2$s</string>
+    <string name="khong_mo_duoc">Map Voice: couldn\'t open %1$s</string>
+</resources>

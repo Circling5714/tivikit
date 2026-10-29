@@ -144,6 +144,8 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
         MucChucNang(Icons.Rounded.SmartButton, MauO.tim, t("Nút remote", "Remote buttons"), t("Gán nút YouTube… sang app khác, VD SmartTube", "Make the YouTube button… open another app, e.g. SmartTube")) { vm.moChucNang { vm.ganPhim.mo() } },
         // 28/10/2026: app YouTube trên điện thoại cùng Wi-Fi thấy tivi trong nút Cast, video mở bằng SmartTube.
         MucChucNang(Icons.Rounded.Cast, MauO.doTuoi, t("Cast SmartTube", "Cast to SmartTube"), t("YouTube trên điện thoại cast sang SmartTube; mã TV, duyệt / chặn điện thoại", "The phone's YouTube casts to SmartTube; TV code, approve / block phones")) { vm.moChucNang { vm.cast.mo() } },
+        // 29/10/2026: nói vào mic của remote, câu tìm nhạc / video mở bằng SmartTube, câu mở kênh mở bằng VTVgo / TV360.
+        MucChucNang(Icons.Rounded.Mic, MauO.doTuoi, "Map Voice", t("Nói vào mic của remote: YouTube mở bằng SmartTube, kênh mở bằng VTVgo / TV360", "Speak into the remote: YouTube opens in SmartTube, channels in VTVgo / TV360")) { vm.moChucNang { vm.mapVoice.mo() } },
         MucChucNang(Icons.Rounded.LiveTv, MauO.doTuoi, t("Kênh nhanh", "Quick channel"), t("Ô kênh mở thẳng VTV1, HTV7… trên TV360 hoặc VTVgo", "Tiles open VTV1, HTV7… straight in TV360 or VTVgo")) { vm.moChucNang { vm.kenhNhanh.mo() } },
         MucChucNang(Icons.Rounded.Alarm, MauO.cam, t("Hẹn giờ", "Timer"), t("Bật / tắt tivi, mở app theo giờ", "Turn the TV on / off, open apps on time")) { vm.moChucNang { vm.henGio.mo() } },
         MucChucNang(Icons.Rounded.Lock, MauO.cham, t("Khoá trẻ em", "Kids lock"), t("Hẹn giờ khoá tivi hay từng app, mở bằng mã OTP", "Lock the TV or single apps on a schedule, OTP code to unlock")) { vm.moChucNang { vm.khoaTre.mo() } },
@@ -345,8 +347,8 @@ private fun TheTivi(vm: PhienLamViec) {
                 onDismissRequest = { hoiTatAdb = false },
                 icon = { Icon(Icons.Rounded.Lock, null, tint = Nhan) },
                 title = { Text(t("Tắt ADB trên tivi?", "Turn off ADB on the TV?")) },
-                text = { Text(t("Từ giờ không ai cùng Wi-Fi điều khiển được tivi bằng ADB, kể cả TiviKit. Hẹn giờ, Khoá trẻ em, Kênh nhanh, Home sạch vẫn chạy bình thường. Lần sau dùng TiviKit: vào Cài đặt → Tuỳ chọn nhà phát triển trên tivi, bật lại Gỡ lỗi USB.",
-                    "From now on nobody on the Wi-Fi can control the TV over ADB, TiviKit included. Timer, Kids lock, Quick channel and the clean Home keep working. To use TiviKit again: on the TV open Settings → Developer options and turn USB debugging back on.")) },
+                text = { Text(t("Từ giờ không ai cùng Wi-Fi điều khiển được tivi bằng ADB, kể cả TiviKit. Hẹn giờ, Khoá trẻ em, Kênh nhanh, Home sạch vẫn chạy bình thường; riêng Map Voice cần ADB nên thôi chuyển câu nói. Lần sau dùng TiviKit: vào Cài đặt → Tuỳ chọn nhà phát triển trên tivi, bật lại Gỡ lỗi USB.",
+                    "From now on nobody on the Wi-Fi can control the TV over ADB, TiviKit included. Timer, Kids lock, Quick channel and the clean Home keep working; Map Voice needs ADB, so it stops moving voice requests. To use TiviKit again: on the TV open Settings → Developer options and turn USB debugging back on.")) },
                 confirmButton = { TextButton(onClick = { hoiTatAdb = false; vm.tatAdbVaKetThuc() }) { Text(t("Tắt ADB", "Turn off ADB"), fontWeight = FontWeight.SemiBold) } },
                 dismissButton = { TextButton(onClick = { hoiTatAdb = false }) { Text(t("Thôi", "Cancel")) } },
                 containerColor = The1,

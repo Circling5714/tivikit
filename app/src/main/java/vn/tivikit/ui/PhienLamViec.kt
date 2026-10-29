@@ -44,7 +44,7 @@ import vn.tivikit.dulieu.TrangThaiGoi
 import vn.tivikit.dulieu.tenDep
 import java.net.Inet4Address
 
-enum class Man { CHINH, KET_NOI, THONG_TIN, CHON_GOI, DANG_TAT, HOME_SACH, XONG, KHOI_PHUC, HUONG_DAN, GIAY_PHEP, KHOA_TRE, CAI_APK, DIEU_KHIEN, QUAN_LY_APP, GUI_FILE, BO_CAI, DNS, GAN_PHIM, KENH_NHANH, HEN_GIO, LAM_MOI, MANG, CAI_DAT_NHANH, CHUYEN_MAY, LG, DONG_LENH, LIEN_KET_APP, LAUNCHER, CAST }
+enum class Man { CHINH, KET_NOI, THONG_TIN, CHON_GOI, DANG_TAT, HOME_SACH, XONG, KHOI_PHUC, HUONG_DAN, GIAY_PHEP, KHOA_TRE, CAI_APK, DIEU_KHIEN, QUAN_LY_APP, GUI_FILE, BO_CAI, DNS, GAN_PHIM, KENH_NHANH, HEN_GIO, LAM_MOI, MANG, CAI_DAT_NHANH, CHUYEN_MAY, LG, DONG_LENH, LIEN_KET_APP, LAUNCHER, CAST, MAP_VOICE }
 
 /** Số app tối đa trong dock: bằng số cột lớn nhất của Home sạch (columns 1–8); dock dài hơn số cột thì tràn xuống hàng sau (22/10/2026, góp ý muốn hàng đầu nhiều app hơn). */
 const val DOCK_TOI_DA = 8
@@ -109,6 +109,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
     /** Hẹn giờ bật / tắt tivi, mở app (ui/HenGioTivi.kt). */
     val henGio by lazy { HenGioTivi(this) }
     val cast by lazy { CastTivi(this) }
+    /** Map Voice: câu nói vào mic của remote mở SmartTube / VTVgo / TV360 (ui/MapVoiceTivi.kt). */
+    val mapVoice by lazy { MapVoiceTivi(this) }
     /** Khoá trẻ em: giờ khoá, giới hạn, mã OTP, hộp nhập mã (ui/KhoaTreTivi.kt). */
     val khoaTre by lazy { KhoaTreTivi(this) }
     /** Làm mới tivi: RAM, bộ nhớ, đóng app nằm nền, xoá cache khi gần đầy (ui/LamMoiTivi.kt). */
@@ -783,7 +785,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         daNapCu = false
         // Nút gán riêng / ô Kênh nhanh thuộc về tivi trước: tivi này đọc lại từ config.json của nó (napTuJson, màn Nút
         // remote, màn Kênh nhanh).
-        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); cast.quen(); khoaTre.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); cast.quen(); mapVoice.quen(); khoaTre.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
         xemManHinh.tat(); kenhDieuKhien.dong(); dangPhat.dong()
         tv.quenTivi()
@@ -1982,7 +1984,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         thongTin = null; trangThai = null; dnsChanQc = false; dangKhoiPhuc = false
         laMayChieu = false; saoLuu = null; saoLuuTuTv = false
         dsCai.clear(); apkTrenTv = null; abiTvDaDo = null; GoiApk.donDep(ctx); qlApp.quen(); guiFile.quen()
-        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); cast.quen(); khoaTre.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
+        phimRieng.clear(); ganPhim.quen(); tenKenh.clear(); anhOKenh.clear(); kenhNhanh.quen(); henGio.quen(); cast.quen(); mapVoice.quen(); khoaTre.quen(); lamMoi.quen(); mang.quen(); caiDatNhanh.quen(); capNhatApp.quen()
         dongLenh.quen(); lienKet.quen(); qlLauncher.quen()
         xemManHinh.tat(); kenhDieuKhien.dong(); dangPhat.dong()
         dangDon = false; sauKetNoi = null

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chỉ nghe đổi cửa sổ (tên app vừa hiện, để biết Trợ lý Google có vừa mở YouTube gốc), không đọc nội dung màn hình, không
+     lọc phím. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canRetrieveWindowContent="false"
+    android:notificationTimeout="100"
+    android:description="@string/mo_ta" />

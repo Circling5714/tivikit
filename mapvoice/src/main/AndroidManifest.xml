@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Tìm video đầu tiên trên YouTube (câu "mở …"), và nối ADB của chính tivi ở 127.0.0.1:5555. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Mở app thì tắt màn bảo vệ (câu thử gõ từ TiviKit lúc tivi đang ở màn bảo vệ); Android 14+ cần TURN_SCREEN_ON, TiviKit
+         cấp qua ADB. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" tools:ignore="ProtectedPermissions" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- Android 11+: thấy SmartTube (các bản), app mở được link YouTube, Trợ lý Google, YouTube gốc, VTVgo, TV360. -->
+    <queries>
+        <package android:name="org.smarttube.stable" />
+        <package android:name="org.smarttube.beta" />
+        <package android:name="com.liskovsoft.smarttubetv" />
+        <package android:name="com.liskovsoft.smarttubetv.beta" />
+        <package android:name="com.google.android.youtube.tv" />
+        <package android:name="com.google.android.katniss" />
+        <package android:name="com.viettel.tv360.tv" />
+        <package android:name="vn.vtv.vtvgotv" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="www.youtube.com" />
+        </intent>
+    </queries>
+
+    <!-- Không có màn mở trong danh sách app: bật và chỉnh ở TiviKit trên điện thoại. -->
+    <application
+        android:label="@string/ten_app"
+        android:icon="@drawable/ic_map_voice"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <!-- Giữ phần nghe chạy suốt từ lúc tivi bật, để Android cho mở SmartTube / VTVgo / TV360 khi app đang chạy nền, và biết
+             YouTube gốc có vừa hiện lên không. -->
+        <service
+            android:name=".MapVoiceDichVu"
+            android:exported="true"
+            android:label="@string/ten_app"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/map_voice_tro_nang" />
+        </service>
+        <!-- Cấu hình chỉ đặt được từ ADB (TiviKit). -->
+        <provider
+            android:name=".CauHinhProvider"
+            android:authorities="${applicationId}"
+            android:exported="true" />
+    </application>
+</manifest>

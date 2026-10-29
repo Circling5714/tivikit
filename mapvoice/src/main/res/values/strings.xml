@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ten_app">Map Voice (TiviKit)</string>
+    <string name="mo_ta">Nói vào nút mic của remote như thường: câu tìm nhạc, video mở bằng SmartTube thay vì YouTube gốc, câu mở kênh mở bằng VTVgo / TV360. Đọc câu Trợ lý Google vừa nghe qua ADB của chính tivi, chỉ biết app nào vừa hiện, không đọc nội dung màn hình, không bắt phím remote.</string>
+    <string name="dang_hoi">Map Voice: tivi đang hỏi \"Cho phép gỡ lỗi?\". Chọn Luôn cho phép rồi OK để Map Voice nghe được câu nói.</string>
+    <string name="mo_youtube">Map Voice: \"%1$s\" → %2$s</string>
+    <string name="mo_app">Map Voice: mở %1$s</string>
+    <string name="mo_kenh">Map Voice: %1$s → %2$s</string>
+    <string name="khong_mo_duoc">Map Voice: không mở được %1$s</string>
+</resources>
