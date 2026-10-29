@@ -145,7 +145,8 @@ internal fun MenuNguon(tt: TrangThaiHome) {
         val x by animateDpAsState((giua - 70).dp, tween(160), label = "bong-ten")
         Box(Modifier.align(Alignment.TopEnd).padding(top = (34 + O_NGUON + LE_NGUON + 9).dp, end = (46 - LE_NGUON).dp).width(day.dp)
             .graphicsLayer { alpha = mo.value.coerceIn(0f, 1f) }) {
-            Box(Modifier.offset(x = x).width(140.dp), contentAlignment = Alignment.Center) {
+            // Ô tên 140 dp rộng hơn viên kính 2 nút (98 dp, tivi không có Khoá trẻ em): không bó theo, kẻo tên bị cắt (TX3).
+            Box(Modifier.wrapContentWidth(Alignment.Start, unbounded = true).offset(x = x).width(140.dp), contentAlignment = Alignment.Center) {
                 val bong = RoundedCornerShape(50)
                 Box(Modifier.kinh(LocalNen.current, bong, toi = 0.30f, sang = 0.10f, vien = 0.5f).padding(horizontal = 12.dp, vertical = 5.dp)) {
                     Nhan(muc[dangChon.coerceIn(0, n - 1)].ten, 12.sp, FontWeight.Medium, Color.White, bong = false)
