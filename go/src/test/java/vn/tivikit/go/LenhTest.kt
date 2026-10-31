@@ -14,6 +14,9 @@ class LenhTest {
         val l = Lenh.doc(goi(JSONObject().put("chu", "Sơn Tùng M-TP 'Hãy trao cho anh' 😀").put("cu", "com.google.android.leanback.ime/.LeanbackImeService")))!!
         assertEquals("Sơn Tùng M-TP 'Hãy trao cho anh' 😀", l.chu)
         assertEquals("com.google.android.leanback.ime/.LeanbackImeService", l.cu)
+        assertEquals(false, l.thay)
+        // Tele Remote: thay hết chữ trong ô (TiviKit bản cũ không gửi cờ này thì chèn như trước).
+        assertEquals(true, Lenh.doc(goi(JSONObject().put("chu", "phở bò").put("thay", true)))!!.thay)
     }
 
     @Test fun boGoCuLaThiBo() {

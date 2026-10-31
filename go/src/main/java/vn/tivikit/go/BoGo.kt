@@ -23,18 +23,18 @@ class BoGo : InputMethodService() {
         private const val TU_TRA_MS = 15_000L
 
         /**
-         * Gọi từ luồng của provider: chờ bộ gõ gắn vào một ô nhập chữ (tối đa [choMs]), đưa [chu] vào, rồi trả bàn
-         * phím [cu]. Trả "ok", hoặc "chua-bat" (bộ gõ chưa được bật), "khong-o-nhap" (tivi không có ô nhập chữ đang
-         * chọn, hoặc ô do app tự vẽ bàn phím), "khong-go-duoc".
+         * Gọi từ luồng của provider: chờ bộ gõ gắn vào một ô nhập chữ (tối đa [choMs]), đưa [chu] vào ([thay]: thay hết
+         * chữ đang có trong ô), rồi trả bàn phím [cu]. Trả "ok", hoặc "chua-bat" (bộ gõ chưa được bật), "khong-o-nhap"
+         * (tivi không có ô nhập chữ đang chọn, hoặc ô do app tự vẽ bàn phím), "khong-go-duoc".
          */
-        fun go(chu: String, cu: String, choMs: Long = 2000): String {
+        fun go(chu: String, cu: String, thay: Boolean = false, choMs: Long = 2000): String {
             val het = SystemClock.uptimeMillis() + choMs
             while (dangChay?.coONhap != true && SystemClock.uptimeMillis() < het) Thread.sleep(40)
             val bg = dangChay ?: return "chua-bat"
             var kq = "khong-o-nhap"
             val xong = CountDownLatch(1)
             Handler(Looper.getMainLooper()).post {
-                try { if (bg.coONhap) kq = if (bg.dua(chu)) "ok" else "khong-go-duoc" } finally { bg.traBanPhimCu(cu); xong.countDown() }
+                try { if (bg.coONhap) kq = if (bg.dua(chu, thay)) "ok" else "khong-go-duoc" } finally { bg.traBanPhimCu(cu); xong.countDown() }
             }
             xong.await(5, TimeUnit.SECONDS)
             return kq
@@ -72,9 +72,13 @@ class BoGo : InputMethodService() {
     override fun onEvaluateInputViewShown() = false
     override fun onEvaluateFullscreenMode() = false
 
-    /** Đưa [chu] vào ô nhập; đọc lại một chữ trước con trỏ (lệnh chờ trả lời) để chắc app đã nhận trước khi đổi bàn phím. */
-    private fun dua(chu: String): Boolean {
+    /**
+     * Đưa [chu] vào ô nhập ([thay]: chọn hết chữ đang có rồi gõ đè); đọc lại một chữ trước con trỏ (lệnh chờ trả lời) để
+     * chắc app đã nhận trước khi đổi bàn phím.
+     */
+    private fun dua(chu: String, thay: Boolean): Boolean {
         val ic = currentInputConnection ?: return false
+        if (thay) ic.performContextMenuAction(android.R.id.selectAll)
         if (!ic.commitText(chu, 1)) return false
         ic.getTextBeforeCursor(1, 0)
         return true
