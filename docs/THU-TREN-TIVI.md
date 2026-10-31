@@ -242,7 +242,19 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | Một tài khoản Telegram khác (không có trong danh sách) nhắn bot | Bot báo chưa được phép, chủ nhận tin "muốn dùng bot"; TiviKit hiện ở Đang xin dùng; Duyệt thì người đó dùng được |
 | Tắt tivi hẳn, nhắn bot một lệnh, bật tivi lại | Lệnh cũ không làm; lệnh mới sau khi tivi bật thì làm |
 | Đổi sang bot khác, hay dùng cùng token cho tivi thứ hai | Bot mới nghe lệnh; tivi thứ hai báo "Bot này đang chạy ở tivi / máy khác" |
+| Gõ "mở nhạc trịnh", "mở VTV3" (tivi có Map Voice) | Map Voice làm như vừa nói: SmartTube phát video đầu tiên / mở kênh; bot báo việc đã làm |
+| Gõ "mở <tên một app trên tivi>", rồi một câu khác (VD "giá vàng hôm nay") | App đó mở; câu kia mở Trợ lý Google trên tivi (tivi tắt Trợ lý thì bot báo) |
+| Dán link YouTube, link fptplay.vn | Video mở trong app YouTube của Map Voice (SmartTube…); link FPT Play mở FPT Play |
+| Gửi một ảnh, một video ngắn | Tivi chiếu ảnh toàn màn hình / phát video; Back trên remote để tắt; ảnh tự tắt sau 10 phút |
+| Chọn ô tìm kiếm của SmartTube trên tivi, rồi 🎮 → ⌨️ Gõ chữ, gõ "phở bò" | Chữ có dấu hiện đúng trong ô |
+| 📱 Ứng dụng → bấm một app; chủ bấm ⏹ Buộc dừng | App mở; app đang mở bị dừng |
+| ⏰ Hẹn giờ → Tắt sau 15 phút → ✕ huỷ | Hẹn hiện trong bảng rồi mất; TiviKit → Hẹn giờ thấy giống vậy |
+| 🔒 Khoá trẻ em → Khoá ngay, rồi 🔓 30 phút, gõ mã 6 số của bố mẹ | Tivi khoá; mã đúng thì mở tới giờ bot báo và tin chứa mã bị xoá; mã sai báo còn mấy lần |
+| 🧹 Làm mới → Đóng app nền; bật Chụp màn hình ở TiviKit rồi bấm 📸 Màn hình | RAM trống tăng; bot gửi ảnh màn hình tivi |
+| Bật Báo tin ở TiviKit, tắt tivi bằng remote, vài phút sau bật lại | Bot nhắn các chủ "vừa tắt", rồi "vừa bật" |
 
+- **Thành viên:** cùng các việc trên trừ Hẹn giờ, Khoá trẻ em, Làm mới, chụp màn hình, tắt / khởi động lại tivi, buộc dừng app
+  (bot báo chỉ chủ làm được).
 - **Hỏng thì:** tắt công tắc Bật Tele Remote (bot thôi nghe), hay Gỡ Tele Remote khỏi tivi. Bot nhắn chậm hay không trả lời:
   xem dòng Telegram ở mục Trên tivi (tivi chưa vào được Telegram thì đặt DNS ở mục DNS chặn quảng cáo).
 
