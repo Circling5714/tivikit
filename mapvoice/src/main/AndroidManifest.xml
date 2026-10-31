@@ -9,7 +9,8 @@
     <uses-permission android:name="android.permission.TURN_SCREEN_ON" tools:ignore="ProtectedPermissions" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <!-- Android 11+: thấy SmartTube (các bản), app mở được link YouTube, Trợ lý Google, YouTube gốc, VTVgo, TV360. -->
+    <!-- Android 11+: thấy SmartTube (các bản), TizenTube, app mở được link YouTube, Trợ lý Google, YouTube gốc, VTVgo, TV360,
+         FPT Play, và app trong danh sách app của tivi (câu riêng mở app). -->
     <queries>
         <package android:name="org.smarttube.stable" />
         <package android:name="org.smarttube.beta" />
@@ -19,9 +20,19 @@
         <package android:name="com.google.android.katniss" />
         <package android:name="com.viettel.tv360.tv" />
         <package android:name="vn.vtv.vtvgotv" />
+        <package android:name="io.gh.reisxd.tizentube.cobalt" />
+        <package android:name="net.fptplay.ottbox" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="www.youtube.com" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
 
@@ -31,7 +42,7 @@
         android:icon="@drawable/ic_map_voice"
         android:allowBackup="false"
         android:supportsRtl="true">
-        <!-- Giữ phần nghe chạy suốt từ lúc tivi bật, để Android cho mở SmartTube / VTVgo / TV360 khi app đang chạy nền, và biết
+        <!-- Giữ phần nghe chạy suốt từ lúc tivi bật, để Android cho mở SmartTube / VTVgo / TV360 / FPT Play khi app đang chạy nền, và biết
              YouTube gốc có vừa hiện lên không. -->
         <service
             android:name=".MapVoiceDichVu"

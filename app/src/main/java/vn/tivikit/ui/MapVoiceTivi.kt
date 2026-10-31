@@ -4,14 +4,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import vn.tivikit.dulieu.KenhFpt
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.MapVoice
+import vn.tivikit.dulieu.tenDep
 import vn.tivikit.t
 
 /**
  * Map Voice (29/10/2026): cài app phụ vn.tivikit.mapvoice lên tivi để câu nói vào nút mic của remote (Google Assistant) tìm
- * nhạc / video thì mở bằng SmartTube, mở kênh thì mở bằng VTVgo / TV360; chọn cách mở, thử một câu gõ tay, xem câu vừa nghe.
+ * nhạc / video thì mở bằng app YouTube đã chọn (SmartTube, TizenTube, YouTube gốc), mở kênh thì mở bằng VTVgo / TV360 / FPT
+ * Play; câu riêng (31/10/2026) chọn câu nào để Trợ lý làm, câu nào mở bằng app nào; chọn cách mở, thử một câu gõ tay, xem
+ * câu vừa nghe.
  */
 class MapVoiceTivi(private val vm: PhienLamViec) {
     var trangThai by mutableStateOf<MapVoice.TrangThai?>(null)
@@ -19,12 +23,17 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
     /** App phụ đã có trên tivi. */
     var daCai by mutableStateOf(false)
         private set
-    /** SmartTube (các bản) đang bật trên tivi. */
+    /** App mở được YouTube đang bật trên tivi: SmartTube (các bản), TizenTube, YouTube gốc. */
     var dsYouTube by mutableStateOf<List<String>>(emptyList())
         private set
     var coVtvGo by mutableStateOf(false)
         private set
     var coTv360 by mutableStateOf(false)
+        private set
+    var coFpt by mutableStateOf(false)
+        private set
+    /** App trong danh sách app của tivi, cho câu riêng "mở app". */
+    var dsAppMo by mutableStateOf<List<String>>(emptyList())
         private set
     /** Trợ lý Google có trên tivi; đang bật. */
     var coTroLy by mutableStateOf(true)
@@ -39,6 +48,9 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
     var cauThu by mutableStateOf("")
     var ketQuaThu by mutableStateOf<MapVoice.Viec?>(null)
         private set
+    /** Câu riêng đang soạn: chữ trong câu, đích (MapVoice.DICH_TRO_LY, DICH_YOUTUBE hay gói app). */
+    var chuMoi by mutableStateOf("")
+    var dichMoi by mutableStateOf(MapVoice.DICH_TRO_LY)
     var bao by mutableStateOf("")
         private set
 
@@ -59,17 +71,26 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
 
     private suspend fun docLai() {
         val bat = vm.io { vm.tv.goiDangBat() }
-        dsYouTube = MapVoice.SMARTTUBE.filter { it in bat }
+        if (vm.trangThai == null) vm.trangThai = vm.io { vm.tv.docTrangThai() }
+        dsYouTube = MapVoice.APP_YOUTUBE.filter { it in bat }
         coVtvGo = KenhVtvGo.GOI in bat
         coTv360 = KenhNhanh.TV360 in bat
+        coFpt = KenhFpt.GOI in bat
+        dsAppMo = runCatching { vm.appChoDock() }.getOrDefault(emptyList()).filter { it in bat && it != MapVoice.GOI }
         troLyBat = MapVoice.TRO_LY in bat
         coTroLy = troLyBat || vm.io { vm.tv.goiDangTat(MapVoice.TRO_LY) }
         appTrung = MapVoice.APP_TRUNG.filter { it in bat }
         daCai = vm.io { vm.tv.mapVoiceDaCai() }
         docTrangThai()
         cauHinh = trangThai?.cauHinh ?: MapVoice.CauHinh(
-            appYouTube = dsYouTube.firstOrNull().orEmpty(),
-            appKenh = if (coVtvGo || !coTv360) MapVoice.APP_VTVGO else MapVoice.APP_TV360,
+            // Chưa chọn: SmartTube / TizenTube (YouTube gốc là việc Trợ lý vẫn làm).
+            appYouTube = dsYouTube.firstOrNull { it != MapVoice.YOUTUBE_GOC }.orEmpty(),
+            appKenh = when {
+                coVtvGo -> MapVoice.APP_VTVGO
+                coTv360 -> MapVoice.APP_TV360
+                coFpt -> MapVoice.APP_FPT
+                else -> MapVoice.APP_VTVGO
+            },
         )
     }
 
@@ -78,14 +99,15 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
     }
 
     /**
-     * Danh sách kênh gửi lên tivi: mọi kênh VTVgo (tải từ VTVgo, nhớ trong máy) và kênh TV360 biết số (gợi ý của Kênh nhanh,
-     * ô Kênh nhanh đã đọc). "" nếu tivi không có app xem kênh nào.
+     * Danh sách kênh gửi lên tivi: mọi kênh VTVgo (tải từ VTVgo, nhớ trong máy), kênh TV360 biết số (gợi ý của Kênh nhanh,
+     * ô Kênh nhanh đã đọc) và kênh FPT Play (đóng sẵn, khi tivi có FPT Play). "" nếu tivi không có app xem kênh nào.
      */
     private suspend fun dsKenh(): String {
-        if (!coVtvGo && !coTv360) return ""
+        if (!coVtvGo && !coTv360 && !coFpt) return ""
         val go = vm.dsKenhGo.ifEmpty { vm.io { KenhVtvGo.docNho(vm.ctx).ifEmpty { KenhVtvGo.tai(vm.ctx) } } }
         val tv360 = KenhNhanh.GOI_Y + vm.kenhNhanh.ds.mapNotNull { it.kenh }
-        return MapVoice.dsKenh(go, tv360)
+        val fpt = if (coFpt) vm.io { KenhFpt.ds(vm.ctx) } else emptyList()
+        return MapVoice.dsKenh(go, tv360, fpt)
     }
 
     /** Cài / cập nhật app phụ, gửi cài đặt và danh sách kênh, bật dịch vụ; chờ vòng nghe nối ADB rồi báo bước tiếp. */
@@ -132,6 +154,31 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
         docTrangThai()
         bao = t("Đã lưu lên tivi.", "Saved to the TV.")
     }
+
+    /** Thêm câu riêng đang soạn (sửa trên màn, Lưu lên tivi mới gửi); chữ đã có thì thay đích. */
+    fun themCauRieng() {
+        val chu = MapVoice.chuSach(chuMoi)
+        if (chu.isEmpty()) { bao = t("Gõ chữ có trong câu nói, VD giá vàng.", "Type words from the request, e.g. gold price."); return }
+        val ds = cauHinh.cauRieng.filter { !it.chu.equals(chu, ignoreCase = true) }
+        if (ds.size >= MapVoice.CAU_RIENG_TOI_DA) { bao = t("Tối đa ${MapVoice.CAU_RIENG_TOI_DA} câu riêng.", "At most ${MapVoice.CAU_RIENG_TOI_DA} custom phrases."); return }
+        cauHinh = cauHinh.copy(cauRieng = ds + MapVoice.CauRieng(chu, dichMoi))
+        chuMoi = ""
+        bao = ""
+    }
+
+    fun boCauRieng(r: MapVoice.CauRieng) {
+        cauHinh = cauHinh.copy(cauRieng = cauHinh.cauRieng - r)
+    }
+
+    /** Tên đích của câu riêng: Trợ lý Google, app YouTube đã chọn, hay tên app. */
+    fun tenDich(dich: String): String = when (dich) {
+        MapVoice.DICH_TRO_LY -> t("Trợ lý Google", "Google Assistant")
+        MapVoice.DICH_YOUTUBE -> t("app YouTube đã chọn", "the chosen YouTube app")
+        else -> tenApp(dich)
+    }
+
+    /** Tên app cho người dùng: ô Kênh nhanh mang tên kênh, app quen, hoặc tên app trên tivi. */
+    fun tenApp(goi: String): String = tenAppMv(goi) ?: vm.henGio.tenApp(goi)
 
     /** Xem Map Voice hiểu câu gõ thử thế nào (tivi chưa làm gì). */
     fun xem() = vm.chay(t("Đang hỏi tivi…", "Asking the TV…")) {
@@ -191,8 +238,8 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
     }
 
     fun quen() {
-        trangThai = null; daCai = false; dsYouTube = emptyList(); coVtvGo = false; coTv360 = false; coTroLy = true; troLyBat = true
-        appTrung = emptyList(); cauHinh = MapVoice.CauHinh(); ketQuaThu = null; bao = ""
+        trangThai = null; daCai = false; dsYouTube = emptyList(); coVtvGo = false; coTv360 = false; coFpt = false; coTroLy = true; troLyBat = true
+        appTrung = emptyList(); dsAppMo = emptyList(); cauHinh = MapVoice.CauHinh(); ketQuaThu = null; bao = ""; chuMoi = ""; dichMoi = MapVoice.DICH_TRO_LY
     }
 
     companion object {
@@ -208,19 +255,44 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
             else -> t("Chưa nối được ADB của tivi, đang thử lại", "Couldn't reach the TV's ADB yet; retrying")
         }
 
-        /** Việc Map Voice làm cho một câu, nói cho người dùng. */
-        fun moTa(v: MapVoice.Viec): String = when (v.loai) {
-            "yt-phat" -> t("Mở SmartTube, phát video đầu tiên khi tìm \"${v.chiTiet}\"", "Open SmartTube and play the first result for \"${v.chiTiet}\"")
-            "yt-tim" -> t("Mở SmartTube, tìm \"${v.chiTiet}\"", "Open SmartTube and search for \"${v.chiTiet}\"")
-            "yt-app" -> t("Mở SmartTube", "Open SmartTube")
-            "kenh" -> t("Mở kênh ${v.chiTiet} bằng ", "Open channel ${v.chiTiet} in ") + if (v.app == MapVoice.APP_TV360) "TV360" else "VTVgo"
-            "bo-qua" -> t("Để Trợ lý Google làm như thường (không phải câu tìm nhạc, video hay mở kênh)", "Left to the Google Assistant (not a music, video or channel request)")
-            "loi" -> when (v.chiTiet) {
-                "khong-co-smarttube" -> t("Không làm: tivi chưa có SmartTube", "Nothing done: SmartTube isn't on the TV")
-                "khong-mo-duoc" -> t("Không mở được app", "Couldn't open the app")
-                else -> t("Lỗi trên tivi: ", "Error on the TV: ") + v.chiTiet
+        /**
+         * Việc Map Voice làm cho một câu, nói cho người dùng. [ten] = tên app theo gói; app YouTube không rõ (Map Voice 1.0
+         * không báo gói) thì gọi "SmartTube".
+         */
+        fun moTa(v: MapVoice.Viec, ten: (String) -> String = { tenAppMv(it) ?: tenDep(it) }): String {
+            val yt = v.goi.takeIf { it.isNotEmpty() }?.let(ten) ?: "SmartTube"
+            return when (v.loai) {
+                "yt-phat" -> t("Mở $yt, phát video đầu tiên khi tìm \"${v.chiTiet}\"", "Open $yt and play the first result for \"${v.chiTiet}\"")
+                "yt-tim" -> t("Mở $yt, tìm \"${v.chiTiet}\"", "Open $yt and search for \"${v.chiTiet}\"")
+                "yt-app" -> t("Mở $yt", "Open $yt")
+                "kenh" -> t("Mở kênh ${v.chiTiet} bằng ", "Open channel ${v.chiTiet} in ") + when (v.app) {
+                    MapVoice.APP_TV360 -> "TV360"
+                    MapVoice.APP_FPT -> "FPT Play"
+                    else -> "VTVgo"
+                }
+                "mo-app" -> t("Câu riêng: mở ", "Custom phrase: open ") + ten(v.chiTiet)
+                "tro-ly" -> t("Câu riêng \"${v.chiTiet}\": để Trợ lý Google làm", "Custom phrase \"${v.chiTiet}\": left to the Google Assistant")
+                "bo-qua" -> t("Để Trợ lý Google làm như thường (không phải câu tìm nhạc, video hay mở kênh)", "Left to the Google Assistant (not a music, video or channel request)")
+                "loi" -> when (v.chiTiet) {
+                    "khong-co-smarttube" -> t("Không làm: tivi chưa có app YouTube (SmartTube, TizenTube)", "Nothing done: no YouTube app (SmartTube, TizenTube) on the TV")
+                    "khong-co-app" -> t("Không làm: app của câu riêng không còn trên tivi", "Nothing done: the custom phrase's app is no longer on the TV")
+                    "khong-mo-duoc" -> t("Không mở được app", "Couldn't open the app")
+                    else -> t("Lỗi trên tivi: ", "Error on the TV: ") + v.chiTiet
+                }
+                else -> v.loai
             }
-            else -> v.loai
+        }
+
+        /** Tên các app Map Voice hay mở; null nếu không phải app quen. */
+        fun tenAppMv(goi: String): String? = when (goi) {
+            "org.smarttube.stable", "com.liskovsoft.smarttubetv" -> "SmartTube"
+            "org.smarttube.beta", "com.liskovsoft.smarttubetv.beta" -> "SmartTube Beta"
+            MapVoice.TIZENTUBE -> "TizenTube"
+            MapVoice.YOUTUBE_GOC -> t("YouTube gốc", "official YouTube")
+            KenhFpt.GOI -> "FPT Play"
+            KenhVtvGo.GOI -> "VTVgo"
+            KenhNhanh.TV360 -> "TV360"
+            else -> null
         }
     }
 }

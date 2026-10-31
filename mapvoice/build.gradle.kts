@@ -6,7 +6,8 @@ plugins {
 }
 
 // App "Map Voice" cài lên tivi (29/10/2026): nói vào nút mic của remote như thường (Google Assistant), câu tìm nhạc / video
-// mở bằng SmartTube thay vì YouTube gốc, câu mở kênh mở bằng VTVgo / TV360. Ký cùng khoá với TiviKit.
+// mở bằng SmartTube thay vì YouTube gốc, câu mở kênh mở bằng VTVgo / TV360. 1.1 (31/10/2026): câu riêng, chọn TizenTube /
+// YouTube gốc, kênh FPT Play. Ký cùng khoá với TiviKit.
 val kyFile = rootProject.file("ky.properties")
 val ky = Properties().apply { if (kyFile.exists()) kyFile.inputStream().use { load(it) } }
 
@@ -21,8 +22,8 @@ android {
         applicationId = "vn.tivikit.mapvoice"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
     signingConfigs {
         if (kyFile.exists()) {
