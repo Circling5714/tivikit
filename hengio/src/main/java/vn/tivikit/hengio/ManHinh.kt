@@ -31,7 +31,11 @@ class DanhThuc : Activity() {
         // Chờ tivi lên hẳn rồi mới mở app: tivi vừa thức còn đang chuyển nguồn hình, và launcher kiểu Home sạch tự mở Home
         // khoảng 2 giây sau khi đánh thức (Skyworth). Màn này có thể đã bị Home đè và đóng (noHistory): mở bằng ctx của app.
         Handler(Looper.getMainLooper()).postDelayed({
-            if (goi != null && HenGio.moApp(ctx, goi)) HenGioDichVu.dangChay?.canhHome(goi)
+            if (goi != null) {
+                val mo = HenGio.moApp(ctx, goi)
+                Kho(ctx).ghi("mo:$goi", if (mo) "ok" else "khong-mo-duoc")
+                if (mo) HenGioDichVu.dangChay?.canhHome(goi)
+            }
             finish()
         }, CHO_MO_MS)
     }

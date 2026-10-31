@@ -67,6 +67,14 @@ class LichTest {
         assertTrue(Lich.daLo(luc(2021, 1, 21, 8, 39), luc(2026, 10, 28, 8, 44)))
     }
 
+    /** Tên việc trong nhật ký: TiviKit đọc "mo:<gói>" để hiện tên app, "thu" là lần thử đánh thức (31/10/2026). */
+    @Test fun tenViec_trongNhatKy() {
+        assertEquals("bat", Lich.tenViec(Viec(6, 30, moiNgay, Viec.BAT, "vn.tivikit.kenh"), false))
+        assertEquals("thu", Lich.tenViec(Viec(0, 0, moiNgay, Viec.BAT), true))
+        assertEquals("tat", Lich.tenViec(Viec(23, 0, moiNgay, Viec.TAT), false))
+        assertEquals("mo:org.smarttube.stable", Lich.tenViec(Viec(19, 0, moiNgay, Viec.MO, "org.smarttube.stable"), false))
+    }
+
     @Test fun json_khuHoiVaTuChoi() {
         val ds = listOf(Viec(6, 30, setOf(1, 2, 3), Viec.BAT, "vn.tivikit.kenh"), Viec(23, 0, moiNgay, Viec.TAT), Viec(19, 0, setOf(7), Viec.MO, "org.smarttube.stable", false))
         assertEquals(ds, Lich.docJson(Lich.json(ds).toString()))

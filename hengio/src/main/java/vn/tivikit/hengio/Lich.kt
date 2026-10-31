@@ -36,6 +36,13 @@ object Lich {
      */
     fun daLo(luc: Long, bay: Long): Boolean = bay - luc > TRE_TOI_DA_MS
 
+    /** Tên việc trong nhật ký, TiviKit đọc để nói cho người dùng: bat, thu (thử đánh thức), tat, mo:<gói>. */
+    fun tenViec(v: Viec, laThu: Boolean): String = when (v.loai) {
+        Viec.MO -> "mo:${v.goi}"
+        Viec.BAT -> if (laThu) "thu" else Viec.BAT
+        else -> v.loai
+    }
+
     private val TEN_GOI = Regex("""^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$""")
 
     /** Danh sách việc từ JSON TiviKit gửi; null nếu sai dạng (cả danh sách bị từ chối, không lưu nửa vời). */

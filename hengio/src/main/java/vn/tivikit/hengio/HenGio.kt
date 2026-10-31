@@ -50,18 +50,22 @@ object HenGio {
         val ke = Lich.keTiep(kho.lich, kho.motLan(), luc - 1, ZoneId.systemDefault())
         kho.xongMotLan(luc)
         if (ke == null || ke.luc != luc) return
-        if (Lich.daLo(luc, System.currentTimeMillis())) { ke.viec.forEach { kho.ghi(it.loai, "lo-gio") }; return }
+        if (Lich.daLo(luc, System.currentTimeMillis())) { ke.viec.forEach { kho.ghi(Lich.tenViec(it, laThu), "lo-gio") }; return }
+        // Màn bảo vệ cũng tính là đang bật: bật tivi / mở app lúc đó phải tắt màn bảo vệ trước (sangManHinh).
         val dangBat = ctx.getSystemService(PowerManager::class.java)?.isInteractive == true
         for (v in ke.viec) when (v.loai) {
             Viec.BAT -> if (!dangBat) {
-                danhThuc(ctx, v.goi, laThu); kho.ghi(if (laThu) "thu" else "bat", "danh-thuc")
+                danhThuc(ctx, v.goi, laThu); kho.ghi(Lich.tenViec(v, laThu), "danh-thuc")
             } else {
-                v.goi?.let { moApp(ctx, it) }; kho.ghi(if (laThu) "thu" else "bat", "dang-bat")
+                sangManHinh(ctx, 3_000)
+                kho.ghi(Lich.tenViec(v, laThu), "dang-bat")
+                v.goi?.let { kho.ghi("mo:$it", if (moApp(ctx, it)) "ok" else "khong-mo-duoc") }
             }
             Viec.TAT -> { kho.daBaoTat = luc + Lich.BAO_TRUOC_MS; baoTat(ctx, kho, "bao-truoc") }
             Viec.MO -> {
                 val goi = v.goi ?: continue
-                kho.ghi("mo:$goi", if (!dangBat) "tivi-dang-tat" else if (moApp(ctx, goi)) "ok" else "khong-mo-duoc")
+                val kq = if (!dangBat) "tivi-dang-tat" else { sangManHinh(ctx, 3_000); if (moApp(ctx, goi)) "ok" else "khong-mo-duoc" }
+                kho.ghi(Lich.tenViec(v, laThu), kq)
             }
         }
     }
@@ -72,17 +76,23 @@ object HenGio {
         if (dangBat) { moManHinh(ctx, Intent(ctx, BaoTat::class.java)); kho.ghi("tat", ghiChu) } else kho.ghi("tat", "da-tat-san")
     }
 
-    /**
-     * Đánh thức tivi: màn DanhThuc có turnScreenOn (cách Android khuyên dùng) và thêm khoá thức ACQUIRE_CAUSES_WAKEUP
-     * (chạy trên Android 13 trở xuống; Android 14+ cần quyền TURN_SCREEN_ON, TiviKit cấp qua ADB), rồi mở [goi].
-     */
+    /** Đánh thức tivi đang chờ: sáng màn hình, mở màn DanhThuc (turnScreenOn, cách Android khuyên dùng), màn đó mở [goi]. */
     private fun danhThuc(ctx: Context, goi: String?, laThu: Boolean) {
+        sangManHinh(ctx, 10_000)
+        moManHinh(ctx, Intent(ctx, DanhThuc::class.java).putExtra("goi", goi).putExtra("thu", laThu))
+    }
+
+    /**
+     * Sáng màn hình như bấm remote (31/10/2026): tivi đang chờ thì bật lên, đang ở màn bảo vệ thì tắt nó. Màn bảo vệ vẫn
+     * tính là đang bật, mà app mở lúc đó nằm phía sau nó, không ai thấy (app Cast, TX3 28/10/2026). Khoá thức
+     * ACQUIRE_CAUSES_WAKEUP; Android 14+ cần quyền TURN_SCREEN_ON (TiviKit cấp qua ADB).
+     */
+    private fun sangManHinh(ctx: Context, ms: Long) {
         @Suppress("DEPRECATION")
         runCatching {
             ctx.getSystemService(PowerManager::class.java)?.newWakeLock(
-                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE, "hengio:bat")?.acquire(10_000)
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE, "hengio:bat")?.acquire(ms)
         }
-        moManHinh(ctx, Intent(ctx, DanhThuc::class.java).putExtra("goi", goi).putExtra("thu", laThu))
     }
 
     fun moManHinh(ctx: Context, i: Intent) { runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
