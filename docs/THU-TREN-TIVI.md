@@ -246,7 +246,7 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | Gõ "mở <tên một app trên tivi>", rồi một câu khác (VD "giá vàng hôm nay") | App đó mở; câu kia mở Trợ lý Google trên tivi (tivi tắt Trợ lý thì bot báo) |
 | Dán link YouTube, link fptplay.vn | Video mở trong app YouTube của Map Voice (SmartTube…); link FPT Play mở FPT Play |
 | Gửi một ảnh, một video ngắn | Tivi chiếu ảnh toàn màn hình / phát video; Back trên remote để tắt; ảnh tự tắt sau 10 phút |
-| Chọn ô tìm kiếm của SmartTube trên tivi, rồi 🎮 → ⌨️ Gõ chữ, gõ "phở bò" | Chữ có dấu hiện đúng trong ô |
+| 🎮 → ⌨️ Gõ chữ, dùng ⬆️⬇️⬅️➡️ chọn ô tìm kiếm của SmartTube, gõ "phở bò", rồi ⌨️ Gõ tiếp " hà nội", ↵ Enter | "phở bò" thay chữ cũ trong ô (chữ có dấu đúng), rồi thành "phở bò hà nội"; Enter thì SmartTube tìm |
 | 📱 Ứng dụng → bấm một app; chủ bấm ⏹ Buộc dừng | App mở; app đang mở bị dừng |
 | ⏰ Hẹn giờ → Tắt sau 15 phút → ✕ huỷ | Hẹn hiện trong bảng rồi mất; TiviKit → Hẹn giờ thấy giống vậy |
 | 🔒 Khoá trẻ em → Khoá ngay, rồi 🔓 30 phút, gõ mã 6 số của bố mẹ | Tivi khoá; mã đúng thì mở tới giờ bot báo và tin chứa mã bị xoá; mã sai báo còn mấy lần |
