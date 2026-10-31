@@ -18,6 +18,9 @@ class KenhFptTest {
         // Kênh hay xem đều có trong danh sách, đúng thứ tự.
         assertEquals(KenhFpt.HAY_XEM, KenhFpt.hayXem(ds).map { it.ma })
         assertEquals("VTV1 HD", ds.first { it.ma == "vtv1-hd" }.ten)
+        // Kênh cần gói (nhãn premium của FPT Play): VTV3 hỏi mua gói, VTV1 phát (thử trên Skyworth đã đăng nhập).
+        assertEquals(36, ds.count { it.canGoi })
+        assertEquals(listOf(false, true, false, false), listOf("vtv1-hd", "vtv3-hd", "hanoitv-1", "antv").map { m -> ds.first { it.ma == m }.canGoi })
     }
 
     @Test fun tenO_vaLink() {

@@ -153,23 +153,28 @@ private fun SoanFpt(vm: PhienLamViec) {
     val dangChon = k.kenhFpt
     KenhFpt.hayXem(k.dsFpt).chunked(5).forEach { hang ->
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            hang.forEach { g -> ChonChip(if (k.daCoFpt(g.ma)) "${g.tenO} ✓" else g.tenO, dangChon?.second == g.ma) { k.chonFpt(g.tenO, g.ma) } }
+            hang.forEach { g ->
+                ChonChip(g.tenO + (if (g.canGoi) " 💎" else "") + (if (k.daCoFpt(g.ma)) " ✓" else ""), dangChon?.second == g.ma) { k.chonFpt(g.tenO, g.ma) }
+            }
         }
     }
     if (dangChon != null) Text(t("Kênh của ô: ${dangChon.first}", "Tile channel: ${dangChon.first}"), fontWeight = FontWeight.SemiBold, color = ChuChinh)
     NutPhu(t("Kênh khác trên FPT Play (địa phương, quốc tế…)", "Other FPT Play channels (local, international…)"), Icons.Rounded.Search) { k.moChonFpt = true }
-    Phu(t("Ô mở thẳng kênh trong app FPT Play. Xem kênh cần đăng nhập FPT Play trên tivi: chưa đăng nhập thì FPT Play hỏi đăng nhập. ✓ = kênh đã có ô.",
-        "The tile opens the channel straight in the FPT Play app. Watching needs an FPT Play login on the TV: if you're signed out, FPT Play asks you to sign in. ✓ = already has a tile."))
+    Phu(t("Ô mở thẳng kênh trong app FPT Play. Xem kênh cần đăng nhập FPT Play trên tivi: chưa đăng nhập thì FPT Play hỏi đăng nhập. 💎 = kênh cần gói của FPT Play (chưa mua gói thì FPT Play hỏi mua); VTV1, ANTV, QPVN, HaNoiTV và đài địa phương xem được khi đã đăng nhập. ✓ = kênh đã có ô.",
+        "The tile opens the channel straight in the FPT Play app. Watching needs an FPT Play login on the TV: if you're signed out, FPT Play asks you to sign in. 💎 = the channel needs an FPT Play package (without one, FPT Play offers to sell it); VTV1, ANTV, QPVN, HaNoiTV and local stations play once signed in. ✓ = already has a tile."))
 }
 
-/** Một dòng trong hộp chọn kênh: nhóm (gói kênh của VTVgo, nhóm kênh của FPT Play), mã kênh, tên đầy đủ, tên trên ô. */
-private data class MucKenh(val nhom: String, val ma: String, val ten: String, val tenO: String, val canDangNhap: Boolean = false)
+/**
+ * Một dòng trong hộp chọn kênh: nhóm (gói kênh của VTVgo, nhóm kênh của FPT Play), mã kênh, tên đầy đủ, tên trên ô, dấu sau
+ * tên (🔒 kênh VTVgo cần đăng nhập, 💎 kênh FPT Play cần gói).
+ */
+private data class MucKenh(val nhom: String, val ma: String, val ten: String, val tenO: String, val dau: String = "")
 
 /** Chọn một kênh VTVgo bất kỳ cho ô soạn (CleanTV 3.0.0): danh sách từ API của VTVgo, nhóm theo gói, tìm theo tên không dấu. */
 @Composable
 private fun HopChonKenhGo(vm: PhienLamViec) {
     val k = vm.kenhNhanh
-    val ds = remember(vm.dsKenhGo) { vm.dsKenhGo.map { MucKenh(it.nhom, it.ma, it.ten, it.tenO, it.canDangNhap) } }
+    val ds = remember(vm.dsKenhGo) { vm.dsKenhGo.map { MucKenh(it.nhom, it.ma, it.ten, it.tenO, if (it.canDangNhap) " 🔒" else "") } }
     HopChonKenh(t("Kênh trên VTVgo", "Channels on VTVgo"), ds, k.kenhGo?.second, k::daCoGo,
         trong = if (vm.dangTaiKenh) t("Đang tải danh sách kênh…", "Loading channels…")
             else t("Không tải được danh sách kênh. Kiểm tra mạng của điện thoại rồi mở lại.", "Could not load the channel list. Check the phone's internet and try again."),
@@ -181,10 +186,11 @@ private fun HopChonKenhGo(vm: PhienLamViec) {
 @Composable
 private fun HopChonKenhFpt(vm: PhienLamViec) {
     val k = vm.kenhNhanh
-    val ds = remember(k.dsFpt) { k.dsFpt.map { MucKenh(it.nhom, it.ma, it.ten, it.tenO) } }
+    val ds = remember(k.dsFpt) { k.dsFpt.map { MucKenh(it.nhom, it.ma, it.ten, it.tenO, if (it.canGoi) " 💎" else "") } }
     HopChonKenh(t("Kênh trên FPT Play", "Channels on FPT Play"), ds, k.kenhFpt?.second, k::daCoFpt,
         trong = t("Không đọc được danh sách kênh FPT Play.", "Couldn't read the FPT Play channel list."),
-        chuThich = t("Bấm một kênh để chọn cho ô · ✓ = đã có ô · xem kênh cần đăng nhập FPT Play trên tivi", "Tap a channel for the tile · ✓ = already has a tile · watching needs an FPT Play login on the TV"),
+        chuThich = t("Bấm một kênh để chọn cho ô · ✓ = đã có ô · 💎 = cần gói FPT Play · xem kênh cần đăng nhập FPT Play trên tivi",
+            "Tap a channel for the tile · ✓ = already has a tile · 💎 = needs an FPT Play package · watching needs an FPT Play login on the TV"),
         dong = { k.moChonFpt = false }) { k.chonFpt(it.tenO, it.ma) }
 }
 
@@ -218,7 +224,7 @@ private fun HopChonKenh(
                             Row(Modifier.fillMaxWidth().clickable { chon(g); dong() }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(if (dangChon) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked, null, tint = if (dangChon) Xanh else ChuPhu, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(10.dp))
-                                Text(g.ten + (if (g.canDangNhap) " 🔒" else "") + (if (daCo(g.ma)) " ✓" else ""), fontSize = 14.sp, modifier = Modifier.weight(1f))
+                                Text(g.ten + g.dau + (if (daCo(g.ma)) " ✓" else ""), fontSize = 14.sp, modifier = Modifier.weight(1f))
                             }
                         }
                     }

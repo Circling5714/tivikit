@@ -7,14 +7,15 @@ import org.json.JSONObject
  * Kênh của FPT Play (31/10/2026). Mã kênh là đoạn cuối link kênh trên fptplay.vn (fptplay.vn/xem-truyen-hinh/vtv1-hd),
  * cũng là deep link FPT Play bản tivi (net.fptplay.ottbox) mở thẳng màn xem kênh: ô Kênh nhanh FPT Play (app phụ, module
  * kenh/) và câu mở kênh của Map Voice dùng link này. Danh sách đóng sẵn trong assets/kenh-fpt.json (93 kênh, lấy từ danh
- * sách kênh công khai của fptplay.vn ngày 31/10/2026): mã, tên, nhóm, số kênh của FPT Play, ảnh kênh. Xem kênh vẫn cần
- * đăng nhập FPT Play trên tivi (chưa đăng nhập thì FPT Play hỏi).
+ * sách kênh công khai của fptplay.vn ngày 31/10/2026): mã, tên, nhóm, số kênh của FPT Play, ảnh kênh, có cần gói không. Xem
+ * kênh vẫn cần đăng nhập FPT Play trên tivi (chưa đăng nhập thì FPT Play hỏi); kênh cần gói (VTV2–VTV10, HTV7, HTV9, kênh quốc
+ * tế…, nhãn premium của FPT Play) thì tài khoản chưa mua gói bị hỏi mua gói (thấy trên Skyworth: VTV3 HD hỏi, VTV1 HD phát).
  */
 object KenhFpt {
     const val GOI = "net.fptplay.ottbox"
     const val ASSET = "kenh-fpt.json"
 
-    data class Kenh(val ma: String, val ten: String, val nhom: String, val so: String, val anh: String) {
+    data class Kenh(val ma: String, val ten: String, val nhom: String, val so: String, val anh: String, val canGoi: Boolean = false) {
         /** Tên trên ô: bỏ chữ "HD" cuối cho gọn ("VTV1 HD" → "VTV1"), tối đa 24 ký tự. */
         val tenO: String get() = tenNgan(ten)
     }
@@ -39,7 +40,8 @@ object KenhFpt {
             val ma = o.optString("ma").trim()
             val ten = o.optString("ten").trim()
             if (!MA.matches(ma) || ten.isEmpty() || !da.add(ma)) null
-            else Kenh(ma, ten, o.optString("nhom").trim(), o.optString("so").trim(), o.optString("anh").trim().takeIf { it.startsWith("https://") }.orEmpty())
+            else Kenh(ma, ten, o.optString("nhom").trim(), o.optString("so").trim(),
+                o.optString("anh").trim().takeIf { it.startsWith("https://") }.orEmpty(), o.optBoolean("canGoi"))
         }
     }
 
