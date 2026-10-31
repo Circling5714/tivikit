@@ -72,6 +72,9 @@ object ChuBot {
             "khoa-tv" -> t(en, "khoá thành viên tới $sau", "paused members until $sau")
             "mo-tv" -> t(en, "mở lại cho thành viên", "let members back in")
             "quay" -> t(en, "quay màn hình 10 giây", "recorded the screen for 10 s")
+            "xin-them" -> t(en, "trẻ xin thêm giờ xem", "a child asked for more TV time")
+            "khong-cho-them" -> t(en, "không cho thêm giờ", "said no to more TV time")
+            "hoan-tat" -> t(en, "hoãn tắt tivi 30 phút", "postponed turning off for 30 min")
             "nen" -> t(en, "đặt ảnh nền Home", "set the Home wallpaper")
             "bo-nen" -> t(en, "về ảnh nền mặc định", "went back to the default wallpaper")
             "cast" -> sau.substringAfter('|').let { may ->
@@ -173,6 +176,30 @@ object ChuBot {
         if (appKhoa.isNotEmpty()) dong += t(en, "App đang khoá: ", "Apps locked now: ") + appKhoa.joinToString(", ")
         if (j.optBoolean("coOtp")) dong += t(en, "Mở tạm cần mã 6 số trong app xác thực của bố mẹ (hay mã dự phòng 8 số).",
             "Unlocking needs the 6-digit code from the parent's authenticator app (or an 8-digit backup code).")
+        return dong.joinToString("\n")
+    }
+
+    /**
+     * 📊 Thời gian xem 7 ngày từ báo cáo của app Khoá trẻ em (thoi-gian): mỗi ngày tổng thời gian / giới hạn và ba app xem
+     * nhiều nhất; hôm nay đánh dấu ▶.
+     */
+    fun baoCao(j: JSONObject, tenTivi: String, en: Boolean): String {
+        val dong = mutableListOf("📊 ${t(en, "Thời gian xem 7 ngày", "Viewing time, last 7 days")} · $tenTivi")
+        val homNay = j.optString("homNay")
+        val thu = if (en) THU_EN else THU_VI
+        ds(j.optJSONArray("ngay")).forEach { n ->
+            val ngay = n.optString("ngay")
+            val p = ngay.split("-")
+            val ngayThang = if (p.size == 3) "${p[2].toIntOrNull() ?: p[2]}/${p[1].toIntOrNull() ?: p[1]}" else ngay
+            val giay = n.optLong("giay")
+            val han = n.optInt("gioiHan")
+            val apps = ds(n.optJSONArray("apps")).take(3).joinToString(", ") { "${it.optString("ten")} ${thoiGian(it.optLong("giay") * 1000, en)}" }
+            dong += (if (ngay == homNay) "▶ " else "") + "${thu.getOrElse(n.optInt("thu") - 1) { "" }} $ngayThang · ${thoiGian(giay * 1000, en)}" +
+                (if (han > 0) " / " + XuLyLenh.thoiLuong(han, en) + (if (giay >= han * 60L) " ⚠️" else "") else "") +
+                (if (apps.isNotEmpty()) " · $apps" else "")
+        }
+        if (!j.optBoolean("coQuyen")) dong += t(en, "Tivi chưa cho Khoá trẻ em đọc thời gian từng app nên chưa biết app nào.",
+            "The TV hasn't let Kids lock read per-app usage, so apps aren't listed.")
         return dong.joinToString("\n")
     }
 

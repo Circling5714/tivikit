@@ -4,6 +4,7 @@ import android.content.ContentProvider
 import android.content.ContentValues
 import android.net.Uri
 import android.os.Binder
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Process
 import java.io.File
@@ -23,15 +24,19 @@ import org.json.JSONObject
  *   content call --uri content://vn.tivikit.teleremote --method thu --arg '{"chu":"ℹ️ Tivi"}' / '{"nut":"k:19"}'
  *     (làm như chủ tivi vừa nhắn / bấm, "vaiTro":"thanh-vien" thì như thành viên, "anh":"<đường dẫn>" = ảnh coi như vừa gửi
  *     (trong thư mục của app); trả chữ bot sẽ trả lời kèm chữ trên nút; để thử không cần Telegram)
- * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đọc được token hay đổi người được dùng.
+ *   xin-them-gio (lý do khoá) / sap-tat (lúc tắt, ms): app Khoá trẻ em / Hẹn giờ báo để bot nhắn chủ tivi kèm nút.
+ * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đọc được token hay đổi người được dùng. Riêng
+ * xin-them-gio, sap-tat thì app phụ cùng khoá ký với TiviKit cũng gọi được (chỉ làm bot nhắn chủ tivi).
  */
 class CauHinhProvider : ContentProvider() {
     override fun onCreate() = true
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
         val uid = Binder.getCallingUid()
-        if (uid != Process.SHELL_UID && uid != 0 && uid != Process.myUid()) throw SecurityException("chỉ ADB")
         val ctx = context!!
+        // App phụ khác của TiviKit (cùng khoá ký) báo việc cần nhắn chủ tivi: trẻ xin thêm giờ (Khoá trẻ em), tivi sắp tắt (Hẹn giờ).
+        val cungKhoa = runCatching { ctx.packageManager.checkSignatures(uid, Process.myUid()) == PackageManager.SIGNATURE_MATCH }.getOrDefault(false)
+        if (uid != Process.SHELL_UID && uid != 0 && uid != Process.myUid() && !(cungKhoa && method in BAO_TU_APP)) throw SecurityException("chỉ ADB")
         val kho = Kho(ctx)
         val dv = TeleRemoteDichVu.dangChay
         val kq = Bundle()
@@ -114,6 +119,15 @@ class CauHinhProvider : ContentProvider() {
                 kho.khoaThanhVienDen = 0
                 kq.putString("ok", "1")
             }
+            "xin-them-gio" -> {
+                if (dv == null) return kq.apply { putString("loi", "dich-vu-tat") }
+                if (dv.xinThemGio(arg.orEmpty())) kq.putString("ok", "1") else kq.putString("loi", "chua-co-chu")
+            }
+            "sap-tat" -> {
+                if (dv == null) return kq.apply { putString("loi", "dich-vu-tat") }
+                dv.sapTat(arg?.toLongOrNull() ?: (System.currentTimeMillis() + 60_000))
+                kq.putString("ok", "1")
+            }
             "thu" -> {
                 if (dv == null) return kq.apply { putString("loi", "dich-vu-tat") }
                 val j = runCatching { JSONObject(arg ?: "") }.getOrDefault(JSONObject())
@@ -154,5 +168,7 @@ class CauHinhProvider : ContentProvider() {
     companion object {
         /** Chat của lệnh thu (ID chat Telegram thật luôn khác 0). */
         private const val CHAT_THU = 0L
+        /** Lệnh app phụ cùng khoá ký gọi được (ngoài ADB). */
+        private val BAO_TU_APP = setOf("xin-them-gio", "sap-tat")
     }
 }

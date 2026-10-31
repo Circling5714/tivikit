@@ -272,6 +272,9 @@ class TeleRemoteTivi(private val vm: PhienLamViec) {
                 "khoa-tv" -> t("khoá thành viên tới $sau", "paused members until $sau")
                 "mo-tv" -> t("mở lại cho thành viên", "let members back in")
                 "quay" -> t("quay màn hình 10 giây", "recorded the screen for 10 s")
+                "xin-them" -> t("trẻ xin thêm giờ xem", "a child asked for more TV time")
+                "khong-cho-them" -> t("không cho thêm giờ", "said no to more TV time")
+                "hoan-tat" -> t("hoãn tắt tivi 30 phút", "postponed turning off for 30 min")
                 "nen" -> t("đặt ảnh nền Home", "set the Home wallpaper")
                 "bo-nen" -> t("về ảnh nền mặc định", "went back to the default wallpaper")
                 "cast" -> sau.substringAfter('|').let { may ->

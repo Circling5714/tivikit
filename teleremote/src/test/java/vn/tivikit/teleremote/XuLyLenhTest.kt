@@ -154,7 +154,7 @@ class XuLyLenhTest {
         listOf(XuLyLenh.bangThem(true, false, 0, 1), XuLyLenh.bangThem(true, true, 99, 1), XuLyLenh.bangNguoi(ch2, listOf(XinDung(333, "", "Ông", 1)), false),
             XuLyLenh.bangMotNguoi(ch2.nguoiDung[1], false), XuLyLenh.bangXinDung(333, true), XuLyLenh.nutBatManHinh(false),
             XuLyLenh.sauKhiChup(false), XuLyLenh.nutDatNen(true), XuLyLenh.nutBoNen(false), XuLyLenh.bangCast(7, false),
-            XuLyLenh.bangTatCaKenh(1), XuLyLenh.bangKenh(listOf(1 to "VTV1"), tatCa = true),
+            XuLyLenh.bangTatCaKenh(1), XuLyLenh.bangKenh(listOf(1 to "VTV1"), tatCa = true), XuLyLenh.bangXinGio(false), XuLyLenh.bangSapTat(true),
             XuLyLenh.sauKhiGo(en = false), XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
             XuLyLenh.bangLamMoi(en = false, ganDay = true), XuLyLenh.hoiTat(en = false),
             XuLyLenh.bangUngDung((1..30).map { "com.app.so$it" to "App $it" }, 1, en = false, chu = true)).forEach { bp ->
@@ -360,5 +360,17 @@ class XuLyLenhTest {
         assertEquals("VTV1", h.getJSONArray(0).getJSONObject(0).getString("text"))
         val cuoi = XuLyLenh.bangTatCaKenh(99).getJSONArray("inline_keyboard")
         assertEquals("kd:1", cuoi.getJSONArray(cuoi.length() - 1).getJSONObject(0).getString("callback_data"))
+    }
+
+    @Test
+    fun nhom3() {
+        assertEquals(XuLyLenh.BaoCao7, XuLyLenh.viecTuNut("kh:bc"))
+        assertEquals(XuLyLenh.TuChoiXin, XuLyLenh.viecTuNut("kh:x"))
+        assertEquals(XuLyLenh.HoanTat, XuLyLenh.viecTuNut("ht:h"))
+        assertEquals(XuLyLenh.TatNgayHen, XuLyLenh.viecTuNut("ht:t"))
+        listOf(XuLyLenh.BaoCao7, XuLyLenh.TuChoiXin, XuLyLenh.HoanTat, XuLyLenh.TatNgayHen).forEach { assertTrue(it.toString(), XuLyLenh.chiChu(it)) }
+        // Tin trẻ xin thêm giờ: mở tạm (hỏi mã như nút 🔓) hay không cho.
+        val nut = XuLyLenh.bangXinGio(false).getJSONArray("inline_keyboard")
+        assertEquals(XuLyLenh.MoTam(30), XuLyLenh.viecTuNut(nut.getJSONArray(0).getJSONObject(0).getString("callback_data")))
     }
 }

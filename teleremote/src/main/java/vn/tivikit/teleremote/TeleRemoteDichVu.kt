@@ -99,10 +99,35 @@ class TeleRemoteDichVu : AccessibilityService() {
         bot?.baoChu(chu, banPhim)
     }
 
+    /**
+     * Trẻ bấm Xin bố mẹ thêm giờ trên màn khoá (app Khoá trẻ em): nhắn các chủ tivi kèm nút mở tạm / không cho. false nếu
+     * chưa có bot hay chưa chủ nào nhắn bot.
+     */
+    fun xinThemGio(lyDo: String): Boolean {
+        val ch = kho.cauHinh
+        if (kho.token.isEmpty() || ch.nguoiDung.none { it.vaiTro == VaiTro.CHU && it.id != 0L }) return false
+        val en = ch.tiengAnh
+        val vi = when (lyDo) { "het-gio" -> "hết giờ xem hôm nay"; "gio-khoa" -> "đang trong giờ khoá"; "bo-me-khoa" -> "bố mẹ đã khoá"; "gio-sai" -> "tivi chưa có giờ đúng"; else -> "" }
+        val enLy = when (lyDo) { "het-gio" -> "today's viewing time is used up"; "gio-khoa" -> "within locked hours"; "bo-me-khoa" -> "locked by a parent"; "gio-sai" -> "the TV's clock is wrong"; else -> "" }
+        baoTin(if (en) "🧒 Someone on ${tenTivi()} asks for more TV time" + (if (enLy.isNotEmpty()) " ($enLy)." else ".")
+            else "🧒 Trên tivi ${tenTivi()} có người xin thêm giờ xem" + (if (vi.isNotEmpty()) " ($vi)." else "."), XuLyLenh.bangXinGio(en))
+        kho.ghi(tenTivi(), "xin-them|$lyDo")
+        return true
+    }
+
+    /** Hẹn giờ sắp tắt tivi (màn báo trước vừa hiện): báo tin bật thì nhắn các chủ kèm nút hoãn / tắt luôn. */
+    fun sapTat(luc: Long) {
+        val ch = kho.cauHinh
+        if (!ch.baoTin) return
+        val gio = java.text.SimpleDateFormat("HH:mm", Locale.ROOT).format(java.util.Date(luc))
+        baoTin(if (ch.tiengAnh) "⏰ ${tenTivi()} turns off at $gio by its Timer (about a minute left)." else "⏰ Tivi ${tenTivi()} sẽ tắt lúc $gio theo Hẹn giờ (còn chừng một phút).",
+            XuLyLenh.bangSapTat(ch.tiengAnh))
+    }
+
     /** Nhắn [chu] cho các chủ tivi (báo tin); giữ máy thức một lúc cho kịp gửi khi tivi vừa tắt màn hình. */
-    fun baoTin(chu: String) {
+    fun baoTin(chu: String, banPhim: org.json.JSONObject? = null) {
         runCatching { getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tivikit:teleremote-bao").acquire(30_000) }
-        bot?.baoChu(chu)
+        bot?.baoChu(chu, banPhim)
     }
 
     override fun onAccessibilityEvent(e: AccessibilityEvent?) {

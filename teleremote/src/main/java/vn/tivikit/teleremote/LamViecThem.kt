@@ -302,3 +302,29 @@ internal fun LamViec.castDuyet(d: Den, nd: NguoiDung, so: Int, lam: String) {
     })
     ghi(nd, "cast|$lam|$ten")
 }
+
+// ---------- Khoá trẻ em: 7 ngày, trả lời xin thêm giờ; Hẹn giờ: hoãn / tắt từ xa ----------
+
+internal fun LamViec.baoCao7(d: Den) {
+    if (d.nut != null) ra.traLoiNut(d.idNut)
+    val j = dv.goiAppPhu(LamViec.KHOA, "thoi-gian", choToiDa = 15_000)?.let(XuLyLenh::jsonTrong)
+    ra.gui(d.chat, j?.let { ChuBot.baoCao(it, dv.tenTivi(), en) } ?: chuChuaAdb())
+}
+
+internal fun LamViec.tuChoiXin(d: Den, nd: NguoiDung) {
+    val kq = dv.goiAppPhu(LamViec.KHOA, "tra-loi-xin", XuLyLenh.thamSo(JSONObject().put("cho", false).put("phut", 0)))
+    ra.traLoiNut(d.idNut)
+    ra.sua(d.chat, d.idTin, if (kq?.contains("ok=1") == true) t("❌ Đã không cho thêm giờ (màn khoá trên tivi đã báo).", "❌ Said no (the lock screen on the TV shows it).")
+        else t("❌ Không cho thêm giờ (chưa báo được lên tivi).", "❌ Said no (couldn't show it on the TV)."))
+    ghi(nd, "khong-cho-them")
+}
+
+internal fun LamViec.henGioTuXa(d: Den, nd: NguoiDung, tat: Boolean) {
+    val kq = dv.goiAppPhu(LamViec.HEN_GIO, if (tat) "tat-ngay" else "hoan")
+    val ok = kq?.contains("ok=1") == true
+    ra.traLoiNut(d.idNut, if (ok) "" else if (kq == null) chuChuaAdb() else t("Tivi đã tắt hay không còn hẹn tắt.", "The TV is already off, or there's nothing to postpone."), canhBao = !ok)
+    if (!ok) return
+    val gio = ChuBot.gio(System.currentTimeMillis() + 30 * 60_000L, System.currentTimeMillis(), mui)
+    ra.sua(d.chat, d.idTin, if (tat) t("📴 Đã tắt tivi.", "📴 The TV is off.") else t("😴 Đã hoãn tắt tivi 30 phút (tới chừng $gio).", "😴 Postponed for 30 minutes (until about $gio)."))
+    ghi(nd, if (tat) "tat" else "hoan-tat")
+}

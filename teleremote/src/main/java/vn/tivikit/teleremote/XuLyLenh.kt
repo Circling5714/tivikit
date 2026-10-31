@@ -93,6 +93,13 @@ object XuLyLenh {
     data class MoKenhTen(val i: Int) : Viec
     /** Duyệt điện thoại xin cast: [so] = số bot đặt cho máy đó, [lam] = "cho-phep" / "hom-nay" / "24h" / "chan" (app Cast). */
     data class CastDuyet(val so: Int, val lam: String) : Viec
+    /** 📊 Thời gian xem 7 ngày (Khoá trẻ em). */
+    data object BaoCao7 : Viec
+    /** Không cho trẻ thêm giờ (trả lời ô Xin bố mẹ thêm giờ). */
+    data object TuChoiXin : Viec
+    /** Hẹn giờ sắp tắt tivi: hoãn 30 phút / tắt luôn. */
+    data object HoanTat : Viec
+    data object TatNgayHen : Viec
 
     /**
      * Phím của bảng điều khiển (mã KeyEvent → chữ trên nút), theo thứ tự ba nút một hàng: Back ▲ Home / ◀ OK ▶ / phát-dừng
@@ -306,6 +313,10 @@ object XuLyLenh {
         du == "h:r" -> HenGio
         du == "kh:r" -> Khoa
         du == "kh:k" -> KhoaNgay
+        du == "kh:bc" -> BaoCao7
+        du == "kh:x" -> TuChoiXin
+        du == "ht:h" -> HoanTat
+        du == "ht:t" -> TatNgayHen
         du == "m" -> Them
         du == "on" -> BatManHinh
         du == "net" -> KiemTraMang
@@ -347,7 +358,7 @@ object XuLyLenh {
     fun chiChu(v: Viec): Boolean = v is TatSau || v is HuyHen || v is MoTam || v is NguoiXem || v is DatVaiTro || v is BoNguoi ||
         v is Duyet || v is BoQuaXin || v is KhoaThanhVien || v is CastDuyet || v in setOf(
             HoiTat, Tat, KhoiDongLai, HenGio, Khoa, KhoaNgay, ChupManHinh, LamMoiTv, DongAppNen, DonCache, DungApp, NguoiDs, ThemNguoi, NhatKyXem,
-            QuayManHinh, DatNen, BoNen,
+            QuayManHinh, DatNen, BoNen, BaoCao7, TuChoiXin, HoanTat, TatNgayHen,
         )
 
     /** Tính năng đang dùng được trên tivi, để bàn phím chỉ hiện nút có tác dụng: Hẹn giờ, Khoá trẻ em đã cài, chủ bật chụp. */
@@ -426,12 +437,23 @@ object XuLyLenh {
             listOf(listOf((if (en) "🔄 Refresh" else "🔄 Cập nhật") to "h:r")),
     )
 
-    /** Khoá trẻ em: khoá ngay (tivi đã có mã), mở tạm 30 phút / 1 giờ / 2 giờ, cập nhật. */
+    /** Khoá trẻ em: khoá ngay (tivi đã có mã), mở tạm 30 phút / 1 giờ / 2 giờ, thời gian xem 7 ngày, cập nhật. */
     fun bangKhoa(en: Boolean, coMa: Boolean): JSONObject = nutTrongTin(listOfNotNull(
         listOf((if (en) "🔒 Lock now" else "🔒 Khoá ngay") to "kh:k").takeIf { coMa },
         MO_TAM.map { p -> "🔓 " + thoiLuong(p, en) to "kh:m:$p" },
-        listOf((if (en) "🔄 Refresh" else "🔄 Cập nhật") to "kh:r"),
+        listOf((if (en) "📊 Last 7 days" else "📊 Xem 7 ngày") to "kh:bc", (if (en) "🔄 Refresh" else "🔄 Cập nhật") to "kh:r"),
     ))
+
+    /** Tin báo trẻ xin thêm giờ: mở tạm 30 phút / 1 giờ (hỏi mã bố mẹ), không cho. */
+    fun bangXinGio(en: Boolean): JSONObject = nutTrongTin(listOf(
+        listOf("🔓 " + thoiLuong(30, en) to "kh:m:30", "🔓 " + thoiLuong(60, en) to "kh:m:60"),
+        listOf((if (en) "❌ No" else "❌ Không cho") to "kh:x"),
+    ))
+
+    /** Tin báo Hẹn giờ sắp tắt tivi: hoãn 30 phút, tắt luôn. */
+    fun bangSapTat(en: Boolean): JSONObject = nutTrongTin(listOf(listOf(
+        (if (en) "😴 Postpone 30 min" else "😴 Hoãn 30 phút") to "ht:h", (if (en) "📴 Turn off now" else "📴 Tắt luôn") to "ht:t",
+    )))
 
     /** Làm mới: đóng app nền, dọn cache (bộ nhớ gần đầy), chủ có thêm khởi động lại (hỏi lại trước), đo lại. */
     fun bangLamMoi(en: Boolean, ganDay: Boolean): JSONObject = nutTrongTin(listOfNotNull(

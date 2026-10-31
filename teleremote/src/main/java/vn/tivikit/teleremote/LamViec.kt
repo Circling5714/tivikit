@@ -126,6 +126,10 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
             is XuLyLenh.TatCaKenh -> tatCaKenh(d, viec.trang)
             is XuLyLenh.MoKenhTen -> moKenhTen(d, nd, viec.i)
             is XuLyLenh.CastDuyet -> castDuyet(d, nd, viec.so, viec.lam)
+            XuLyLenh.BaoCao7 -> baoCao7(d)
+            XuLyLenh.TuChoiXin -> tuChoiXin(d, nd)
+            XuLyLenh.HoanTat -> henGioTuXa(d, nd, tat = false)
+            XuLyLenh.TatNgayHen -> henGioTuXa(d, nd, tat = true)
             XuLyLenh.KhongRo -> ra.gui(d.chat, t("Chọn việc ở bàn phím bên dưới, hay gõ như nói với Trợ lý (VD \"mở nhạc trịnh\"). Gõ /start nếu không thấy bàn phím.",
                 "Pick from the keyboard below, or type like talking to the Assistant (e.g. \"play piano music\"). Send /start if you don't see the keyboard."), banPhim(nd))
         }

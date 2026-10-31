@@ -88,4 +88,17 @@ class ChuBotTest {
         listOf("RAM còn ít", "CPU đang quá tải", "Chip đang nóng", "Bộ nhớ gần đầy", "chạy liên tục 9 ngày").forEach { assertTrue(it, chu.contains(it)) }
         assertTrue(ChuBot.lamMoi(ChuBot.SoDo(2 * gb, gb, 20, null, 3_600_000, 16 * gb, 8 * gb), "TV", true).endsWith("• The TV looks fine."))
     }
+
+    @Test
+    fun baoCao7Ngay() {
+        val j = JSONObject("""{"homNay":"2026-11-01","coQuyen":true,"ngay":[
+            {"ngay":"2026-10-31","thu":6,"giay":5400,"gioiHan":120,"apps":[{"goi":"org.smarttube.stable","ten":"SmartTube","giay":3600},{"goi":"x","ten":"TV360","giay":1800}]},
+            {"ngay":"2026-11-01","thu":7,"giay":7500,"gioiHan":120,"apps":[]}]}""")
+        val dong = ChuBot.baoCao(j, "TX3 Mini", false).lines()
+        assertEquals("📊 Thời gian xem 7 ngày · TX3 Mini", dong[0])
+        assertEquals("T7 31/10 · 1 giờ 30 phút / 2 giờ · SmartTube 1 giờ 0 phút, TV360 30 phút", dong[1])
+        // Hôm nay, xem quá giới hạn.
+        assertEquals("▶ CN 1/11 · 2 giờ 5 phút / 2 giờ ⚠️", dong[2])
+        assertTrue(ChuBot.baoCao(JSONObject("""{"coQuyen":false,"ngay":[]}"""), "TV", true).contains("apps aren't listed"))
+    }
 }
