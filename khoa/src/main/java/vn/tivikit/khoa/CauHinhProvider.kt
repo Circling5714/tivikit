@@ -21,6 +21,8 @@ import java.util.Calendar
  *       (khoá các app đó từ 30 phút nữa tới hết ngày; {"phien":…,"bo":0} bỏ hẹn thứ 0)
  *   content call --uri content://vn.tivikit.khoa --method quen-ma        (24 giờ sau đổi được không cần mã, xem XacThuc)
  *   content call --uri content://vn.tivikit.khoa --method thoi-gian      (báo cáo 7 ngày, xem BaoCao)
+ *   content call --uri content://vn.tivikit.khoa --method tra-loi-xin --arg '{"cho":false,"phut":0}'   (bố mẹ trả lời ô Xin
+ *       bố mẹ thêm giờ qua Telegram; Tele Remote gọi)
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được giờ khoá hay mã. Tivi đã có mã mở khoá
  * (28/10/2026) thì đổi gì cũng phải kèm phiên lấy bằng xac-thuc.
  */
@@ -116,6 +118,12 @@ class CauHinhProvider : ContentProvider() {
                 kq.putString("json", o.toString())
             }
             "thoi-gian" -> kq.putString("json", BaoCao.lap(context!!).toString())
+            // Bố mẹ trả lời ô Xin bố mẹ thêm giờ qua Telegram (Tele Remote, 1/11/2026): báo lên màn khoá.
+            "tra-loi-xin" -> {
+                val o = runCatching { JSONObject(arg ?: "") }.getOrNull() ?: return loi("sai")
+                KhoaDichVu.dangChay?.traLoiXin(o.optBoolean("cho"), o.optInt("phut")) ?: return loi("dich-vu")
+                kq.putString("ok", "1")
+            }
             else -> kq.putString("loi", "khong biet $method")
         }
         KhoaDichVu.dangChay?.capNhatSau()

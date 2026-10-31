@@ -10,6 +10,10 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
+    <!-- Android 11+: thấy bot Telegram của tivi (Tele Remote) để ô Xin bố mẹ thêm giờ nhắn được bố mẹ. -->
+    <queries>
+        <package android:name="vn.tivikit.teleremote" />
+    </queries>
     <application android:label="@string/ten_app" android:icon="@drawable/ic_khoa" android:banner="@drawable/banner_khoa"
         android:allowBackup="false" android:supportsRtl="true">
         <!-- Bảng phụ huynh (28/10/2026): ô "Khoá trẻ em" trong danh sách app của tivi; hỏi mã rồi mới mở bảng. -->

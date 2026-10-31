@@ -69,9 +69,17 @@ class KhoaDichVu : AccessibilityService() {
         private const val LOP_ADB = "UsbDebuggingActivity"
         /** Vân tay khoá RSA trong hộp cho phép ADB: MD5 là 16 cặp số hex nối bằng dấu hai chấm. */
         private val VAN_TAY = Regex("(?:[0-9A-Fa-f]{2}:){15,}[0-9A-Fa-f]{2}")
-        private val PHIM = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓", PHU_HUYNH)
-        /** Ô cuối, dưới bàn phím số: mở bảng phụ huynh (nhập mã trước). */
+        private val PHIM = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓", PHU_HUYNH, XIN_THEM)
+        /** Ô dưới bàn phím số: mở bảng phụ huynh (nhập mã trước). */
         private const val PHU_HUYNH = "⚙  Phụ huynh"
+        /** Ô cuối, chỉ khi cả tivi đang khoá và tivi có Tele Remote: nhắn bố mẹ qua Telegram xin thêm giờ (1/11/2026). */
+        private const val XIN_THEM = "📩  Xin thêm giờ"
+        private const val O_PHU_HUYNH = 12
+        private const val O_XIN = 13
+        /** Bot Telegram của tivi (TiviKit → Tele Remote). */
+        private const val TELE_REMOTE = "vn.tivikit.teleremote"
+        /** Xin thêm giờ xong thì chừng này sau mới xin lại được (khỏi nhắn bố mẹ liên tục). */
+        private const val XIN_CACH_MS = 5 * 60_000L
 
         /** Số giây tivi được xem ngày [ngay], tính cả phần chưa ghi. */
         fun giayDaXem(kho: Kho, ngay: String): Long = kho.giayXem(ngay) + if (ngay == ngayCho) msCho / 1000 else 0
@@ -109,7 +117,11 @@ class KhoaDichVu : AccessibilityService() {
     private lateinit var tvBao: TextView
     private lateinit var tvQuen: TextView
     private lateinit var tvGio: TextView
+    /** Lời báo của ô Xin bố mẹ thêm giờ (đã nhắn, bố mẹ trả lời). */
+    private lateinit var tvXin: TextView
     private val oPhim = mutableListOf<TextView>()
+    /** Lúc vừa xin bố mẹ thêm giờ (0 = chưa). */
+    private var lucXin = 0L
     private var chon = 4
     /** Các số đang gõ: mã OTP 6 số hoặc mã dự phòng 8 số. */
     private var nhap = ""
@@ -610,9 +622,10 @@ class KhoaDichVu : AccessibilityService() {
         if (lop == null && !taoLop()) return
         if (cu == CheTivi && moi != CheTivi) imTieng(false)
         if (cu is CheApp && moi !is CheApp) thaFocus()
-        if (cu != moi) { nhap = ""; choSai = false; chon = 4; tvBao.text = ""; vePin(); veChon() }
+        if (cu != moi) { nhap = ""; choSai = false; chon = 4; tvBao.text = ""; veXin(""); vePin(); veChon() }
         if (cu == CheXacNhan && moi != CheXacNhan) traXacNhan(false)
-        oPhim.getOrNull(PHIM.lastIndex)?.visibility = if (moi == CheMaPh || moi == CheXacNhan) View.GONE else View.VISIBLE
+        oPhim.getOrNull(O_PHU_HUYNH)?.visibility = if (moi == CheMaPh || moi == CheXacNhan) View.GONE else View.VISIBLE
+        oPhim.getOrNull(O_XIN)?.visibility = if (moi == CheTivi && coTeleRemote()) View.VISIBLE else View.GONE
         che = moi; dangKhoa = moi == CheTivi
         tay.removeCallbacks(anCheApp)
         when (moi) {
@@ -642,18 +655,22 @@ class KhoaDichVu : AccessibilityService() {
         tvCham = chu("", 34f).apply { letterSpacing = 0.4f; setPadding(0, dp(6), 0, dp(4)) }; cot.addView(tvCham)
         val luoi = GridLayout(this).apply { columnCount = 3 }
         oPhim.clear()
+        // Có Tele Remote thì thêm hàng Xin bố mẹ thêm giờ: phím số thấp hơn chút cho cả lớp vẫn vừa màn 540dp.
+        val gon = coTeleRemote()
         PHIM.forEach { k ->
-            val o = if (k == PHU_HUYNH) chu(t(k, "⚙  Parent"), 17f, dam = true).apply {
+            val o = if (k == PHU_HUYNH || k == XIN_THEM) chu(if (k == PHU_HUYNH) t(k, "⚙  Parent") else t(k, "📩  Ask for more time"), 17f, dam = true).apply {
                 layoutParams = GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(0, 3)).apply {
-                    width = dp(232); height = dp(40); setMargins(dp(4), dp(8), dp(4), dp(4))
+                    width = dp(232); height = dp(40); setMargins(dp(4), dp(if (gon) 4 else 8), dp(4), dp(4))
                 }
+                if (k == XIN_THEM) visibility = View.GONE
             } else chu(k, 24f, dam = true).apply {
-                layoutParams = GridLayout.LayoutParams().apply { width = dp(72); height = dp(44); setMargins(dp(4), dp(4), dp(4), dp(4)) }
+                layoutParams = GridLayout.LayoutParams().apply { width = dp(72); height = dp(if (gon) 40 else 44); setMargins(dp(4), dp(if (gon) 3 else 4), dp(4), dp(if (gon) 3 else 4)) }
             }
             oPhim += o; luoi.addView(o)
         }
         cot.addView(luoi, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER_HORIZONTAL })
         tvBao = chu("", 16f, Color.parseColor("#FF8FA3")).apply { setPadding(0, dp(8), 0, 0) }; cot.addView(tvBao)
+        tvXin = chu("", 15f, Color.parseColor("#9FE8B0")).apply { setPadding(0, dp(6), 0, 0); visibility = View.GONE }; cot.addView(tvXin)
         tvQuen = chu("", 14f, Color.parseColor("#FFB86B")).apply { setPadding(0, dp(8), 0, 0); visibility = View.GONE }; cot.addView(tvQuen)
         tvGio = chu("", 13f, Color.parseColor("#8A84B8")).apply { setPadding(0, dp(8), 0, 0) }; cot.addView(tvGio)
         val nen = FrameLayout(this).apply {
@@ -750,8 +767,12 @@ class KhoaDichVu : AccessibilityService() {
             in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> go(('0' + (k - KeyEvent.KEYCODE_NUMPAD_0)).toString())
             KeyEvent.KEYCODE_DPAD_LEFT -> { if (chon < 12 && chon % 3 > 0) chon--; veChon() }
             KeyEvent.KEYCODE_DPAD_RIGHT -> { if (chon < 12 && chon % 3 < 2) chon++; veChon() }
-            KeyEvent.KEYCODE_DPAD_UP -> { if (chon == 12) chon = 10 else if (chon >= 3) chon -= 3; veChon() }
-            KeyEvent.KEYCODE_DPAD_DOWN -> { if (chon < 9) chon += 3 else if (chon < 12 && ph) chon = 12; veChon() }
+            KeyEvent.KEYCODE_DPAD_UP -> { if (chon == O_XIN) chon = O_PHU_HUYNH else if (chon == O_PHU_HUYNH) chon = 10 else if (chon >= 3) chon -= 3; veChon() }
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if (chon < 9) chon += 3 else if (chon < O_PHU_HUYNH && ph) chon = O_PHU_HUYNH
+                else if (chon == O_PHU_HUYNH && oPhim.getOrNull(O_XIN)?.visibility == View.VISIBLE) chon = O_XIN
+                veChon()
+            }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> bam(PHIM[chon])
             KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_BACK -> bam("⌫")
         }
@@ -763,7 +784,44 @@ class KhoaDichVu : AccessibilityService() {
         "✓" -> thu()
         // Ô Phụ huynh: nhập mã để mở bảng phụ huynh thay vì mở khoá.
         PHU_HUYNH -> { cheTruoc = che; hienKhoa(CheMaPh) }
+        XIN_THEM -> xinThemGio()
         else -> go(nhan)
+    }
+
+    /** Tivi có bot Telegram của TiviKit (Tele Remote) để nhắn bố mẹ. */
+    private fun coTeleRemote(): Boolean = runCatching { packageManager.getApplicationInfo(TELE_REMOTE, 0).enabled }.getOrDefault(false)
+
+    private fun veXin(s: String) {
+        if (!::tvXin.isInitialized) return
+        tvXin.text = s; tvXin.visibility = if (s.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    /**
+     * Ô Xin bố mẹ thêm giờ (1/11/2026): nhờ Tele Remote nhắn các chủ tivi qua Telegram kèm nút mở tạm (bố mẹ vẫn phải gõ mã
+     * 6 số trong Telegram). Mỗi [XIN_CACH_MS] xin một lần.
+     */
+    private fun xinThemGio() {
+        val bay = System.currentTimeMillis()
+        if (bay - lucXin < XIN_CACH_MS) {
+            veXin(t("Đã nhắn bố mẹ rồi, chờ bố mẹ trả lời nhé.", "Your parents already got a message; wait for their answer."))
+            return
+        }
+        val c = kho.cauHinh
+        val lich = Calendar.getInstance()
+        val ly = when (Luat.lyDo(c, lich, giayDaXem(kho, Luat.ngay(lich)), kho.moTamDen, kho.khoaTay)) {
+            Luat.LyDo.HET_GIO -> "het-gio"; Luat.LyDo.GIO_KHOA -> "gio-khoa"; Luat.LyDo.GIO_SAI -> "gio-sai"; Luat.LyDo.BO_ME_KHOA -> "bo-me-khoa"; null -> ""
+        }
+        val kq = runCatching { contentResolver.call(Uri.parse("content://$TELE_REMOTE"), "xin-them-gio", ly, null) }.getOrNull()
+        if (kq?.getString("ok") == "1") {
+            lucXin = bay
+            veXin(t("📩 Đã nhắn bố mẹ qua Telegram. Chờ bố mẹ trả lời nhé.", "📩 Your parents got a Telegram message. Wait for their answer."))
+        } else veXin(t("Chưa nhắn được bố mẹ (bot Telegram của tivi chưa chạy).", "Couldn't reach your parents (the TV's Telegram bot isn't running)."))
+    }
+
+    /** Bố mẹ trả lời lời xin thêm giờ qua Telegram (Tele Remote gọi tra-loi-xin): cho thì tivi đã mở, không cho thì báo. */
+    fun traLoiXin(cho: Boolean, phut: Int) = tay.post {
+        if (cho) veXin(t("🎉 Bố mẹ cho xem thêm $phut phút.", "🎉 Your parents gave you $phut more minutes."))
+        else veXin(t("Bố mẹ chưa cho xem thêm lúc này.", "Your parents said no more TV for now."))
     }
 
     private fun go(so: String) {
