@@ -20,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vn.tivikit.dulieu.HenGio
@@ -96,8 +98,11 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
             ChonChip(t("Mở app / kênh", "Open an app / channel"), h.loai == HenGio.MO) { h.loai = HenGio.MO }
         }
         if (!h.duocTat) Phu(t("Tắt tivi theo giờ cần Android 9 trở lên.", "Timed turn-off needs Android 9 or later."))
-        OutlinedTextField(h.gio, { h.gio = it.take(5) }, modifier = Modifier.width(150.dp), singleLine = true, shape = RoundedCornerShape(12.dp),
+        // Chỉ nhận số, tự chèn dấu hai chấm (HenGio.oGio); con trỏ luôn ở cuối vì ô chỉ có 5 ký tự.
+        OutlinedTextField(TextFieldValue(h.gio, TextRange(h.gio.length)), { h.gio = HenGio.oGio(it.text) }, modifier = Modifier.width(150.dp),
+            singleLine = true, shape = RoundedCornerShape(12.dp), isError = HenGio.gioSai(h.gio), placeholder = { Text("06:30") },
             label = { Text(t("Giờ (VD 06:30)", "Time (e.g. 06:30)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        if (HenGio.gioSai(h.gio)) Phu(t("Giờ từ 00 đến 23, phút từ 00 đến 59.", "Hours 00 to 23, minutes 00 to 59."), Cam)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             (1..7).forEach { d -> ChonChip(t(TEN_THU[d - 1], TEN_THU_EN[d - 1]), d in h.ngay) { h.ngay = if (d in h.ngay) h.ngay - d else h.ngay + d } }
         }

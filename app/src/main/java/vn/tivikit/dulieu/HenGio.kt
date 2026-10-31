@@ -25,11 +25,29 @@ object HenGio {
         val gioChu: String get() = "%02d:%02d".format(java.util.Locale.ROOT, gio, phut)
     }
 
-    /** "6:30", "06:30", "6h30", "630" → (6, 30); sai → null. */
+    /** "6:30", "06:30", "6h30", "630" → (6, 30); chỉ có giờ ("06") là phút 00; sai → null. */
     fun docGio(s: String): Pair<Int, Int>? {
+        Regex("""^\d{1,2}$""").matchEntire(s.trim())?.let { m -> return m.value.toInt().takeIf { it in 0..23 }?.let { it to 0 } }
         val m = Regex("""^(\d{1,2})\s*[:hH.]?\s*(\d{2})$""").matchEntire(s.trim()) ?: return null
         val g = m.groupValues[1].toInt(); val p = m.groupValues[2].toInt()
         return if (g in 0..23 && p in 0..59) g to p else null
+    }
+
+    /**
+     * Ô giờ lúc đang gõ (31/10/2026): chỉ giữ chữ số, tự chèn dấu hai chấm khi đã có chữ số phút; chữ số đầu từ 3 trở lên là
+     * giờ một chữ số nên thêm 0: "6" → "06", "630" → "06:30", "1830" → "18:30". Bàn phím số của điện thoại không có dấu ':'.
+     */
+    fun oGio(s: String): String {
+        var so = s.filter { it in '0'..'9' }
+        if (so.firstOrNull()?.let { it in '3'..'9' } == true) so = "0$so"
+        so = so.take(4)
+        return if (so.length <= 2) so else so.take(2) + ":" + so.drop(2)
+    }
+
+    /** Ô giờ đang gõ đã sai chưa: giờ quá 23, hay chữ số đầu của phút quá 5. */
+    fun gioSai(s: String): Boolean {
+        val so = s.filter { it in '0'..'9' }
+        return (so.length >= 2 && so.take(2).toInt() > 23) || (so.length >= 3 && so[2] > '5')
     }
 
     /** Lịch gửi cho app phụ (content call … --method dat): chỉ số và tên gói, không có nháy đơn. */

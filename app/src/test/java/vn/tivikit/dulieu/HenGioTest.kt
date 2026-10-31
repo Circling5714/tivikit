@@ -20,6 +20,32 @@ class HenGioTest {
         assertNull(HenGio.docGio("24:00"))
         assertNull(HenGio.docGio("6:60"))
         assertNull(HenGio.docGio("sáu giờ"))
+        // Chỉ có giờ: phút 00; phút gõ dở thì chưa đúng.
+        assertEquals(6 to 0, HenGio.docGio("06"))
+        assertEquals(21 to 0, HenGio.docGio("21"))
+        assertNull(HenGio.docGio("24"))
+        assertNull(HenGio.docGio("06:3"))
+    }
+
+    /** Ô giờ tự chèn dấu hai chấm khi gõ (31/10/2026). */
+    @Test fun oGio_tuChenHaiCham() {
+        assertEquals("1", HenGio.oGio("1"))
+        assertEquals("18", HenGio.oGio("18"))
+        assertEquals("18:3", HenGio.oGio("183"))
+        assertEquals("18:30", HenGio.oGio("1830"))
+        assertEquals("18:30", HenGio.oGio("18305"))
+        // Chữ số đầu từ 3 trở lên là giờ một chữ số.
+        assertEquals("06", HenGio.oGio("6"))
+        assertEquals("06:30", HenGio.oGio("630"))
+        // Xoá lùi qua dấu hai chấm, dán chữ có dấu phân cách.
+        assertEquals("06", HenGio.oGio("06:"))
+        assertEquals("06:30", HenGio.oGio("6:30"))
+        assertEquals("18:30", HenGio.oGio("18h30"))
+        assertEquals("", HenGio.oGio("ab"))
+        assertFalse(HenGio.gioSai("23:59"))
+        assertFalse(HenGio.gioSai("2"))
+        assertTrue(HenGio.gioSai("24"))
+        assertTrue(HenGio.gioSai("06:7"))
     }
 
     @Test fun json_khuHoi_tatKhongMangGoi() {
