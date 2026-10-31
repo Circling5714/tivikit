@@ -8,6 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
+import java.time.ZonedDateTime
 
 /** Hẹn giờ (25/10/2026): giờ người dùng gõ, lịch gửi cho app phụ trên tivi, trạng thái nó trả về. */
 class HenGioTest {
@@ -83,6 +84,40 @@ class HenGioTest {
         // App phụ 1.1.1 ghi việc lỡ giờ chỉ bằng loại việc.
         assertEquals("Mở app – bỏ qua vì trễ quá 10 phút (tivi ngủ sâu hay vừa đổi giờ)", mt("mo", "lo-gio"))
         assertEquals("viec-moi – ma-moi", mt("viec-moi", "ma-moi"))
+    }
+
+    /** Việc một lần (31/10/2026): trạng thái app phụ 1.2, lệnh gửi đi, tên app gửi tivi. */
+    @Test fun motLan() {
+        val j = JSONObject("""{"lich":[],"keTiep":0,"phienBan":"1.2.0","bayGio":1793455200000,"muiGio":"Asia/Ho_Chi_Minh","motLan":[
+            {"id":"tat-1793457000000","luc":1793457000000,"loai":"tat"},
+            {"id":"bat-1793400000000","luc":1793400000000,"loai":"bat","goi":"vn.tivikit.kenh"},
+            {"id":"","luc":1,"loai":"tat"}]}""")
+        val tt = HenGio.trangThai(j)
+        assertTrue(tt.coManTv)
+        assertEquals(listOf("bat-1793400000000", "tat-1793457000000"), tt.motLan.map { it.id })
+        assertEquals("vn.tivikit.kenh", tt.motLan[0].goi)
+        // App phụ 1.1 không có motLan: chưa có màn trên tivi.
+        assertFalse(HenGio.trangThai(JSONObject("""{"lich":[]}""")).coManTv)
+        val tat = JSONObject(HenGio.jsonTatSau(30))
+        assertEquals("tat", tat.getString("loai")); assertEquals(30, tat.getInt("sauPhut"))
+        val bat = JSONObject(HenGio.jsonMotLanLuc(HenGio.BAT, 6, 30, "vn.tivikit.kenh"))
+        assertEquals(6, bat.getInt("gio")); assertEquals(30, bat.getInt("phut")); assertEquals("vn.tivikit.kenh", bat.getString("goi"))
+        assertFalse(JSONObject(HenGio.jsonMotLanLuc(HenGio.TAT, 22, 0, "a.b")).has("goi"))
+        // Tên app gửi tivi: chỉ ASCII (libadb), không có nháy đơn, đọc lại vẫn đúng chữ.
+        val ten = HenGio.jsonTenApp(mapOf("vn.tivikit.kenh" to "Kênh nhanh: VTV1", "a.b" to "Bà's"))
+        assertTrue(ten.all { it.code < 128 })
+        assertFalse(ten.contains('\''))
+        assertEquals("Kênh nhanh: VTV1", JSONObject(ten).getString("vn.tivikit.kenh"))
+        assertEquals("Bà's", JSONObject(ten).getString("a.b"))
+    }
+
+    @Test fun ngayCua() {
+        val vn = ZoneId.of("Asia/Ho_Chi_Minh")
+        fun luc(m: Int, d: Int, h: Int) = ZonedDateTime.of(2026, m, d, h, 0, 0, 0, vn).toInstant().toEpochMilli()
+        val bay = luc(10, 31, 21)
+        assertEquals("hôm nay", HenGio.ngayCua(luc(10, 31, 23), bay, vn))
+        assertEquals("ngày mai", HenGio.ngayCua(luc(11, 1, 6), bay, vn))
+        assertEquals("Thứ Hai 02/11", HenGio.ngayCua(luc(11, 2, 6), bay, vn))
     }
 
     @Test fun trangThai() {

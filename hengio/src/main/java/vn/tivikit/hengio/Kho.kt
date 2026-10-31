@@ -32,16 +32,29 @@ class Kho(ctx: Context) {
         get() = p.getLong("ke_tiep", 0)
         set(v) { p.edit().putLong("ke_tiep", v).apply() }
 
-    /** Việc một lần còn hạn, đưa vào Lich.keTiep. */
+    /** Việc một lần đang chờ (hẹn tắt sau X phút, việc một lần lúc HH:MM), theo giờ chạy. */
+    var motLanDs: List<MotLan>
+        get() = Lich.docMotLanDs(p.getString("mot_lan", null)).sortedBy { it.luc }
+        set(v) { p.edit().putString("mot_lan", Lich.jsonMotLan(v).toString()).apply() }
+
+    /** Tên app TiviKit gửi (ô Kênh nhanh mang tên kênh): màn tivi hiện thay cho tên app chung "Kênh nhanh 2". */
+    var tenApp: Map<String, String>
+        get() = runCatching { JSONObject(p.getString("ten_app", null) ?: "{}").let { o -> o.keys().asSequence().associateWith { o.getString(it) } } }
+            .getOrDefault(emptyMap())
+        set(v) { p.edit().putString("ten_app", JSONObject(v).toString()).apply() }
+
+    /** Việc một lần còn hạn, đưa vào Lich.keTiep: hoãn tắt, thử đánh thức, việc một lần (theo giờ báo). */
     fun motLan(): List<Pair<Long, Viec>> = listOfNotNull(
         hoanDen.takeIf { it > 0 }?.let { it to Viec(0, 0, (1..7).toSet(), Viec.TAT) },
         thuDen.takeIf { it > 0 }?.let { it to Viec(0, 0, (1..7).toSet(), Viec.BAT) },
-    )
+    ) + motLanDs.map { it.bao to it.viec() }
 
     /** Bỏ các việc một lần đã tới lúc [luc]. */
     fun xongMotLan(luc: Long) {
         if (hoanDen in 1..luc) hoanDen = 0
         if (thuDen in 1..luc) thuDen = 0
+        val ds = motLanDs
+        if (ds.any { it.bao <= luc }) motLanDs = ds.filter { it.bao > luc }
     }
 
     /** 20 dòng gần nhất: {luc, viec, kq} để TiviKit xem lần chạy có được không. */

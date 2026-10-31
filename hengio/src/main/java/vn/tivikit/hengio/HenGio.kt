@@ -12,8 +12,9 @@ import java.time.ZoneId
 
 /**
  * Bộ hẹn giờ trên tivi (25/10/2026): một báo thức hệ thống cho lần kế tiếp (Lich.keTiep), tới giờ thì bật tivi (đánh
- * thức màn hình rồi mở app nếu có), tắt tivi (báo trước 60 giây, có Hoãn) hoặc mở app. Lịch do TiviKit gửi qua ADB
- * (CauHinhProvider); tivi tự chạy, không cần điện thoại.
+ * thức màn hình rồi mở app nếu có), tắt tivi (báo trước 60 giây, có Hoãn) hoặc mở app. Lịch hằng tuần và việc một lần
+ * (31/10/2026) do TiviKit gửi qua ADB (CauHinhProvider) hay đặt ở màn Hẹn giờ trên tivi (BangHenGio); tivi tự chạy, không
+ * cần điện thoại.
  */
 object HenGio {
     const val BAO = "vn.tivikit.hengio.BAO"
@@ -28,6 +29,7 @@ object HenGio {
         Lich.tatLoBao(kho.lich, System.currentTimeMillis(), ZoneId.systemDefault())?.let { tat ->
             if (kho.daBaoTat != tat) { kho.daBaoTat = tat; baoTat(ctx, kho, "bao-tre") }
         }
+        motLanQua(ctx, kho, System.currentTimeMillis())
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
         val ke = Lich.keTiep(kho.lich, kho.motLan(), System.currentTimeMillis(), ZoneId.systemDefault())
         val i = Intent(ctx, BaoThuc::class.java).setAction(BAO)
@@ -61,13 +63,64 @@ object HenGio {
                 kho.ghi(Lich.tenViec(v, laThu), "dang-bat")
                 v.goi?.let { kho.ghi("mo:$it", if (moApp(ctx, it)) "ok" else "khong-mo-duoc") }
             }
-            Viec.TAT -> { kho.daBaoTat = luc + Lich.BAO_TRUOC_MS; baoTat(ctx, kho, "bao-truoc") }
+            Viec.TAT -> {
+                // Giờ tắt; datBaoThuc vừa báo trễ cho đúng lần này thì không báo lần nữa.
+                val tat = luc + Lich.BAO_TRUOC_MS
+                if (kho.daBaoTat != tat) { kho.daBaoTat = tat; baoTat(ctx, kho, "bao-truoc") }
+            }
             Viec.MO -> {
                 val goi = v.goi ?: continue
                 val kq = if (!dangBat) "tivi-dang-tat" else { sangManHinh(ctx, 3_000); if (moApp(ctx, goi)) "ok" else "khong-mo-duoc" }
                 kho.ghi(Lich.tenViec(v, laThu), kq)
             }
         }
+    }
+
+    /**
+     * Việc một lần đã qua giờ báo mà chưa chạy (tivi vừa khởi động lại, đổi giờ): tắt tivi còn trong phút báo trước thì báo
+     * ngay; việc khác trễ quá 1 phút thì bỏ, ghi lo-gio (chưa tới 1 phút thì có thể báo thức đang tới, để nguyên).
+     */
+    private fun motLanQua(ctx: Context, kho: Kho, bay: Long) {
+        val ds = kho.motLanDs
+        val bo = ds.filter { m ->
+            when {
+                m.bao > bay -> false
+                m.loai == Viec.TAT && bay < m.luc -> {
+                    if (kho.daBaoTat != m.luc) { kho.daBaoTat = m.luc; baoTat(ctx, kho, "bao-tre") }
+                    true
+                }
+                bay - m.bao > 60_000L -> { kho.ghi(Lich.tenViec(m.viec(), false), "lo-gio"); true }
+                else -> false
+            }
+        }
+        if (bo.isNotEmpty()) kho.motLanDs = ds - bo.toSet()
+    }
+
+    /** Thêm việc một lần (TiviKit hay màn Hẹn giờ trên tivi); trả mã lỗi ("trung", "qua-nhieu"), null nếu xong. */
+    fun themMotLan(ctx: Context, m: MotLan): String? {
+        val kho = Kho(ctx)
+        val ds = kho.motLanDs
+        if (ds.any { it.id == m.id }) return "trung"
+        if (ds.size >= Lich.MOT_LAN_TOI_DA) return "qua-nhieu"
+        kho.motLanDs = ds + m
+        datBaoThuc(ctx)
+        return null
+    }
+
+    /** Huỷ việc một lần [id]; false nếu không còn việc đó (đã chạy hay đã huỷ). */
+    fun huyMotLan(ctx: Context, id: String): Boolean {
+        val kho = Kho(ctx)
+        val ds = kho.motLanDs
+        if (ds.none { it.id == id }) return false
+        kho.motLanDs = ds.filter { it.id != id }
+        datBaoThuc(ctx)
+        return true
+    }
+
+    /** Lưu lịch hằng tuần sửa trên màn Hẹn giờ của tivi (như lệnh dat của TiviKit, nhưng giữ lần hoãn tắt đang có). */
+    fun luuLich(ctx: Context, ds: List<Viec>) {
+        Kho(ctx).lich = Lich.sapXep(ds)
+        datBaoThuc(ctx)
     }
 
     /** Báo sắp tắt tivi (màn BaoTat đếm ngược rồi tắt); tivi đã ở chế độ chờ thì thôi. */

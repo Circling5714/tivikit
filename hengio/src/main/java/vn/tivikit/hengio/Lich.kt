@@ -22,10 +22,24 @@ data class Viec(val gio: Int, val phut: Int, val ngay: Set<Int>, val loai: Strin
 /** Lần báo thức kế tiếp: thời điểm [luc] (ms) và các việc đến hạn đúng lúc đó. */
 data class KeTiep(val luc: Long, val viec: List<Viec>)
 
+/**
+ * Việc một lần (31/10/2026): [loai] lúc [luc] (ms; tắt tivi thì là giờ tắt, báo trước BAO_TRUOC_MS), chạy xong thì bỏ. Từ
+ * nút hẹn tắt sau X phút hay việc một lần lúc HH:MM (TiviKit, màn Hẹn giờ trên tivi).
+ */
+data class MotLan(val luc: Long, val loai: String, val goi: String? = null) {
+    val id: String get() = "$loai-$luc"
+    /** Giờ báo thức: tắt tivi thì sớm hơn BAO_TRUOC_MS để báo trước. */
+    val bao: Long get() = luc - if (loai == Viec.TAT) Lich.BAO_TRUOC_MS else 0
+    fun viec(): Viec = Viec(0, 0, (1..7).toSet(), loai, goi)
+}
+
 object Lich {
     /** Tắt tivi: báo trước 60 giây (có nút Hoãn) để tivi tắt đúng giờ đã đặt. */
     const val BAO_TRUOC_MS = 60_000L
     const val TOI_DA = 30
+    const val MOT_LAN_TOI_DA = 10
+    /** Hẹn tắt sau từ 1 phút tới 12 giờ. */
+    val SAU_PHUT = 1..720
     /** Báo thức tới trễ hơn chừng này thì việc coi như đã lỡ: bỏ, không chạy bù. */
     const val TRE_TOI_DA_MS = 10 * 60_000L
 
@@ -44,6 +58,8 @@ object Lich {
     }
 
     private val TEN_GOI = Regex("""^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$""")
+
+    fun laTenGoi(s: String): Boolean = TEN_GOI.matches(s)
 
     /** Danh sách việc từ JSON TiviKit gửi; null nếu sai dạng (cả danh sách bị từ chối, không lưu nửa vời). */
     fun docJson(s: String?): List<Viec>? = runCatching {
@@ -67,6 +83,50 @@ object Lich {
     fun json(ds: List<Viec>): JSONArray = JSONArray(ds.map { v ->
         JSONObject().put("gio", v.gio).put("phut", v.phut).put("ngay", JSONArray(v.ngay.sorted())).put("loai", v.loai)
             .put("bat", v.bat).apply { v.goi?.let { put("goi", it) } }
+    })
+
+    /** Sắp theo giờ trong ngày, rồi theo loại (bật trước mở, tắt sau), như TiviKit. */
+    fun sapXep(ds: List<Viec>): List<Viec> = ds.sortedWith(compareBy({ it.gio * 60 + it.phut }, { listOf(Viec.BAT, Viec.MO, Viec.TAT).indexOf(it.loai) }))
+
+    /**
+     * Việc một lần TiviKit / màn tivi gửi (31/10/2026): {"loai","goi"?} kèm "sauPhut" (tính từ [bay]), "gio" + "phut" (lần tới
+     * của giờ đó, lanToi) hay "luc" (ms). Null nếu sai dạng.
+     */
+    fun docMotLan(s: String?, bay: Long, zone: ZoneId): MotLan? = runCatching {
+        val o = JSONObject(s ?: return null)
+        val loai = o.getString("loai")
+        val goi = o.optString("goi").trim().ifEmpty { null }
+        require(loai == Viec.BAT || loai == Viec.TAT || loai == Viec.MO)
+        require(goi == null || TEN_GOI.matches(goi))
+        require(loai != Viec.MO || goi != null)
+        val luc = when {
+            o.has("sauPhut") -> bay + o.getInt("sauPhut").also { require(it in SAU_PHUT) } * 60_000L
+            o.has("gio") -> lanToi(o.getInt("gio"), o.getInt("phut"), bay, zone)
+            else -> o.getLong("luc").also { require(it > bay) }
+        }
+        MotLan(luc, loai, if (loai == Viec.TAT) null else goi)
+    }.getOrNull()
+
+    /** Lần tới của [gio]:[phut] sau [bay] theo múi giờ [zone]: hôm nay nếu chưa qua giờ đó, không thì ngày mai. */
+    fun lanToi(gio: Int, phut: Int, bay: Long, zone: ZoneId): Long {
+        require(gio in 0..23 && phut in 0..59)
+        val homNay = Instant.ofEpochMilli(bay).atZone(zone).toLocalDate()
+        val luc = ZonedDateTime.of(homNay, LocalTime.of(gio, phut), zone).toInstant().toEpochMilli()
+        return if (luc > bay) luc else ZonedDateTime.of(homNay.plusDays(1), LocalTime.of(gio, phut), zone).toInstant().toEpochMilli()
+    }
+
+    fun docMotLanDs(s: String?): List<MotLan> = runCatching {
+        val a = JSONArray(s ?: return emptyList())
+        (0 until a.length()).mapNotNull { i ->
+            val o = a.optJSONObject(i) ?: return@mapNotNull null
+            val loai = o.optString("loai"); val luc = o.optLong("luc")
+            if (luc <= 0 || (loai != Viec.BAT && loai != Viec.TAT && loai != Viec.MO)) null
+            else MotLan(luc, loai, o.optString("goi").trim().ifEmpty { null })
+        }
+    }.getOrDefault(emptyList())
+
+    fun jsonMotLan(ds: List<MotLan>): JSONArray = JSONArray(ds.map { m ->
+        JSONObject().put("id", m.id).put("luc", m.luc).put("loai", m.loai).apply { m.goi?.let { put("goi", it) } }
     })
 
     /** Thời điểm báo thức của [v] cho lần chạy vào ngày-giờ [lan]: tắt tivi thì sớm hơn BAO_TRUOC_MS để báo trước. */

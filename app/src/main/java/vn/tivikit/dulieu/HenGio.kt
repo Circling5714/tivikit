@@ -19,6 +19,10 @@ object HenGio {
     const val TAT = "tat"
     const val MO = "mo"
     const val TOI_DA = 30
+    /** Việc một lần đang chờ tối đa (app phụ 1.2). */
+    const val MOT_LAN_TOI_DA = 10
+    /** Hẹn tắt sau từ 1 phút tới 12 giờ. */
+    val SAU_PHUT = 1..720
 
     /** Một việc: [gio]:[phut] các ngày [ngay] (1 = Thứ Hai … 7 = Chủ Nhật); [goi] = app mở (bật tivi: không bắt buộc). */
     data class Viec(val gio: Int, val phut: Int, val ngay: Set<Int>, val loai: String, val goi: String? = null, val bat: Boolean = true) {
@@ -108,17 +112,54 @@ object HenGio {
         return "$viec – $kq"
     }
 
-    /** Trạng thái app phụ trên tivi (content call … --method doc). */
+    /** Việc một lần đang chờ trên tivi (app phụ 1.2): [loai] lúc [luc] (tắt tivi: giờ tắt), [id] để huỷ. */
+    data class MotLan(val id: String, val luc: Long, val loai: String, val goi: String?)
+
+    /**
+     * Trạng thái app phụ trên tivi (content call … --method doc). [coManTv]: app phụ 1.2 trở lên, có màn Hẹn giờ trên tivi
+     * và việc một lần.
+     */
     data class TrangThai(
         val lich: List<Viec>, val keTiep: Long, val hoanDen: Long, val dichVuChay: Boolean, val chinhXac: Boolean,
         val bayGio: Long, val muiGio: ZoneId, val nhatKy: List<NhatKy>,
+        val motLan: List<MotLan> = emptyList(), val coManTv: Boolean = false,
     )
 
     fun trangThai(j: JSONObject): TrangThai {
         val zone = runCatching { ZoneId.of(j.optString("muiGio")) }.getOrDefault(ZoneId.systemDefault())
         val nk = j.optJSONArray("nhatKy")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { NhatKy(it.optLong("luc"), it.optString("viec"), it.optString("kq")) } }.orEmpty()
+        val ml = j.optJSONArray("motLan")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty().mapNotNull { o ->
+            val loai = o.optString("loai")
+            if (o.optString("id").isBlank() || loai !in setOf(BAT, TAT, MO)) null else MotLan(o.optString("id"), o.optLong("luc"), loai, o.optString("goi").ifBlank { null })
+        }
         return TrangThai(docLich(j.optJSONArray("lich")), j.optLong("keTiep"), j.optLong("hoanDen"), j.optBoolean("dichVuChay"),
-            j.optBoolean("chinhXac", true), j.optLong("bayGio"), zone, nk)
+            j.optBoolean("chinhXac", true), j.optLong("bayGio"), zone, nk, ml.sortedBy { it.luc }, j.has("motLan"))
+    }
+
+    /** Lệnh hẹn một lần (content call … --method mot-lan): tắt tivi sau [phut] phút. */
+    fun jsonTatSau(phut: Int): String = JSONObject().put("loai", TAT).put("sauPhut", phut).toString()
+
+    /** Lệnh hẹn một lần lúc [gio]:[phut]; tivi tính lần tới của giờ đó (hôm nay hay ngày mai) theo đồng hồ của nó. */
+    fun jsonMotLanLuc(loai: String, gio: Int, phut: Int, goi: String?): String =
+        JSONObject().put("loai", loai).put("gio", gio).put("phut", phut).apply { if (loai != TAT) goi?.let { put("goi", it) } }.toString()
+
+    /**
+     * Tên app gửi app phụ (content call … --method ten-app) để màn Hẹn giờ trên tivi hiện tên ô Kênh nhanh thay cho "Kênh
+     * nhanh 2": chỉ ASCII (chữ có dấu thành \uXXXX, libadb tính độ dài lệnh theo ký tự), không có nháy đơn.
+     */
+    fun jsonTenApp(ten: Map<String, String>): String = TiviKitLauncher.chiAscii(JSONObject(ten).toString()).replace("'", "\\u0027")
+
+    /** "hôm nay", "ngày mai" hay "Thứ Hai 02/11": ngày của [luc] so với [bay], theo múi giờ của tivi. */
+    fun ngayCua(luc: Long, bay: Long, zone: ZoneId): String {
+        val d = Instant.ofEpochMilli(luc).atZone(zone).toLocalDate()
+        val homNay = Instant.ofEpochMilli(bay).atZone(zone).toLocalDate()
+        return when (d) {
+            homNay -> t("hôm nay", "today")
+            homNay.plusDays(1) -> t("ngày mai", "tomorrow")
+            else -> t(listOf("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật")[d.dayOfWeek.value - 1],
+                listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")[d.dayOfWeek.value - 1]) +
+                " %02d/%02d".format(java.util.Locale.ROOT, d.dayOfMonth, d.monthValue)
+        }
     }
 
     /** Giờ:phút của [luc] theo múi giờ của tivi, kèm thứ (1 = Thứ Hai) để hiện "06:30 Thứ Hai". */

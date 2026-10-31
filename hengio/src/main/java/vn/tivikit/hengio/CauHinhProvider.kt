@@ -16,6 +16,11 @@ import java.time.ZoneId
  *   content call --uri content://vn.tivikit.hengio --method dat --arg '[{"gio":6,"phut":30,"ngay":[1,2,3,4,5],"loai":"bat"}]'
  *   content call --uri content://vn.tivikit.hengio --method thu --arg 120   (thử đánh thức sau 120 giây)
  *   content call --uri content://vn.tivikit.hengio --method doc
+ * Việc một lần (31/10/2026, bản 1.2):
+ *   content call --uri content://vn.tivikit.hengio --method mot-lan --arg '{"loai":"tat","sauPhut":30}'
+ *     (hay {"loai":"bat|tat|mo","gio":6,"phut":30,"goi":"…"}: lần tới của giờ đó; trả id và luc)
+ *   content call --uri content://vn.tivikit.hengio --method huy-mot-lan --arg tat-1793422740000
+ *   content call --uri content://vn.tivikit.hengio --method ten-app --arg '{"vn.tivikit.kenh":"Kênh nhanh: VTV1"}'
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được lịch.
  */
 class CauHinhProvider : ContentProvider() {
@@ -42,10 +47,23 @@ class CauHinhProvider : ContentProvider() {
                 HenGio.datBaoThuc(ctx)
                 kq.putString("ok", "1")
             }
+            "mot-lan" -> {
+                val m = Lich.docMotLan(arg, System.currentTimeMillis(), ZoneId.systemDefault()) ?: return kq.apply { putString("loi", "viec sai") }
+                HenGio.themMotLan(ctx, m)?.let { return kq.apply { putString("loi", it) } }
+                kq.putString("ok", "1"); kq.putString("id", m.id); kq.putLong("luc", m.luc)
+            }
+            "huy-mot-lan" -> if (HenGio.huyMotLan(ctx, arg?.trim().orEmpty())) kq.putString("ok", "1") else kq.putString("loi", "khong-co")
+            "ten-app" -> {
+                val o = runCatching { JSONObject(arg.orEmpty()) }.getOrNull() ?: return kq.apply { putString("loi", "ten sai") }
+                kho.tenApp = o.keys().asSequence().filter { Lich.laTenGoi(it) }.take(100).associateWith { o.optString(it).take(60) }
+                kq.putString("ok", "1")
+            }
             "doc" -> {
                 val am = ctx.getSystemService(AlarmManager::class.java)
                 val o = JSONObject()
+                    .put("phienBan", runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull())
                     .put("lich", Lich.json(kho.lich))
+                    .put("motLan", Lich.jsonMotLan(kho.motLanDs))
                     .put("keTiep", kho.keTiep).put("hoanDen", kho.hoanDen).put("thuDen", kho.thuDen)
                     .put("dichVuChay", HenGioDichVu.dangChay != null)
                     .put("chinhXac", am != null && HenGio.chinhXac(am))

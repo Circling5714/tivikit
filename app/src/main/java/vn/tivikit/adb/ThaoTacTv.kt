@@ -1752,13 +1752,21 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /** Trạng thái app Hẹn giờ trên tivi (lịch, việc kế tiếp, dịch vụ, nhật ký); null nếu chưa cài / đọc không được. */
     fun docHenGio(): org.json.JSONObject? = if (!henGioDaCai()) null else docQua(HenGio.GOI)
 
-    /**
-     * Cài / cập nhật app Hẹn giờ, cấp hai quyền người dùng đã đồng ý ở màn Hẹn giờ — báo thức đúng giờ (Android 12) và bật
-     * màn hình (Android 14+), không có lệnh nào trên máy cũ hơn thì bỏ qua — bật dịch vụ trợ năng của nó (hiện trong Cài
-     * đặt → Trợ năng, tắt được ở đó), rồi gửi lịch. [json] không chứa nháy đơn (HenGio.json).
-     */
+    /** Cài / cập nhật app Hẹn giờ (caiAppHenGio) rồi gửi lịch. [json] không chứa nháy đơn (HenGio.json). */
     fun caiHenGio(apk: ByteArray, json: String, bao: (String) -> Unit) {
         require(!json.contains('\'')) { "json" }
+        caiAppHenGio(apk, bao)
+        bao(t("Gửi lịch…", "Sending the schedule…"))
+        val kq = sh("content call --uri $henGioUri --method dat --arg '$json'")
+        if (!kq.contains("ok=1")) error(t("Tivi không nhận lịch: ${kq.trim()}", "The TV rejected the schedule: ${kq.trim()}"))
+    }
+
+    /**
+     * Cài / cập nhật app Hẹn giờ, cấp hai quyền người dùng đã đồng ý ở màn Hẹn giờ — báo thức đúng giờ (Android 12) và bật
+     * màn hình (Android 14+), không có lệnh nào trên máy cũ hơn thì bỏ qua — và bật dịch vụ trợ năng của nó (hiện trong Cài
+     * đặt → Trợ năng, tắt được ở đó). Không đổi lịch: dùng trước khi gửi lịch hay hẹn một lần.
+     */
+    fun caiAppHenGio(apk: ByteArray, bao: (String) -> Unit) {
         caiAppPhu(HenGio.GOI, apk) { bao(t("Cài app Hẹn giờ lên tivi…", "Installing the Timer app on the TV…")) }
         bao(t("Bật dịch vụ Hẹn giờ…", "Turning the Timer service on…"))
         sh("cmd appops set ${HenGio.GOI} SCHEDULE_EXACT_ALARM allow 2>/dev/null; cmd appops set ${HenGio.GOI} TURN_SCREEN_ON allow 2>/dev/null; true")
@@ -1766,10 +1774,38 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         boTroNang("${HenGio.GOI}/${GoiCu.LOP_HEN_GIO_CU}")
         val dv = HenGio.DICH_VU
         sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$dv*) ;; null|'') settings put secure enabled_accessibility_services $dv ;; *) settings put secure enabled_accessibility_services \"\$s:$dv\" ;; esac; settings put secure accessibility_enabled 1")
-        bao(t("Gửi lịch…", "Sending the schedule…"))
-        val kq = sh("content call --uri $henGioUri --method dat --arg '$json'")
-        if (!kq.contains("ok=1")) error(t("Tivi không nhận lịch: ${kq.trim()}", "The TV rejected the schedule: ${kq.trim()}"))
     }
+
+    /**
+     * Hẹn một lần (31/10/2026, app phụ 1.2): [json] là HenGio.jsonTatSau / jsonMotLanLuc, không có nháy đơn. Trả giờ chạy
+     * theo đồng hồ của tivi (ms; tắt tivi là giờ tắt).
+     */
+    fun henMotLan(json: String): Long {
+        require(!json.contains('\'')) { "json" }
+        val kq = sh("content call --uri $henGioUri --method mot-lan --arg '$json'")
+        if (!kq.contains("ok=1")) error(when {
+            kq.contains("loi=trung") -> t("Việc một lần này đã có trên tivi.", "This one-off is already set on the TV.")
+            kq.contains("loi=qua-nhieu") -> t("Tivi đã có ${HenGio.MOT_LAN_TOI_DA} việc một lần đang chờ: huỷ bớt rồi thử lại.",
+                "The TV already has ${HenGio.MOT_LAN_TOI_DA} pending one-offs: cancel one first.")
+            else -> t("Tivi không nhận: ${kq.trim()}", "The TV rejected it: ${kq.trim()}")
+        })
+        return Regex("""luc=(\d+)""").find(kq)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+    }
+
+    /** Huỷ việc một lần [id] (dạng tat-1793422740000). */
+    fun huyMotLan(id: String) {
+        require(Regex("""^[a-z]+-\d+$""").matches(id)) { "id" }
+        sh("content call --uri $henGioUri --method huy-mot-lan --arg $id")
+    }
+
+    /** Tên app cho màn Hẹn giờ trên tivi (HenGio.jsonTenApp); app phụ bản cũ không biết lệnh này thì thôi. */
+    fun datTenAppHenGio(json: String) {
+        require(!json.contains('\'')) { "json" }
+        sh("content call --uri $henGioUri --method ten-app --arg '$json' >/dev/null 2>&1; true")
+    }
+
+    /** Mở màn Hẹn giờ trên tivi (app phụ 1.2). */
+    fun moManHenGio() { sh("am start -n ${HenGio.GOI}/.BangHenGio >/dev/null 2>&1; true") }
 
     /** Hẹn thử đánh thức sau [giay] giây (người dùng tắt tivi bằng remote ngay sau đó). */
     fun thuDanhThuc(giay: Int): Boolean = sh("content call --uri $henGioUri --method thu --arg $giay 2>&1").contains("ok=1")

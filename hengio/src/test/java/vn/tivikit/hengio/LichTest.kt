@@ -75,6 +75,53 @@ class LichTest {
         assertEquals("mo:org.smarttube.stable", Lich.tenViec(Viec(19, 0, moiNgay, Viec.MO, "org.smarttube.stable"), false))
     }
 
+    /** Việc một lần (31/10/2026): tắt sau X phút, lần tới của HH:MM, báo trước khi tắt. */
+    @Test fun motLan_docVaTinhGio() {
+        val bay = luc(2026, 10, 31, 21, 14, 37)
+        val tat = Lich.docMotLan("""{"loai":"tat","sauPhut":30}""", bay, vn)!!
+        assertEquals(bay + 30 * 60_000L, tat.luc)
+        assertEquals(tat.luc - Lich.BAO_TRUOC_MS, tat.bao)
+        assertNull(tat.goi)
+        assertEquals("tat-${tat.luc}", tat.id)
+        // Lúc HH:MM: hôm nay nếu chưa qua giờ đó, không thì ngày mai.
+        assertEquals(luc(2026, 10, 31, 22, 0), Lich.docMotLan("""{"loai":"mo","gio":22,"phut":0,"goi":"org.smarttube.stable"}""", bay, vn)!!.luc)
+        val bat = Lich.docMotLan("""{"loai":"bat","gio":6,"phut":30,"goi":"vn.tivikit.kenh"}""", bay, vn)!!
+        assertEquals(luc(2026, 11, 1, 6, 30), bat.luc)
+        assertEquals(bat.luc, bat.bao)
+        assertEquals("vn.tivikit.kenh", bat.goi)
+        // Sai: số phút ngoài 1..720, mở app không có gói, gói lạ, giờ sai, giờ đã qua.
+        assertNull(Lich.docMotLan("""{"loai":"tat","sauPhut":0}""", bay, vn))
+        assertNull(Lich.docMotLan("""{"loai":"tat","sauPhut":721}""", bay, vn))
+        assertNull(Lich.docMotLan("""{"loai":"mo","gio":22,"phut":0}""", bay, vn))
+        assertNull(Lich.docMotLan("""{"loai":"mo","gio":22,"phut":0,"goi":"x; reboot"}""", bay, vn))
+        assertNull(Lich.docMotLan("""{"loai":"tat","gio":24,"phut":0}""", bay, vn))
+        assertNull(Lich.docMotLan("""{"loai":"tat","luc":${bay - 1}}""", bay, vn))
+    }
+
+    @Test fun motLan_jsonKhuHoi_vaVaoKeTiep() {
+        val bay = luc(2026, 10, 31, 21, 0)
+        val ds = listOf(MotLan(luc(2026, 10, 31, 21, 30), Viec.TAT), MotLan(luc(2026, 11, 1, 6, 30), Viec.BAT, "vn.tivikit.kenh"))
+        assertEquals(ds, Lich.docMotLanDs(Lich.jsonMotLan(ds).toString()))
+        // Hẹn tắt 21:30 báo lúc 21:29, trước lần tắt 22:00 hằng ngày (báo 21:59).
+        val k = Lich.keTiep(listOf(Viec(22, 0, moiNgay, Viec.TAT)), ds.map { it.bao to it.viec() }, bay, vn)!!
+        assertEquals(luc(2026, 10, 31, 21, 29), k.luc)
+        assertEquals(Viec.TAT, k.viec.single().loai)
+    }
+
+    @Test fun lanToi_quaNuaDem() {
+        val bay = luc(2026, 10, 31, 23, 50)
+        assertEquals(luc(2026, 11, 1, 0, 10), Lich.lanToi(0, 10, bay, vn))
+        assertEquals(luc(2026, 10, 31, 23, 55), Lich.lanToi(23, 55, bay, vn))
+        assertEquals(luc(2026, 11, 1, 23, 50), Lich.lanToi(23, 50, bay, vn))
+    }
+
+    @Test fun sapXep_nhuTiviKit() {
+        val a = Viec(23, 0, moiNgay, Viec.TAT)
+        val b = Viec(6, 30, moiNgay, Viec.MO, "x.y")
+        val c = Viec(6, 30, moiNgay, Viec.BAT)
+        assertEquals(listOf(c, b, a), Lich.sapXep(listOf(a, b, c)))
+    }
+
     @Test fun json_khuHoiVaTuChoi() {
         val ds = listOf(Viec(6, 30, setOf(1, 2, 3), Viec.BAT, "vn.tivikit.kenh"), Viec(23, 0, moiNgay, Viec.TAT), Viec(19, 0, setOf(7), Viec.MO, "org.smarttube.stable", false))
         assertEquals(ds, Lich.docJson(Lich.json(ds).toString()))
