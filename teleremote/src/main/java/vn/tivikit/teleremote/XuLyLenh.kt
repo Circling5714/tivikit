@@ -32,8 +32,10 @@ object XuLyLenh {
     data class Phim(val ma: Int) : Viec
     /** Làm mới bảng điều khiển (app đang mở). */
     data object CapNhat : Viec
-    /** Hỏi chữ để gõ vào ô nhập đang chọn trên tivi. */
+    /** Hỏi chữ để gõ vào ô nhập đang chọn trên tivi (thay chữ đang có trong ô). */
     data object GoChu : Viec
+    /** Hỏi chữ để gõ tiếp vào ô vừa gõ (viết nối vào sau). */
+    data object GoTiep : Viec
     data object Kenh : Viec
     data class MoKenh(val o: Int) : Viec
     data object YouTube : Viec
@@ -72,6 +74,9 @@ object XuLyLenh {
         85 to "⏯", 20 to "⬇️", 82 to "☰",
         25 to "🔉", 164 to "🔇", 24 to "🔊",
     )
+
+    /** Phím bấm được qua nút nhưng không nằm trên bảng điều khiển: Enter sau khi gõ chữ (tìm luôn trong ô tìm kiếm). */
+    val PHIM_THEM: Map<Int, String> = mapOf(66 to "↵")
 
     /** Tin chữ cũ hơn chừng này giây thì bỏ (tivi vừa có mạng lại: lệnh gõ từ lâu không làm nữa). */
     const val CU_QUA = 120L
@@ -206,6 +211,7 @@ object XuLyLenh {
     fun viecTuNut(du: String): Viec? = when {
         du == "r" -> CapNhat
         du == "g" -> GoChu
+        du == "g+" -> GoTiep
         du == "as" -> DungApp
         du == "t:ok" -> Tat
         du == "t:x" -> ThoiTat
@@ -217,7 +223,7 @@ object XuLyLenh {
         du == "h:r" -> HenGio
         du == "kh:r" -> Khoa
         du == "kh:k" -> KhoaNgay
-        du.startsWith("k:") -> du.drop(2).toIntOrNull()?.takeIf { it in PHIM }?.let(::Phim)
+        du.startsWith("k:") -> du.drop(2).toIntOrNull()?.takeIf { it in PHIM || it in PHIM_THEM }?.let(::Phim)
         du.startsWith("o:") -> du.drop(2).toIntOrNull()?.takeIf { it in 1..SO_O }?.let(::MoKenh)
         du.startsWith("ap:") -> du.drop(3).toIntOrNull()?.takeIf { it in 0..99 }?.let(::UngDung)
         du.startsWith("a:") -> du.drop(2).takeIf { GOI.matches(it) }?.let(::MoUngDung)
@@ -295,6 +301,10 @@ object XuLyLenh {
         listOf((if (en) "📴 Turn off now" else "📴 Tắt ngay") to "t:ok", (if (en) "🔁 Restart" else "🔁 Khởi động lại") to "t:rb"),
         listOf((if (en) "Cancel" else "Thôi") to "t:x"),
     ))
+
+    /** Sau khi gõ chữ lên tivi: Enter (tìm luôn), gõ tiếp (viết nối vào sau), gõ lại (thay hết). */
+    fun sauKhiGo(en: Boolean): JSONObject = nutTrongTin(listOf(listOf((if (en) "↵ Enter" else "↵ Enter (tìm)") to "k:66"),
+        listOf((if (en) "⌨️ Type more" else "⌨️ Gõ tiếp") to "g+", (if (en) "⌨️ Retype" else "⌨️ Gõ lại") to "g")))
 
     /** Ô gõ trả lời ngay (bot đang chờ chữ để gõ lên tivi / mã mở khoá): [goiY] hiện mờ trong ô gõ. */
     fun choTraLoi(goiY: String): JSONObject = JSONObject().put("force_reply", true).put("input_field_placeholder", goiY.take(64))

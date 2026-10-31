@@ -85,6 +85,7 @@ class XuLyLenhTest {
         assertEquals(XuLyLenh.ThoiTat, XuLyLenh.viecTuNut("t:x"))
         assertEquals(XuLyLenh.CapNhat, XuLyLenh.viecTuNut("r"))
         assertEquals(XuLyLenh.GoChu, XuLyLenh.viecTuNut("g"))
+        assertEquals(XuLyLenh.GoTiep, XuLyLenh.viecTuNut("g+"))
         assertEquals(XuLyLenh.KhoiDongLai, XuLyLenh.viecTuNut("t:rb"))
         assertEquals(XuLyLenh.UngDung(2), XuLyLenh.viecTuNut("ap:2"))
         assertEquals(XuLyLenh.MoUngDung("com.netflix.ninja"), XuLyLenh.viecTuNut("a:com.netflix.ninja"))
@@ -97,6 +98,8 @@ class XuLyLenhTest {
         assertNull(XuLyLenh.viecTuNut("h:t:7"))
         assertNull(XuLyLenh.viecTuNut("h:x:tat-1'; reboot"))
         assertNull(XuLyLenh.viecTuNut("kh:m:999"))
+        // Enter sau khi gõ chữ: không nằm trên bảng điều khiển nhưng bấm được.
+        assertEquals(XuLyLenh.Phim(66), XuLyLenh.viecTuNut("k:66"))
         // Phím ngoài bảng (nút nguồn, phím lạ) và ô ngoài 1..6: dữ liệu giả, bỏ.
         assertNull(XuLyLenh.viecTuNut("k:26"))
         assertNull(XuLyLenh.viecTuNut("k:abc"))
@@ -143,7 +146,7 @@ class XuLyLenhTest {
         }
         assertEquals("o:2", XuLyLenh.bangKenh(listOf(1 to "VTV1", 2 to "VTV3")).getJSONArray("inline_keyboard").getJSONArray(0).getJSONObject(1).getString("callback_data"))
         // Mọi nút trong các bảng khác cũng đọc lại được và vừa giới hạn 64 byte của Telegram.
-        listOf(XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
+        listOf(XuLyLenh.sauKhiGo(en = false), XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
             XuLyLenh.bangLamMoi(en = false, ganDay = true), XuLyLenh.hoiTat(en = false),
             XuLyLenh.bangUngDung((1..30).map { "com.app.so$it" to "App $it" }, 1, en = false, chu = true)).forEach { bp ->
             val h = bp.getJSONArray("inline_keyboard")

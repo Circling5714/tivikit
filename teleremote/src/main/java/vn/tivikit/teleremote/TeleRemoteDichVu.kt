@@ -209,17 +209,21 @@ class TeleRemoteDichVu : AccessibilityService() {
     }
 
     /**
-     * Gõ [chu] vào ô nhập đang chọn trên tivi (GoChuTr): "ok", mã lỗi của bộ gõ ("khong-o-nhap"…), "can-bo-go" (chữ có dấu
-     * mà tivi chưa có bộ gõ của TiviKit), "chua-adb".
+     * Gõ [chu] vào ô nhập đang chọn trên tivi (GoChuTr; [thay]: thay hết chữ đang có trong ô, không thì viết tiếp): "ok", mã
+     * lỗi của bộ gõ ("khong-o-nhap"…), "can-bo-go" (chữ có dấu mà tivi chưa có bộ gõ của TiviKit), "chua-adb". Có bộ gõ của
+     * TiviKit thì gõ mọi chữ qua nó (biết chắc chữ đã vào ô, chưa chọn ô thì báo); chưa có thì chữ không dấu gõ bằng
+     * `input text` (chèn ở con trỏ, không biết có ô hay không).
      */
-    fun goChu(chu: String): String {
+    fun goChu(chu: String, thay: Boolean): String {
         if (!coAdb()) return "chua-adb"
-        if (!GoChuTr.canBoGo(chu)) return if (lenh(GoChuTr.lenhAscii(chu), 10_000) != null) "ok" else "chua-adb"
-        if (!coApp(GoChuTr.GOI)) return "can-bo-go"
+        if (!coApp(GoChuTr.GOI)) {
+            if (GoChuTr.canBoGo(chu)) return "can-bo-go"
+            return if (lenh(GoChuTr.lenhAscii(chu), 10_000) != null) "ok" else "chua-adb"
+        }
         var cu = lenh("settings get secure default_input_method", 3000)?.trim().orEmpty()
         // Bộ gõ đang dùng là của TiviKit (lần trước bị ngắt giữa chừng): trả về bàn phím khác đang bật.
         if (!GoChuTr.laBoGoCu(cu)) cu = lenh("ime list -s", 3000).orEmpty().lines().map { it.trim() }.firstOrNull { GoChuTr.laBoGoCu(it) } ?: ""
-        return GoChuTr.ketQua(lenh(GoChuTr.lenhBoGo(chu, cu), 15_000).orEmpty())
+        return GoChuTr.ketQua(lenh(GoChuTr.lenhBoGo(chu, cu, thay), 15_000).orEmpty())
     }
 
     /**

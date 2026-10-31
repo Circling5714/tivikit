@@ -28,13 +28,14 @@ object GoChuTr {
         .joinToString("; ") { doan -> "input text '" + doan.replace("'", "'\\''").replace(" ", "%s") + "'" }
 
     /**
-     * Một lệnh shell qua bộ gõ: bật bộ gõ, gửi [chu] (base64 của JSON, thuần ASCII qua ADB), bộ gõ đưa chữ vào rồi tự trả
-     * bàn phím [cu]; chưa trả được thì lệnh trả, rồi tắt bộ gõ khỏi danh sách bàn phím. Kết quả: "ok=1" hay "loi=<mã>".
+     * Một lệnh shell qua bộ gõ: bật bộ gõ, gửi [chu] (base64 của JSON, thuần ASCII qua ADB), bộ gõ đưa chữ vào ([thay]: thay
+     * hết chữ đang có trong ô, bộ gõ 1.1 trở lên) rồi tự trả bàn phím [cu]; chưa trả được thì lệnh trả, rồi tắt bộ gõ khỏi
+     * danh sách bàn phím. Kết quả: "ok=1" hay "loi=<mã>".
      */
-    fun lenhBoGo(chu: String, cu: String): String {
+    fun lenhBoGo(chu: String, cu: String, thay: Boolean): String {
         val coCu = laBoGoCu(cu)
         val goi = Base64.getEncoder().encodeToString(JSONObject().put("chu", Normalizer.normalize(chu, Normalizer.Form.NFC))
-            .put("cu", if (coCu) cu else "").toString().toByteArray())
+            .put("cu", if (coCu) cu else "").put("thay", thay).toString().toByteArray())
         val tra = if (coCu) "[ \"\$(settings get secure default_input_method)\" = '$cu' ] || ime set '$cu' >/dev/null 2>&1; " else ""
         return "ime enable $BO_GO >/dev/null 2>&1; ime set $BO_GO >/dev/null 2>&1; " +
             "content call --uri content://$GOI --method chu --arg '$goi'; " + tra + "ime disable $BO_GO >/dev/null 2>&1; true"

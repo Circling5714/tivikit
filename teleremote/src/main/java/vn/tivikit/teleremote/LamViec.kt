@@ -17,9 +17,12 @@ import vn.tivikit.teleremote.XuLyLenh.Den
  * việc một lúc).
  */
 class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
-    /** Việc đang chờ tin chữ kế tiếp của một chat: chữ để gõ lên tivi, hay mã mở khoá trẻ em ([phut] phút mở tạm). */
+    /**
+     * Việc đang chờ tin chữ kế tiếp của một chat: chữ để gõ lên tivi ([thay]: thay chữ đang có trong ô, không thì viết tiếp),
+     * hay mã mở khoá trẻ em ([phut] phút mở tạm).
+     */
     sealed interface Cho { val het: Long }
-    data class ChoGo(override val het: Long) : Cho
+    data class ChoGo(override val het: Long, val thay: Boolean = true) : Cho
     data class ChoMa(val phut: Int, override val het: Long) : Cho
 
     private val ch = dv.kho.cauHinh
@@ -32,12 +35,15 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
             d.nut != null -> XuLyLenh.viecTuNut(d.nut) ?: run { ra.traLoiNut(d.idNut); return }
             else -> XuLyLenh.viecTuTin(d)
         }
-        // Bot đang chờ chữ để gõ / mã mở khoá: câu chữ kế tiếp là câu trả lời. Bấm nút hay chọn việc khác thì thôi chờ.
-        val cho = dv.choTin.remove(d.chat)?.takeIf { it.het > System.currentTimeMillis() }
+        // Bot đang chờ chữ để gõ / mã mở khoá: câu chữ kế tiếp là câu trả lời. Chờ gõ chữ thì bấm phím trên bảng điều khiển
+        // (đi tới ô nhập) vẫn chờ; chọn việc khác thì thôi chờ.
+        val cho = dv.choTin[d.chat]?.takeIf { it.het > System.currentTimeMillis() }
         if (cho != null && d.nut == null && (viec is XuLyLenh.Noi || viec is XuLyLenh.Link)) {
+            dv.choTin.remove(d.chat)
             traLoiCho(d, nd, cho)
             return
         }
+        if (!(cho is ChoGo && (viec is XuLyLenh.Phim || viec == XuLyLenh.CapNhat))) dv.choTin.remove(d.chat)
         if (XuLyLenh.chiChu(viec) && nd.vaiTro != VaiTro.CHU) {
             val loi = if (viec == XuLyLenh.HoiTat || viec == XuLyLenh.Tat) t("Chỉ chủ tivi mới tắt được tivi.", "Only the TV's owner can turn it off.")
                 else t("Việc này chỉ chủ tivi làm được.", "Only the TV's owner can do this.")
@@ -55,7 +61,8 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
                 ra.traLoiNut(d.idNut)
                 ra.sua(d.chat, d.idTin, chuDieuKhien(null), XuLyLenh.bangDieuKhien(en))
             }
-            XuLyLenh.GoChu -> hoiGo(d)
+            XuLyLenh.GoChu -> hoiGo(d, thay = true)
+            XuLyLenh.GoTiep -> hoiGo(d, thay = false)
             XuLyLenh.Kenh -> kenh(d)
             is XuLyLenh.MoKenh -> moKenh(d, nd, viec.o)
             XuLyLenh.YouTube -> youTube(d, nd)
@@ -122,16 +129,17 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
         ra.traLoiNut(d.idNut)
         // Phím đổi màn (Back, Home, OK) thì đợi lâu hơn cho tên app mới kịp hiện (TX3: Home hiện sau chừng nửa giây).
         Thread.sleep(if (ma == 3 || ma == 4 || ma == 23) 800L else 150L)
-        ra.sua(d.chat, d.idTin, chuDieuKhien(XuLyLenh.PHIM[ma]), XuLyLenh.bangDieuKhien(en))
+        ra.sua(d.chat, d.idTin, chuDieuKhien(XuLyLenh.PHIM[ma] ?: XuLyLenh.PHIM_THEM[ma]), XuLyLenh.bangDieuKhien(en))
     }
 
     // ---------- Gõ chữ, mã mở khoá: chờ câu trả lời ----------
 
-    private fun hoiGo(d: Den) {
+    private fun hoiGo(d: Den, thay: Boolean) {
         if (d.nut != null) ra.traLoiNut(d.idNut)
-        dv.choTin[d.chat] = ChoGo(System.currentTimeMillis() + CHO_MS)
-        ra.gui(d.chat, t("⌨️ Gõ chữ cần nhập vào ô đang chọn trên tivi (ô tìm kiếm, mật khẩu Wi-Fi…) rồi gửi.",
-            "⌨️ Type the text for the field selected on the TV (search box, Wi-Fi password…) and send it."),
+        dv.choTin[d.chat] = ChoGo(System.currentTimeMillis() + CHO_MS, thay)
+        ra.gui(d.chat, if (thay) t("⌨️ Gõ chữ cần nhập vào ô đang chọn trên tivi (ô tìm kiếm, mật khẩu Wi-Fi…) rồi gửi: chữ đang có trong ô được thay. Chưa chọn ô thì dùng ⬆️⬇️⬅️➡️ trên bảng điều khiển để chọn trước, bot vẫn chờ.",
+            "⌨️ Type the text for the field selected on the TV (search box, Wi-Fi password…) and send it; it replaces what's in the field. If no field is selected yet, use ⬆️⬇️⬅️➡️ on the remote pad first; the bot keeps waiting.")
+            else t("⌨️ Gõ chữ để viết tiếp vào ô vừa gõ.", "⌨️ Type the text to add to the field."),
             XuLyLenh.choTraLoi(t("Chữ gõ lên tivi", "Text for the TV")))
     }
 
@@ -140,18 +148,21 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
         when (cho) {
             is ChoGo -> {
                 ra.dangLam(d.chat, "typing")
-                val kq = dv.goChu(chu)
+                val kq = dv.goChu(chu, cho.thay)
+                if (kq == "ok") {
+                    ra.gui(d.chat, t("⌨️ Đã gõ lên tivi.", "⌨️ Typed on the TV."), XuLyLenh.sauKhiGo(en))
+                    // Không ghi chữ đã gõ (có thể là mật khẩu).
+                    ghi(nd, "go-chu")
+                    return
+                }
                 ra.gui(d.chat, when (kq) {
-                    "ok" -> t("⌨️ Đã gõ lên tivi.", "⌨️ Typed on the TV.")
-                    "khong-o-nhap" -> t("Trên tivi chưa chọn ô nhập chữ: chọn ô (VD ô tìm kiếm) rồi bấm ⌨️ Gõ chữ lại.",
-                        "No text field is selected on the TV: select one (e.g. a search box), then tap ⌨️ Type again.")
+                    "khong-o-nhap" -> t("Trên tivi chưa chọn ô nhập chữ: dùng ⬆️⬇️⬅️➡️ trên bảng điều khiển chọn ô (VD ô tìm kiếm) rồi bấm ⌨️ Gõ chữ lại.",
+                        "No text field is selected on the TV: use ⬆️⬇️⬅️➡️ on the remote pad to select one (e.g. a search box), then tap ⌨️ Type again.")
                     "can-bo-go" -> t("Chữ có dấu cần bộ gõ tiếng Việt của TiviKit trên tivi: mở TiviKit → Tele Remote → Cài lại / cập nhật. Chữ không dấu thì gõ được ngay.",
                         "Accented text needs TiviKit's Vietnamese typing helper on the TV: open TiviKit → Tele Remote → Reinstall / update. Plain text works now.")
                     "chua-adb" -> chuChuaAdb()
                     else -> t("Chưa gõ được ($kq).", "Couldn't type it ($kq).")
                 }, banPhim(nd))
-                // Không ghi chữ đã gõ (có thể là mật khẩu).
-                if (kq == "ok") ghi(nd, "go-chu")
             }
             is ChoMa -> moTam(d, nd, cho.phut, chu)
         }
