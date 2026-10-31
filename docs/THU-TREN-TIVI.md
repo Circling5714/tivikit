@@ -197,6 +197,28 @@ Cần remote có mic (nút Trợ lý Google) và SmartTube trên tivi; muốn th
 - **Hỏng thì:** tắt công tắc Bật Map Voice rồi Lưu (câu nói về Trợ lý như cũ), hay Gỡ Map Voice khỏi tivi. Trợ lý Google không
   nghe gì nữa: Cài đặt → Ứng dụng → Google (katniss) → Buộc dừng, hay khởi động lại tivi. Gửi kèm nội dung mục Câu vừa nghe.
 
+## 9d. Hẹn giờ
+
+Nên có SmartTube hay một ô Kênh nhanh trên tivi để hẹn mở.
+
+| Thử | Đạt khi |
+| --- | --- |
+| Tiện ích → Hẹn giờ → Mở app / kênh lúc 2 phút nữa (chọn SmartTube) → Thêm vào lịch → Lưu lên tivi | App báo "Đã lưu lên tivi. Việc kế tiếp: …"; tới giờ SmartTube mở trên tivi |
+| Như trên, nhưng để tivi vào màn bảo vệ trước giờ hẹn | Tới giờ màn bảo vệ tắt và SmartTube hiện lên, không mở phía sau màn bảo vệ |
+| Bật tivi lúc 2 phút nữa, để tivi ở màn bảo vệ | Tới giờ màn bảo vệ tắt |
+| Tắt tivi lúc 2 phút nữa | Trước 1 phút tivi báo có nút "Hoãn 30 phút" (chọn sẵn); bấm Hoãn thì không tắt; để yên thì tivi tắt đúng giờ |
+| Thử: tivi tự bật sau 2 phút, rồi tắt tivi bằng remote ngay | Khoảng 2 phút sau tivi tự bật, hiện "Hẹn giờ: tivi đã tự bật" (tivi ngủ sâu thì không tự bật được) |
+| Làm mới → Lần chạy gần đây | Mỗi dòng là câu dễ hiểu, VD "Mở SmartTube – đã mở", "Tắt tivi – hoãn 30 phút", không còn mã như danh-thuc, lo-gio |
+| Bấm bút ở một việc → đổi giờ / ngày / app → Cập nhật việc → Lưu lên tivi | Dòng đang sửa có viền xanh; bấm Cập nhật thì việc đó đổi, không thêm dòng mới, công tắc bật / tắt giữ nguyên; Thôi sửa thì không đổi gì |
+| Đang sửa mà bấm Lưu lên tivi | App nhắc bấm Cập nhật việc hoặc Thôi sửa trước |
+| Trên tivi: mở ô "Hẹn giờ (TiviKit)" trong danh sách app (hay Mở trên tivi ở TiviKit) | Màn Hẹn giờ có việc kế tiếp, nút hẹn tắt, lịch, lần chạy gần đây; ◀ ▶ ▲ ▼ OK đi được mọi chỗ, Back về màn trước |
+| Trên tivi: hẹn tắt 30 phút, rồi OK ở dòng việc một lần → Huỷ việc | Có dòng "Tắt tivi lúc … còn 30 phút"; huỷ xong thì mất; TiviKit (Làm mới) thấy giống vậy |
+| Trên tivi: + Thêm việc → ◀ ▶ đổi việc, Giờ (gõ phím số), Lặp lại, App → ▼ tới Lưu | ▼ từ dòng cuối vào thẳng nút Lưu; việc mới có trong lịch, TiviKit cũng thấy |
+| Trên tivi: OK ở một việc → đổi Trạng thái → Lưu; rồi Xoá việc | Việc thành Đang tắt, rồi mất khỏi lịch; màn hỏi lại chọn sẵn Thôi |
+| Khoá trẻ em đang bật: trên tivi thêm / sửa / xoá một việc | Hiện màn "Cần mã của bố mẹ"; Back thì không đổi gì, đúng mã thì đổi; hẹn tắt tivi thì không hỏi mã |
+
+- **Hỏng thì:** tắt công tắc của việc đó rồi Lưu lên tivi, hay Gỡ Hẹn giờ khỏi tivi (cuối màn Hẹn giờ).
+
 ## 10. Các tính năng còn lại
 
 | Thử | Đạt khi |
