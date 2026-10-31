@@ -260,6 +260,10 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | ⚙️ Thêm → 👥 Người dùng → bấm một người → đổi vai trò / bỏ; ➕ thêm @username | Danh sách đổi theo; tivi không cho bỏ / hạ chủ cuối cùng |
 | ⚙️ Thêm → ⏸ Khoá thành viên 1 giờ, thành viên bấm thử | Thành viên bị báo "tạm khoá tới …"; ▶️ Mở lại (hay nút ở TiviKit) thì dùng lại được |
 | ⚙️ Thêm → 📜 Việc vừa làm | 15 việc gần nhất, ai làm, lúc nào |
+| 📸 Màn hình → 📹 Quay 10 giây (đang phát video) | Bot gửi video 10 giây màn hình tivi, xem được ngay trong Telegram |
+| Gửi một ảnh, bấm 🖼 Đặt làm ảnh nền Home (tivi có TiviKit Launcher) | Home của TiviKit Launcher đổi nền thành ảnh đó (cắt giữa 16:9); ↩️ thì về ảnh nền mặc định |
+| 📺 Kênh nhanh → 📺 Tất cả kênh → bấm VTV3, HTV7 | Map Voice mở kênh bằng app kênh đã chọn (TV360 / VTVgo / FPT Play) |
+| Một điện thoại lạ (chưa liên kết) cast YouTube lên tivi | Tivi hỏi trên màn hình, đồng thời bot nhắn chủ kèm nút; bấm ✅ / 📅 / ⏱ / 🚫 thì máy đó cast được / bị chặn |
 
 - **Thành viên:** cùng các việc trên trừ Hẹn giờ, Khoá trẻ em, Làm mới, chụp màn hình, tắt / khởi động lại tivi, buộc dừng app
   (bot báo chỉ chủ làm được).
