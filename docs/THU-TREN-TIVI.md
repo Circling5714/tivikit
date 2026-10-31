@@ -252,6 +252,14 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | 🔒 Khoá trẻ em → Khoá ngay, rồi 🔓 30 phút, gõ mã 6 số của bố mẹ | Tivi khoá; mã đúng thì mở tới giờ bot báo và tin chứa mã bị xoá; mã sai báo còn mấy lần |
 | 🧹 Làm mới → Đóng app nền; bật Chụp màn hình ở TiviKit rồi bấm 📸 Màn hình | RAM trống tăng; bot gửi ảnh màn hình tivi |
 | Bật Báo tin ở TiviKit, tắt tivi bằng remote, vài phút sau bật lại | Bot nhắn các chủ "vừa tắt", rồi "vừa bật" |
+| 📢 Nhắn tivi → gõ "ăn cơm thôi", rồi bấm OK trên remote | Lời nhắn hiện to trên tivi kèm tiếng bíp; OK thì đóng và bot báo "đã xem" |
+| ⚙️ Thêm → 🌐 Kiểm tra mạng | Bot báo Wi-Fi (băng, sóng, tốc độ) hay dây LAN, độ trễ tới router / Internet / YouTube, nhận xét |
+| Gõ "âm lượng 10", "to lên", "tắt tiếng", "bật tiếng" | Âm lượng đổi đúng, bot báo mức mới |
+| Tivi ở màn bảo vệ: ℹ️ Tivi → ☀️ Bật màn hình (hay gõ "bật tivi") | Tivi thoát màn bảo vệ |
+| Một tài khoản lạ nhắn bot; chủ bấm ✅ Duyệt thành viên ngay trong tin báo | Người đó nhận tin "đã được duyệt", dùng được bot; 👥 hiện họ |
+| ⚙️ Thêm → 👥 Người dùng → bấm một người → đổi vai trò / bỏ; ➕ thêm @username | Danh sách đổi theo; tivi không cho bỏ / hạ chủ cuối cùng |
+| ⚙️ Thêm → ⏸ Khoá thành viên 1 giờ, thành viên bấm thử | Thành viên bị báo "tạm khoá tới …"; ▶️ Mở lại (hay nút ở TiviKit) thì dùng lại được |
+| ⚙️ Thêm → 📜 Việc vừa làm | 15 việc gần nhất, ai làm, lúc nào |
 
 - **Thành viên:** cùng các việc trên trừ Hẹn giờ, Khoá trẻ em, Làm mới, chụp màn hình, tắt / khởi động lại tivi, buộc dừng app
   (bot báo chỉ chủ làm được).
