@@ -54,13 +54,6 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
         }
         NutNgonNgu()
     }
-    TheBanCu(vm)
-    if (vm.baoChuyen.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Nhan.copy(alpha = 0.12f)).padding(start = 14.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.SwapHoriz, null, tint = Nhan); Spacer(Modifier.width(10.dp))
-        Text(vm.baoChuyen, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
-        IconButton(onClick = { vm.baoChuyen = "" }) { Icon(Icons.Rounded.Close, t("Ẩn", "Hide"), tint = ChuPhu) }
-    }
     if (vm.daTuTatAdb || vm.daTatAdb) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Nhan.copy(alpha = 0.12f)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Rounded.Lock, null, tint = Nhan); Spacer(Modifier.width(10.dp))
@@ -262,40 +255,6 @@ private fun HopCapNhat(vm: PhienLamViec) {
         dismissButton = { TextButton(onClick = { vm.moCapNhat = false }) { Text(t("Đóng", "Close")) } },
         containerColor = The1,
     )
-}
-
-/**
- * Nhắc gỡ TiviKit bản cũ (tên gói com.icm.cleantv) còn trên máy (25/10/2026, đổi tên gói sang vn.tivikit): hai app cùng
- * tên dễ mở nhầm. Mở trang thông tin app của bản cũ để bấm Gỡ (không cần quyền gỡ app); quay lại app thì xem lại.
- */
-@Composable
-private fun TheBanCu(vm: PhienLamViec) {
-    val vongDoi = androidx.compose.ui.platform.LocalLifecycleOwner.current
-    androidx.compose.runtime.DisposableEffect(vongDoi) {
-        val nghe = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) vm.kiemTraBanCu() }
-        vongDoi.lifecycle.addObserver(nghe)
-        onDispose { vongDoi.lifecycle.removeObserver(nghe) }
-    }
-    if (!vm.conBanCu) return
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(The1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OIcon(Icons.Rounded.DeleteSweep, 34.dp, MauO.cam)
-            Spacer(Modifier.width(12.dp))
-            Text(t("Máy còn TiviKit bản cũ", "The old TiviKit is still installed"), fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-        }
-        Phu(t("Bản mới đổi tên gói (vn.tivikit) nên cài riêng, hai app cùng tên dễ mở nhầm. Bản sao lưu vẫn còn trên từng tivi: nối lại bằng bản mới là có, app phụ trên tivi cũng tự chuyển sang bản mới.",
-            "The new version has a new package name (vn.tivikit), so it installs separately and the two look alike. Backups are also kept on each TV: reconnect with the new version to get them; helper apps on the TV move over automatically."))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NutVien(t("Gỡ bản cũ", "Uninstall the old one"), Icons.Rounded.Delete, Modifier.weight(1f), true) {
-                runCatching {
-                    ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${vn.tivikit.dulieu.GoiCu.APP}"))
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                }
-            }
-            NutVien(t("Để sau", "Later"), Icons.Rounded.Schedule, Modifier.weight(1f), true) { vm.anBanCu() }
-        }
-    }
 }
 
 /** Thẻ tivi: đã nối thì tên / Android / IP + Đổi tivi / Ngắt; chưa nối thì nút Kết nối + tivi gần đây nối lại một chạm. */

@@ -1541,23 +1541,13 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     private val lopKhoa = "vn.tivikit.khoa.KhoaDichVu"
     private val khoaDv = "$PKG_KHOA/$lopKhoa"
 
-    /**
-     * App Khoá trẻ em đang có trên tivi: bản mới, không thì bản trước khi đổi tên gói (GoiCu.KHOA — vẫn khoá bằng PIN cũ,
-     * chờ phụ huynh cài mã OTP để chuyển); null nếu không có.
-     */
-    private fun goiKhoa(): String? = when { coGoi(PKG_KHOA) -> PKG_KHOA; coGoi(GoiCu.KHOA) -> GoiCu.KHOA; else -> null }
-
-    fun khoaDaCai(): Boolean = goiKhoa() != null
+    fun khoaDaCai(): Boolean = coGoi(PKG_KHOA)
 
     /**
      * Trạng thái trên tivi (không có mã): {bat, khung, moTamPhut, moTamDen, dangKhoa, dichVuChay…}; app khoá 1.2 thêm
-     * {coOtp, soDuPhong, choGiay, yeuCauGo, goDuoc}, bản trước đó có coPin. Thêm banCu=true khi là app bản trước khi đổi
-     * tên gói; null nếu chưa cài.
+     * {coOtp, soDuPhong, choGiay, yeuCauGo, goDuoc}, bản trước đó có coPin; null nếu chưa cài.
      */
-    fun docKhoa(): org.json.JSONObject? {
-        val g = goiKhoa() ?: return null
-        return docQua(g)?.apply { if (g == GoiCu.KHOA) put("banCu", true) }
-    }
+    fun docKhoa(): org.json.JSONObject? = if (khoaDaCai()) docQua(PKG_KHOA) else null
 
     /**
      * Nhập mã Khoá trẻ em (28/10/2026): tivi kiểm tra mã OTP / mã dự phòng — TiviKit không giữ mã gốc — đúng thì trả phiên
@@ -1585,10 +1575,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /** Lệnh khoá trả "can-ma": phiên nhập mã không có / hết hạn. */
     private fun kiemPhien(kq: String) { if (kq.contains("can-ma")) throw CanMaException() }
 
-    /**
-     * Cài (nếu cần), cấp quyền tự canh gác, ghi cấu hình, bật dịch vụ khoá; tivi còn bản cũ (trước khi đổi tên gói) thì
-     * tắt và gỡ bản đó khi bản mới đã chạy. [json] không chứa dấu nháy đơn.
-     */
+    /** Cài (nếu cần), cấp quyền tự canh gác, ghi cấu hình, bật dịch vụ khoá. [json] không chứa dấu nháy đơn. */
     fun caiKhoa(apk: ByteArray, json: String, bao: (String) -> Unit) {
         require(!json.contains('\'')) { "json" }
         // Chưa có, hoặc khác bản đi kèm (VD bản dựng trước khi mã nguồn đổi tên lớp) thì cài đè: giữ giờ khoá và mã.
@@ -1604,7 +1591,6 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         // Bản cài đè từ bản có tên lớp cũ: bỏ tên dịch vụ cũ (không còn lớp đó) trước khi bật tên mới.
         boTroNang("$PKG_KHOA/${GoiCu.LOP_KHOA_CU}")
         sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$khoaDv*) ;; null|'') settings put secure enabled_accessibility_services $khoaDv ;; *) settings put secure enabled_accessibility_services \"\$s:$khoaDv\" ;; esac; settings put secure accessibility_enabled 1")
-        if (coGoi(GoiCu.KHOA)) { bao(t("Gỡ Khoá trẻ em bản cũ…", "Removing the old Kids lock…")); tatKhoaGoi(GoiCu.KHOA, go = true) }
     }
 
     /** Báo cáo xem app gì cần quyền xem thống kê sử dụng của tivi (chỉ ADB cấp được). */
@@ -1625,25 +1611,22 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      * kèm [phien] (app khoá 1.2 nhận JSON); không thì gửi số phút như bản cũ.
      */
     fun moTamKhoa(phut: Int, phien: String?) {
-        val g = goiKhoa() ?: return
+        if (!khoaDaCai()) return
         val arg = if (phien == null) "$phut" else { require(PHIEN.matches(phien)) { "phien" }; "'{\"phut\":$phut,\"phien\":\"$phien\"}'" }
-        kiemPhien(sh("content call --uri content://$g --method mo-tam --arg $arg"))
+        kiemPhien(sh("content call --uri $khoaUri --method mo-tam --arg $arg"))
     }
 
     /**
-     * Tắt khoá (bản mới, cả bản cũ nếu còn): cấu hình bat=false (kèm [phien] nếu có), bỏ dịch vụ khỏi danh sách trợ năng;
-     * [go] = gỡ luôn app. Chỗ gọi lo hỏi mã trước (màn Khoá trẻ em, Khôi phục): shell gỡ được app dù không có phiên.
+     * Tắt khoá: cấu hình bat=false (kèm [phien] nếu có), bỏ dịch vụ khỏi danh sách trợ năng; [go] = gỡ luôn app. Chỗ gọi lo
+     * hỏi mã trước (màn Khoá trẻ em, Khôi phục): shell gỡ được app dù không có phiên.
      */
     fun tatKhoa(go: Boolean, phien: String? = null) {
-        listOf(PKG_KHOA, GoiCu.KHOA).filter { coGoi(it) }.forEach { tatKhoaGoi(it, go, phien) }
-    }
-
-    private fun tatKhoaGoi(goi: String, go: Boolean, phien: String? = null) {
+        if (!khoaDaCai()) return
         val p = phien?.takeIf { PHIEN.matches(it) }?.let { ",\"phien\":\"$it\"" }.orEmpty()
-        sh("content call --uri content://$goi --method dat --arg '{\"bat\":false,\"khung\":[]$p}' 2>/dev/null; true")
+        sh("content call --uri $khoaUri --method dat --arg '{\"bat\":false,\"khung\":[]$p}' 2>/dev/null; true")
         // Tên lớp dịch vụ tuỳ bản đang cài: mới, hoặc dựng trước khi mã nguồn đổi tên (GoiCu.LOP_KHOA_CU).
-        boTroNang("$goi/$lopKhoa"); boTroNang("$goi/${GoiCu.LOP_KHOA_CU}")
-        if (go) sh("pm uninstall $goi")
+        boTroNang(khoaDv); boTroNang("$PKG_KHOA/${GoiCu.LOP_KHOA_CU}")
+        if (go) sh("pm uninstall $PKG_KHOA")
     }
 
     // ---------- Kênh nhanh (mỗi ô kênh một app: vn.tivikit.kenh, kenh2 … kenh6; 25/10/2026) ----------
@@ -2059,78 +2042,6 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
 
     /** App phụ bản cũ (GoiCu) đang có trên tivi. */
     fun appPhuCu(): List<String> { val co = goiDaCai(); return GoiCu.APP_PHU.filter { it in co } }
-
-    /**
-     * Kết quả chuyển: [kenh] = tên các ô kênh đã chuyển, [henGio] = đã chuyển lịch Hẹn giờ, [khoaCho] = Khoá trẻ em bản
-     * cũ còn chờ đặt PIN, [loi] = việc chưa làm được (bản cũ của nó để nguyên, vẫn chạy; lần nối sau thử lại).
-     */
-    data class KetQuaChuyen(val kenh: List<String>, val henGio: Boolean, val khoaCho: Boolean, val loi: List<String>)
-
-    /**
-     * Chuyển app phụ bản cũ sang gói mới: mỗi ô Kênh nhanh cũ → cài ô mới cùng kênh, config.json Home sạch đổi tên gói
-     * theo (tên ô, dock, nút remote đã gán); lịch Hẹn giờ chép sang app Hẹn giờ mới (việc mở ô kênh đổi theo). Bản cũ chỉ
-     * gỡ khi bản mới đã xong. Khoá trẻ em không chuyển ở đây (cần PIN, xem caiKhoa). [apk] đọc file APK đi kèm theo tên.
-     */
-    fun chuyenAppPhuCu(apk: (String) -> ByteArray, bao: (String) -> Unit): KetQuaChuyen {
-        val co = goiDaCai()
-        val loi = mutableListOf<String>()
-        val doi = mutableMapOf<String, String>()
-        val tenKenh = mutableListOf<String>()
-        // Ô mới đã có (lần chuyển trước dở dang): cùng kênh thì dùng lại, khác kênh thì đưa ô cũ sang ô trống.
-        val daDung = (1..KenhNhanh.SO_O).filter { KenhNhanh.goiCua(it) in co }.toMutableSet()
-        for (o in 1..KenhNhanh.SO_O) {
-            val cu = GoiCu.kenh(o)
-            if (cu !in co) continue
-            val k = KenhNhanh.tuJson(docQua(cu))
-            if (k == null) { loi += t("ô kênh cũ $o (không đọc được kênh)", "old channel tile $o (channel unreadable)"); continue }
-            val s = if (o !in daDung || KenhNhanh.tuJson(docQua(KenhNhanh.goiCua(o)))?.so == k.so) o
-                else (1..KenhNhanh.SO_O).firstOrNull { it !in daDung }
-            if (s == null) { loi += t("ô ${k.ten} (đã đủ ${KenhNhanh.SO_O} ô mới)", "the ${k.ten} tile (all ${KenhNhanh.SO_O} new tiles used)"); continue }
-            runCatching {
-                bao(t("Chuyển ô kênh ${k.ten} sang TiviKit mới…", "Moving the ${k.ten} tile to the new TiviKit…"))
-                caiKenh(s, apk(KenhNhanh.apkCua(s)), KenhNhanh.json(k)) {}
-            }.onSuccess { doi[cu] = KenhNhanh.goiCua(s); daDung += s; tenKenh += k.ten }
-                .onFailure { loi += "${k.ten}: ${it.message}" }
-        }
-        if (doi.isNotEmpty()) {
-            // Có config.json mà không đọc được thì giữ ô cũ (nút / dock vẫn trỏ vào nó, vẫn chạy); lần nối sau làm tiếp.
-            val j = runCatching { cauHinhDeSua() }.getOrNull()
-            if (j == null) loi += t("Home sạch (không đọc được cấu hình, giữ ô kênh cũ)", "the clean Home (settings unreadable, old tiles kept)")
-            else {
-                val doiCauHinh = GoiCu.doiTrongCauHinh(j, doi)
-                if (doiCauHinh) {
-                    bao(t("Cập nhật Home sạch…", "Updating the clean Home…"))
-                    ghiFileTheme("config.json", j.toString().toByteArray())
-                }
-                doi.keys.forEach { runCatching { sh("pm uninstall $it") } }
-                if (doiCauHinh) {
-                    // Chạy lúc vừa nối tivi, có thể đang có người xem: chỉ đưa Home lên khi Home đang ở trước mặt. Không thì tắt
-                    // Home sạch (bấm Home là chạy lại với cấu hình mới) và khởi động lại dịch vụ phím cho nút đã gán trỏ sang ô mới.
-                    val dangHien = runCatching { goiDangHien() }.getOrDefault("")
-                    if (dangHien.isEmpty() || dangHien == pkgHome) sh(KHOI_DONG_LAI_HOME)
-                    else sh(TAT_HAN_HOME)
-                }
-            }
-        }
-        var henGio = false
-        if (GoiCu.HEN_GIO in co) runCatching {
-            val j = docQua(GoiCu.HEN_GIO) ?: error(t("không đọc được lịch", "schedule unreadable"))
-            val lich = GoiCu.doiLich(HenGio.trangThai(j).lich, doi)
-            if (lich.isNotEmpty()) {
-                bao(t("Chuyển lịch Hẹn giờ sang TiviKit mới…", "Moving the Timer schedule to the new TiviKit…"))
-                // App Hẹn giờ mới đã có lịch (lần chuyển trước dở dang): gộp, bỏ việc trùng.
-                val dangCo = docHenGio()?.let { HenGio.trangThai(it).lich }.orEmpty()
-                caiHenGio(apk("hengio.apk"), HenGio.json(HenGio.sapXep((dangCo + lich).distinct()).take(HenGio.TOI_DA))) {}
-                henGio = true
-            }
-            boTroNang(GoiCu.DICH_VU_HEN_GIO)
-            sh("pm uninstall ${GoiCu.HEN_GIO}")
-        }.onFailure { loi += t("Hẹn giờ: ${it.message}", "Timer: ${it.message}") }
-        // Khoá trẻ em: có cả hai bản (đặt PIN ở bản mới xong mà gỡ bản cũ dở) thì gỡ bản cũ; chỉ có bản cũ thì chờ PIN.
-        val coKhoaMoi = coGoi(PKG_KHOA)
-        if (GoiCu.KHOA in co && coKhoaMoi) runCatching { tatKhoaGoi(GoiCu.KHOA, go = true) }
-        return KetQuaChuyen(tenKenh, henGio, GoiCu.KHOA in co && !coKhoaMoi, loi)
-    }
 
     /** Gỡ app phụ bản cũ còn sót (Khôi phục tivi), bỏ dịch vụ trợ năng của chúng trước. */
     private fun goAppPhuCu(bao: (String) -> Unit) {

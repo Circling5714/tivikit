@@ -15,11 +15,6 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
-    <!-- Thấy TiviKit bản cũ (trước khi đổi tên gói) còn trên máy để nhắc gỡ (Android 11+ ẩn app khác nếu không khai). -->
-    <queries>
-        <package android:name="com.icm.cleantv" />
-    </queries>
-
     <application
         android:banner="@drawable/banner_tv"
         android:label="TiviKit"

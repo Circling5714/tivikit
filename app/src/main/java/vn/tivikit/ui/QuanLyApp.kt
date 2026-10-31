@@ -81,8 +81,8 @@ class QuanLyApp(private val vm: PhienLamViec) {
      */
     fun laHome(a: App) = a.tv.pkg == vm.trangThai?.homeHienTai || a.tv.pkg == vm.qlLauncher.tt?.homeMo
 
-    /** App Khoá trẻ em (bản mới hay bản trước khi đổi tên gói): cũng không buộc dừng ở đây (28/10/2026). */
-    fun laKhoa(a: App) = a.tv.pkg == ThaoTacTv.PKG_KHOA || a.tv.pkg == vn.tivikit.dulieu.GoiCu.KHOA
+    /** App Khoá trẻ em: cũng không buộc dừng ở đây (28/10/2026). */
+    fun laKhoa(a: App) = a.tv.pkg == ThaoTacTv.PKG_KHOA
 
     fun mo() { vm.man = Man.QUAN_LY_APP; bao = ""; if (ds.isEmpty()) tai() }
 

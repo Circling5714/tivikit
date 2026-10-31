@@ -115,10 +115,8 @@ private fun TheTrenTv(k: KhoaTreTivi, j: JSONObject) = The(t("Trên tivi", "On t
     if (appKhoa.isNotEmpty()) Phu(t("App đang khoá: ${appKhoa.joinToString(", ")}.", "Apps locked now: ${appKhoa.joinToString(", ")}."), Cam)
     if (j.optBoolean("baoVe")) Phu(t("Khoá đang bật nên trên tivi, mở Cài đặt, gỡ / cài app hay cho phép gỡ lỗi ADB đều phải nhập mã.",
         "With the lock on, opening Settings, installing or removing apps and allowing ADB debugging on the TV all ask for the code."))
-    // App khoá cài từ trước khi đổi tên gói (com.icm.cleantv.khoa), hay bản trước 28/10/2026: còn mở bằng PIN.
-    if (j.optBoolean("banCu")) Phu(t("Đây là Khoá trẻ em của TiviKit bản cũ, vẫn khoá bằng PIN cũ. Cài mã OTP ở thẻ Mã mở khoá rồi bấm Lưu: app cài bản mới với giờ khoá này và gỡ bản cũ.",
-        "This is the Kids lock from the old TiviKit and it still works with the old PIN. Set up the OTP code in the Unlock code card and tap Save: the app installs the new version with these periods and removes the old one."), Cam)
-    else if (!j.has("coOtp")) Phu(t("App khoá trên tivi là bản cũ, mở bằng PIN. Khoá trẻ em giờ dùng mã OTP: cài mã ở thẻ Mã mở khoá rồi bấm Lưu & áp dụng (giữ giờ khoá; tới lúc đó PIN cũ vẫn mở được).",
+    // App khoá bản trước 28/10/2026: còn mở bằng PIN.
+    if (!j.has("coOtp")) Phu(t("App khoá trên tivi là bản cũ, mở bằng PIN. Khoá trẻ em giờ dùng mã OTP: cài mã ở thẻ Mã mở khoá rồi bấm Lưu & áp dụng (giữ giờ khoá; tới lúc đó PIN cũ vẫn mở được).",
         "The lock app on the TV is an older version that uses a PIN. The Kids lock now uses an OTP code: set it up in the Unlock code card and tap Save & apply (the schedule is kept; the old PIN works until then)."), Cam)
     if (k.goDuoc) Phu(t("Đang vào không cần mã vì yêu cầu Quên mã đã quá 24 giờ. Cài mã OTP mới ở thẻ Mã mở khoá rồi Lưu.",
         "You're in without the code because the Forgot code request is over 24 hours old. Set up a new OTP code in the Unlock code card and Save."), Cam)

@@ -118,7 +118,7 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
     fun boPhien() { phien = null; phienHet = 0 }
 
     private suspend fun docThoiGian(j: JSONObject?): ThoiGianXem? =
-        if (j == null || j.optBoolean("banCu")) null
+        if (j == null) null
         else vm.io { runCatching { vm.tv.docThoiGianKhoa()?.let { ThoiGianXem.tuJson(it) } }.getOrNull() }
 
     fun mo(): Unit = vm.chayRoi(t("Đọc cài đặt khoá trên tivi…", "Reading the lock settings…")) {
@@ -236,11 +236,10 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
     // ---------- Lưu ----------
 
     fun luu(): Unit = vm.chay(t("Đang cài khoá lên tivi…", "Setting up the lock on the TV…")) {
-        val coMaTv = coOtp && trenTv?.optBoolean("banCu") != true
         val maMoiXong = buoc == Buoc.CAT && daCat
         if (buoc == Buoc.QUET) error(t("Làm xong bước mã mới (quét QR, nhập thử mã) hoặc bấm Huỷ.", "Finish the new code (scan the QR, test a code) or tap Cancel."))
         if (buoc == Buoc.CAT && !daCat) error(t("Cất mã dự phòng rồi đánh dấu \"Đã cất\" trước khi lưu.", "Store the backup codes and tick \"Stored\" before saving."))
-        if (!coMaTv && khoaMoi == null) error(t("Cài mã OTP trước (thẻ Mã mở khoá): khoá không dùng PIN nữa.", "Set up the OTP code first (Unlock code card): the lock no longer uses a PIN."))
+        if (!coOtp && khoaMoi == null) error(t("Cài mã OTP trước (thẻ Mã mở khoá): khoá không dùng PIN nữa.", "Set up the OTP code first (Unlock code card): the lock no longer uses a PIN."))
         if (goDuoc && khoaMoi == null) error(t("Đã vào bằng Quên mã: cài mã OTP mới rồi mới lưu được.", "You came in through Forgot code: set up a new OTP code before saving."))
         if (khung.isEmpty() && luatApp.isEmpty() && phutThuong == 0 && phutCuoiTuan == 0)
             error(t("Thêm ít nhất một khung giờ khoá, giới hạn mỗi ngày hay luật khoá app.", "Add a lock period, a daily limit or an app rule."))
@@ -249,7 +248,7 @@ class KhoaTreTivi(private val vm: PhienLamViec) {
             .put("khung", JSONArray(khung.map { JSONObject().put("tu", it.tu).put("den", it.den).put("ngay", JSONArray(it.ngay.sorted())) }))
             .put("phutThuong", phutThuong).put("phutCuoiTuan", phutCuoiTuan)
             .put("apps", JSONArray(luatApp.map { it.json() }))
-        if (coMaTv && !goDuoc) j.put("phien", phienHoac { luu() } ?: return@chay)
+        if (coOtp && !goDuoc) j.put("phien", phienHoac { luu() } ?: return@chay)
         if (maMoiXong) MaOtp.ghiVao(j, khoaMoi, duPhongMoi)
         val apk = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, "khoa.apk").readBytes() }
         try { vm.io { vm.tv.caiKhoa(apk, j.toString()) { vm.thongBao = it } } }

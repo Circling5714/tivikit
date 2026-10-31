@@ -803,19 +803,13 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         abiTvDaDo = null
         if (tiviCuaDsCai != info.khoaLuu) { dsCai.forEach { it.file?.takeIf { f -> f.tam }?.file?.delete() }; dsCai.clear(); apkTrenTv = null; qlApp.quen(); guiFile.quen() }
         tiviCuaDsCai = info.khoaLuu
-        var tt = io { tv.docTrangThai() }
+        val tt = io { tv.docTrangThai() }
         trangThai = tt
         // Tên app thật từ chính tivi cho tenDep (TrenTv, 27/10/2026): chạy nền, chỉ khi có gói chưa hỏi (app mới cài).
         if (vn.tivikit.dulieu.TenTrenTv.thieu(tt.caiDat)) { val goi = tt.caiDat; viewModelScope.launch { runCatching { docTenTrenTv(goi) } } }
         // App phụ chạy nền (Home sạch, Khoá, Hẹn giờ, TiviKit Launcher): giữ khỏi bị tối ưu pin / hạ nhóm App Standby, mỗi lần nối.
         val giu = ThaoTacTv.GIU_SONG.filter { it in tt.caiDat }
         if (giu.isNotEmpty()) viewModelScope.launch { runCatching { io { adb.shell(ThaoTacTv.lenhGiuSong(giu)) } } }
-        // Đổi tên gói (25/10/2026): app phụ cài từ bản cũ (com.icm.cleantv.*) chép sang gói mới rồi gỡ.
-        baoChuyen = ""
-        if (vn.tivikit.dulieu.GoiCu.APP_PHU.any { it in tt.caiDat }) {
-            chuyenAppPhuCu()
-            tt = trangThai ?: tt
-        }
         // Công tắc DNS AdGuard theo đúng tivi (24/10/2026, góp ý kimhuenguyen1964: kết nối lại thì công tắc luôn tắt).
         dnsChanQc = io { tv.dnsDangChan() }
         val du = io { DuLieu.nap(ctx) }
@@ -842,52 +836,6 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         man = when { dangKhoiPhuc -> Man.KHOI_PHUC; dangDon -> Man.THONG_TIN; else -> Man.CHINH }
         // Chức năng bấm lúc chưa nối (thường cũng chạy qua chay): đợi việc kết nối này nhả dangBan rồi mới mở.
         if (viec != null) viewModelScope.launch { androidx.compose.runtime.snapshotFlow { dangBan }.first { !it }; viec() }
-    }
-
-    /** Lời báo sau khi chuyển app phụ bản cũ trên tivi đang nối (hiện ở màn chính). */
-    var baoChuyen by mutableStateOf("")
-
-    /**
-     * TiviKit bản cũ (tên gói com.icm.cleantv) còn trên máy này: bản mới khác tên gói nên cài riêng, hai app cùng tên dễ
-     * mở nhầm — màn chính nhắc gỡ, tới khi gỡ hoặc bấm Để sau.
-     */
-    var conBanCu by mutableStateOf(false)
-        private set
-
-    fun kiemTraBanCu() {
-        conBanCu = !prefs.getBoolean("an_ban_cu", false) &&
-            runCatching { ctx.packageManager.getPackageInfo(vn.tivikit.dulieu.GoiCu.APP, 0) }.isSuccess
-    }
-
-    fun anBanCu() { prefs.edit().putBoolean("an_ban_cu", true).apply(); conBanCu = false }
-
-    /**
-     * Chuyển app phụ bản cũ trên tivi vừa nối sang gói vn.tivikit.* (ThaoTacTv.chuyenAppPhuCu). Lỗi ở đây không chặn kết
-     * nối: app bản cũ vẫn chạy, lần nối sau thử lại.
-     */
-    private suspend fun chuyenAppPhuCu() {
-        thongBao = t("Tivi còn app phụ của TiviKit bản cũ, đang chuyển sang bản mới…", "The TV has helper apps from the old TiviKit, moving them to the new one…")
-        val kq = runCatching {
-            io { tv.chuyenAppPhuCu({ ten -> vn.tivikit.CapNhat.moAsset(ctx, ten).readBytes() }) { s -> thongBao = s } }
-        }.getOrElse { e ->
-            baoChuyen = t("Chưa chuyển được app phụ bản cũ (${moTaLoi(e)}). Chúng vẫn chạy; lần kết nối sau app thử lại.",
-                "Couldn't move the old helper apps (${moTaLoi(e)}). They keep working; the app tries again next time.")
-            return
-        }
-        trangThai = io { tv.docTrangThai() }
-        if (kq.kenh.isNotEmpty()) veApp()
-        val xong = listOfNotNull(
-            if (kq.kenh.isNotEmpty()) t("ô Kênh nhanh ${kq.kenh.joinToString(", ")}", "Quick channel tiles ${kq.kenh.joinToString(", ")}") else null,
-            if (kq.henGio) t("lịch Hẹn giờ", "the Timer schedule") else null,
-        )
-        baoChuyen = listOfNotNull(
-            if (xong.isNotEmpty()) t("Đã chuyển ${xong.joinToString(" và ")} sang TiviKit mới (tên gói vn.tivikit), nút remote và dock giữ nguyên.",
-                "Moved ${xong.joinToString(" and ")} to the new TiviKit (package vn.tivikit); remote buttons and the dock are kept.") else null,
-            if (kq.khoaCho) t("Khoá trẻ em vẫn là bản cũ và vẫn khoá bằng PIN cũ: mở Khoá trẻ em, cài mã OTP rồi Lưu để chuyển.",
-                "The Kids lock is still the old version and keeps working with the old PIN: open Kids lock, set up the OTP code and Save to move it.") else null,
-            if (kq.loi.isNotEmpty()) t("Chưa chuyển được: ${kq.loi.joinToString("; ")}. Bản cũ vẫn chạy, lần kết nối sau app thử lại.",
-                "Not moved yet: ${kq.loi.joinToString("; ")}. The old ones keep working; the app tries again next time.") else null,
-        ).joinToString(" ")
     }
 
     var dangKhoiPhuc by mutableStateOf(false)
