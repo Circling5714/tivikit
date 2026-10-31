@@ -2,6 +2,7 @@ package vn.tivikit.hengio
 
 import android.app.Activity
 import android.graphics.Color
+import android.net.Uri
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
@@ -47,7 +48,8 @@ class DanhThuc : Activity() {
 
 /**
  * Báo trước khi tắt tivi: đếm ngược 60 giây, "Hoãn 30 phút" (chọn sẵn) hoặc "Tắt ngay". Bấm Back hay Home cũng là
- * hoãn — có người đang dùng tivi; không ai bấm gì thì hết giờ tivi tắt.
+ * hoãn — có người đang dùng tivi; không ai bấm gì thì hết giờ tivi tắt. Tivi có Tele Remote thì báo bot (1/11/2026): bot
+ * nhắn chủ tivi kèm nút hoãn / tắt luôn, bấm từ Telegram (lệnh hoan / tat-ngay của CauHinhProvider).
  */
 class BaoTat : Activity() {
     private val h = Handler(Looper.getMainLooper())
@@ -89,7 +91,14 @@ class BaoTat : Activity() {
         })
         hoan.requestFocus()
         h.post(dem)
+        dangMo = this
+        // Báo bot Telegram của tivi (nếu có): lúc tivi sẽ tắt.
+        val luc = System.currentTimeMillis() + Lich.BAO_TRUOC_MS
+        Thread { runCatching { contentResolver.call(Uri.parse("content://$TELE_REMOTE"), "sap-tat", luc.toString(), null) } }.start()
     }
+
+    /** Hoãn / tắt từ Telegram (Tele Remote gọi lệnh hoan / tat-ngay): như bấm nút trên màn này. */
+    fun tuXa(tat: Boolean) = runOnUiThread { if (tat) tat() else hoan() }
 
     private fun tat() {
         if (xong) return
@@ -113,5 +122,15 @@ class BaoTat : Activity() {
     /** Bấm Home: có người đang dùng tivi. */
     override fun onUserLeaveHint() { hoan() }
 
-    override fun onDestroy() { h.removeCallbacks(dem); super.onDestroy() }
+    override fun onDestroy() {
+        h.removeCallbacks(dem)
+        if (dangMo === this) dangMo = null
+        super.onDestroy()
+    }
+
+    companion object {
+        /** Màn báo trước đang hiện (hoãn / tắt từ Telegram); null nếu không. */
+        @Volatile var dangMo: BaoTat? = null
+        private const val TELE_REMOTE = "vn.tivikit.teleremote"
+    }
 }

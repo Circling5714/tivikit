@@ -12,6 +12,8 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <!-- Android 11+: thấy được các app có màn mở để mở app đã hẹn, và các launcher (HOME) để biết Home có đè lên app vừa mở. -->
     <queries>
+        <!-- Bot Telegram của tivi: báo trước khi tắt để chủ tivi hoãn từ xa. -->
+        <package android:name="vn.tivikit.teleremote" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
