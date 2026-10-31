@@ -30,11 +30,14 @@ class HenGioTivi(private val vm: PhienLamViec) {
     var dsApp by mutableStateOf<List<String>>(emptyList())
         private set
 
-    // Ô thêm việc mới.
+    // Ô soạn: thêm việc mới ([dangSua] null) hay sửa việc [dangSua].
     var loai by mutableStateOf(HenGio.BAT)
     var gio by mutableStateOf("")
     var ngay by mutableStateOf((1..7).toSet())
     var goi by mutableStateOf<String?>(null)
+    /** Việc đang sửa ở ô soạn (bút ở một dòng lịch); null = ô soạn thêm việc mới. */
+    var dangSua by mutableStateOf<HenGio.Viec?>(null)
+        private set
 
     /** Android của tivi: app phụ cần 8+, tắt tivi cần 9+. */
     val sdk: Int get() = vm.thongTin?.sdk ?: 0
@@ -58,38 +61,56 @@ class HenGioTivi(private val vm: PhienLamViec) {
         val j = if (daCai) vm.io { vm.tv.docHenGio() } else null
         trangThai = j?.let { HenGio.trangThai(it) }
         ds.clear(); trangThai?.let { ds.addAll(HenGio.sapXep(it.lich)) }
-        chuaLuu = false
+        chuaLuu = false; dangSua = null
     }
 
     fun lamMoi() = vm.chay(t("Đang đọc hẹn giờ trên tivi…", "Reading the timer on the TV…")) {
         vm.damBaoKetNoi(); bao = ""; docLaiTv()
     }
 
-    /** Thêm việc ở ô nhập vào lịch đang soạn (chưa lưu lên tivi). */
+    /** Thêm việc ở ô soạn vào lịch đang soạn, hoặc thay việc đang sửa [dangSua] (chưa lưu lên tivi). */
     fun them() {
         val (g, p) = HenGio.docGio(gio) ?: run { vm.loi = t("Giờ dạng 06:30 (0:00 đến 23:59).", "Time like 06:30 (0:00 to 23:59)."); return }
         if (ngay.isEmpty()) { vm.loi = t("Chọn ít nhất một ngày.", "Pick at least one day."); return }
         if (loai == HenGio.MO && goi == null) { vm.loi = t("Chọn app cần mở.", "Pick the app to open."); return }
         if (loai == HenGio.TAT && !duocTat) { vm.loi = t("Tắt tivi theo giờ cần Android 9 trở lên.", "Turning the TV off on a timer needs Android 9 or later."); return }
-        if (ds.size >= HenGio.TOI_DA) { vm.loi = t("Tối đa ${HenGio.TOI_DA} việc.", "At most ${HenGio.TOI_DA} entries."); return }
-        val v = HenGio.Viec(g, p, ngay, loai, if (loai == HenGio.TAT) null else goi)
-        if (v in ds) { vm.loi = t("Việc này đã có trong lịch.", "This entry is already in the schedule."); return }
+        val cu = dangSua
+        if (cu == null && ds.size >= HenGio.TOI_DA) { vm.loi = t("Tối đa ${HenGio.TOI_DA} việc.", "At most ${HenGio.TOI_DA} entries."); return }
+        // Việc đang sửa giữ công tắc bật / tắt của nó.
+        val v = HenGio.Viec(g, p, ngay, loai, if (loai == HenGio.TAT) null else goi, cu?.bat ?: true)
+        if (v != cu && v in ds) { vm.loi = t("Việc này đã có trong lịch.", "This entry is already in the schedule."); return }
         vm.loi = ""
-        val moi = HenGio.sapXep(ds + v)
+        val moi = HenGio.sapXep(ds.filter { it != cu } + v)
         ds.clear(); ds.addAll(moi)
+        dangSua = null
         gio = ""; chuaLuu = true; bao = ""
     }
 
-    fun xoa(v: HenGio.Viec) { ds.remove(v); chuaLuu = true; bao = "" }
+    /** Đưa việc [v] lên ô soạn để đổi giờ, ngày, loại việc hay app (31/10/2026); Cập nhật việc thì thay đúng việc đó. */
+    fun sua(v: HenGio.Viec) {
+        dangSua = v
+        loai = v.loai; gio = v.gioChu; ngay = v.ngay; goi = v.goi
+        vm.loi = ""; bao = ""
+    }
+
+    fun thoiSua() { dangSua = null; gio = ""; vm.loi = "" }
+
+    fun xoa(v: HenGio.Viec) {
+        ds.remove(v); chuaLuu = true; bao = ""
+        if (v == dangSua) thoiSua()
+    }
 
     fun doiBat(v: HenGio.Viec, bat: Boolean) {
         val i = ds.indexOf(v); if (i < 0) return
-        ds[i] = v.copy(bat = bat); chuaLuu = true; bao = ""
+        val moi = v.copy(bat = bat)
+        ds[i] = moi; chuaLuu = true; bao = ""
+        if (v == dangSua) dangSua = moi
     }
 
     /** Cài / cập nhật app phụ, bật dịch vụ của nó, gửi lịch; đọc lại để hiện việc kế tiếp. */
     fun luu() = vm.chay(t("Đang lưu hẹn giờ lên tivi…", "Saving the timer to the TV…")) {
         if (!duocCai) error(t("Hẹn giờ cần Android 8 trở lên, tivi này là Android ${vm.thongTin?.android}.", "The timer needs Android 8 or later; this TV runs Android ${vm.thongTin?.android}."))
+        dangSua?.let { error(t("Đang sửa việc ${it.gioChu}: bấm Cập nhật việc hoặc Thôi sửa trước.", "You're editing the ${it.gioChu} entry: tap Update the entry or Stop editing first.")) }
         vm.damBaoKetNoi()
         bao = ""
         val apk = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, "hengio.apk").readBytes() }
@@ -128,7 +149,7 @@ class HenGioTivi(private val vm: PhienLamViec) {
         bao = t("Đã gỡ Hẹn giờ khỏi tivi, lịch đã xoá.", "The Timer is removed from the TV; the schedule is gone.")
     }
 
-    fun quen() { ds.clear(); trangThai = null; daCai = false; chuaLuu = false; bao = ""; dsApp = emptyList(); goi = null }
+    fun quen() { ds.clear(); trangThai = null; daCai = false; chuaLuu = false; bao = ""; dsApp = emptyList(); goi = null; dangSua = null }
 
     /** Tên app hiện trong lịch: ô Kênh nhanh kèm kênh của nó, tên quen, hoặc đuôi tên gói. */
     fun tenApp(p: String): String = vm.kenhNhanh.tenO(p)
@@ -140,6 +161,9 @@ class HenGioTivi(private val vm: PhienLamViec) {
         HenGio.TAT -> t("Tắt tivi", "Turn the TV off")
         else -> t("Mở ", "Open ") + (v.goi?.let { tenApp(it) } ?: "?")
     }
+
+    /** Một dòng nhật ký trên tivi, nói cho người dùng: "Mở Kênh nhanh: VTV1 – đã mở". */
+    fun moTa(n: HenGio.NhatKy): String = HenGio.moTa(n, ::tenApp)
 
     companion object {
         private val THU = listOf("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật")

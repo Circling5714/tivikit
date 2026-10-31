@@ -2,6 +2,7 @@ package vn.tivikit.dulieu
 
 import org.json.JSONArray
 import org.json.JSONObject
+import vn.tivikit.t
 import java.time.Instant
 import java.time.ZoneId
 
@@ -49,6 +50,45 @@ object HenGio {
     fun sapXep(ds: List<Viec>): List<Viec> = ds.sortedWith(compareBy({ it.gio * 60 + it.phut }, { listOf(BAT, MO, TAT).indexOf(it.loai) }))
 
     data class NhatKy(val luc: Long, val viec: String, val kq: String)
+
+    /** Việc "thử đánh thức" (nút Thử) trong nhật ký. */
+    private const val VIEC_THU = "thu"
+    private val MA_SO = Regex("""^(hoan|hen)-(\d+)$""")
+
+    /**
+     * Một dòng nhật ký của app phụ, nói cho người dùng (31/10/2026): "Bật tivi – tivi đang chờ, đã bật lên", "Mở SmartTube
+     * – đã mở". [tenApp] đổi tên gói ra tên app. Mã chưa biết (app phụ bản sau) thì hiện nguyên mã.
+     */
+    fun moTa(n: NhatKy, tenApp: (String) -> String): String {
+        val viec = when {
+            n.viec == BAT -> t("Bật tivi", "Turn on")
+            n.viec == VIEC_THU -> t("Thử bật tivi", "Power-on test")
+            n.viec == TAT -> t("Tắt tivi", "Turn off")
+            n.viec.startsWith("$MO:") -> t("Mở ", "Open ") + tenApp(n.viec.removePrefix("$MO:"))
+            // App phụ 1.1.1 trở về trước ghi việc lỡ giờ chỉ bằng loại việc.
+            n.viec == MO -> t("Mở app", "Open an app")
+            else -> n.viec
+        }
+        val kq = MA_SO.matchEntire(n.kq)?.destructured?.let { (loai, so) ->
+            if (loai == "hoan") t("hoãn $so phút", "snoozed $so min") else t("hẹn tự bật sau $so giây", "set to come on in $so s")
+        } ?: when (n.kq) {
+            "danh-thuc" -> t("tivi đang chờ, đã bật lên", "the TV was in standby and came on")
+            "dang-bat" -> if (n.viec == VIEC_THU) t("tivi vẫn đang bật, chưa tắt bằng remote", "the TV was still on, not turned off with the remote")
+                else t("tivi đang bật sẵn", "the TV was already on")
+            "ok" -> if (n.viec == TAT) t("đã tắt", "done") else t("đã mở", "opened")
+            "mo-lai" -> t("mở lại vì launcher vừa đè lên", "reopened after the launcher came up on top")
+            "khong-mo-duoc" -> t("không mở được (app đã gỡ hay đang tắt?)", "couldn't open it (removed or disabled?)")
+            "tivi-dang-tat" -> t("bỏ qua vì tivi đang tắt", "skipped: the TV was off")
+            "bao-truoc" -> t("đã báo trước 1 phút", "showed the 1-minute warning")
+            "bao-tre" -> t("đã báo trễ, ngay trước giờ tắt", "showed the warning late, just before the time")
+            "da-tat-san" -> t("tivi đã tắt sẵn", "the TV was already off")
+            "dich-vu-tat" -> t("không tắt được vì dịch vụ Hẹn giờ đang tắt", "couldn't: the Timer service is off")
+            "khong-tat-duoc" -> t("tivi không cho tắt", "the TV didn't allow it")
+            "lo-gio" -> t("bỏ qua vì trễ quá 10 phút (tivi ngủ sâu hay vừa đổi giờ)", "skipped: over 10 minutes late (deep sleep or a clock change)")
+            else -> n.kq
+        }
+        return "$viec – $kq"
+    }
 
     /** Trạng thái app phụ trên tivi (content call … --method doc). */
     data class TrangThai(

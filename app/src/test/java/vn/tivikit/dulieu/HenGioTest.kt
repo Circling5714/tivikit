@@ -43,6 +43,22 @@ class HenGioTest {
         assertEquals(listOf(b, c, a), HenGio.sapXep(listOf(a, c, b)))
     }
 
+    /** Nhật ký app phụ nói bằng lời (31/10/2026); mã chưa biết thì hiện nguyên. */
+    @Test fun moTaNhatKy() {
+        val ten = { p: String -> if (p == "vn.tivikit.kenh") "Kênh nhanh: VTV1" else p }
+        fun mt(viec: String, kq: String) = HenGio.moTa(HenGio.NhatKy(0, viec, kq), ten)
+        assertEquals("Bật tivi – tivi đang chờ, đã bật lên", mt("bat", "danh-thuc"))
+        assertEquals("Thử bật tivi – hẹn tự bật sau 120 giây", mt("thu", "hen-120"))
+        assertEquals("Thử bật tivi – tivi vẫn đang bật, chưa tắt bằng remote", mt("thu", "dang-bat"))
+        assertEquals("Mở Kênh nhanh: VTV1 – mở lại vì launcher vừa đè lên", mt("mo:vn.tivikit.kenh", "mo-lai"))
+        assertEquals("Mở org.smarttube.stable – đã mở", mt("mo:org.smarttube.stable", "ok"))
+        assertEquals("Tắt tivi – hoãn 30 phút", mt("tat", "hoan-30"))
+        assertEquals("Tắt tivi – đã tắt", mt("tat", "ok"))
+        // App phụ 1.1.1 ghi việc lỡ giờ chỉ bằng loại việc.
+        assertEquals("Mở app – bỏ qua vì trễ quá 10 phút (tivi ngủ sâu hay vừa đổi giờ)", mt("mo", "lo-gio"))
+        assertEquals("viec-moi – ma-moi", mt("viec-moi", "ma-moi"))
+    }
+
     @Test fun trangThai() {
         val j = JSONObject("""{"lich":[{"gio":6,"phut":30,"ngay":[1,2],"loai":"bat"}],"keTiep":1792971000000,"hoanDen":0,
             "dichVuChay":true,"chinhXac":false,"dangBat":true,"bayGio":1793000000000,"muiGio":"Asia/Ho_Chi_Minh",

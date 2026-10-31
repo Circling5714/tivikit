@@ -1,6 +1,7 @@
 package vn.tivikit.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -57,7 +59,7 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
             if (tt.nhatKy.isNotEmpty()) Gap(t("Lần chạy gần đây", "Recent runs"), Icons.Rounded.History) {
                 tt.nhatKy.takeLast(8).reversed().forEach { n ->
                     val (g, thu) = HenGio.gioCua(n.luc, tt.muiGio)
-                    Phu("$g ${HenGioTivi.tenThu(thu)} · ${n.viec} · ${n.kq}")
+                    Phu("$g ${HenGioTivi.tenThu(thu)} · ${h.moTa(n)}")
                 }
             }
             TextButton(onClick = { h.lamMoi() }, enabled = !vm.dangBan) {
@@ -69,19 +71,25 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
     The(t("Lịch", "Schedule"), Icons.Rounded.Schedule) {
         if (h.ds.isEmpty()) Phu(t("Chưa có việc nào. Thêm ở ô bên dưới.", "Nothing yet. Add entries below."))
         h.ds.forEach { v ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(The2).padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            val dangSua = v == h.dangSua
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(The2)
+                .border(1.dp, if (dangSua) Nhan else Color.Transparent, RoundedCornerShape(14.dp)).padding(start = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     Text(v.gioChu + " · " + h.moTa(v), fontWeight = FontWeight.SemiBold, color = if (v.bat) ChuChinh else ChuPhu)
                     Phu(if (v.ngay.size == 7) t("Mọi ngày", "Every day") else v.ngay.sorted().joinToString(" ") { t(TEN_THU[it - 1], TEN_THU_EN[it - 1]) })
                 }
                 CongTac(v.bat) { h.doiBat(v, it) }
+                IconButton(onClick = { h.sua(v) }, enabled = !vm.dangBan) { Icon(Icons.Rounded.Edit, t("Sửa", "Edit"), tint = ChuPhu) }
                 IconButton(onClick = { h.xoa(v) }, enabled = !vm.dangBan) { Icon(Icons.Rounded.DeleteOutline, t("Xoá", "Delete"), tint = ChuPhu) }
             }
         }
         if (h.chuaLuu) Phu(t("Có thay đổi chưa lưu lên tivi.", "There are changes not saved to the TV yet."), Cam)
     }
 
-    The(t("Thêm việc", "Add an entry"), Icons.Rounded.AddAlarm) {
+    val sua = h.dangSua
+    The(if (sua != null) t("Sửa việc ${sua.gioChu}", "Edit the ${sua.gioChu} entry") else t("Thêm việc", "Add an entry"),
+        if (sua != null) Icons.Rounded.Edit else Icons.Rounded.AddAlarm) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ChonChip(t("Bật tivi", "Turn on"), h.loai == HenGio.BAT) { h.loai = HenGio.BAT }
             if (h.duocTat) ChonChip(t("Tắt tivi", "Turn off"), h.loai == HenGio.TAT) { h.loai = HenGio.TAT; h.goi = null }
@@ -109,7 +117,9 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
             }
         } else Phu(t("Trước 1 phút tivi hiện lời báo có nút \"Hoãn 30 phút\"; không ai bấm thì tivi tắt đúng giờ.",
             "A minute before, the TV shows a notice with \"Snooze 30 min\"; if nobody presses anything it turns off on time."))
-        NutPhu(t("Thêm vào lịch", "Add to the schedule"), Icons.Rounded.Add, enabled = !vm.dangBan) { h.them() }
+        NutPhu(if (sua != null) t("Cập nhật việc", "Update the entry") else t("Thêm vào lịch", "Add to the schedule"),
+            if (sua != null) Icons.Rounded.Check else Icons.Rounded.Add, enabled = !vm.dangBan) { h.them() }
+        if (sua != null) TextButton(onClick = { h.thoiSua() }, enabled = !vm.dangBan) { Text(t("Thôi sửa", "Stop editing")) }
     }
 
     NutChinh(t("Lưu lên tivi", "Save to the TV"), enabled = !vm.dangBan && h.duocCai && (h.chuaLuu || !h.daCai || h.trangThai?.dichVuChay == false), icon = Icons.Rounded.Check) { h.luu() }
