@@ -264,6 +264,10 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | Gửi một ảnh, bấm 🖼 Đặt làm ảnh nền Home (tivi có TiviKit Launcher) | Home của TiviKit Launcher đổi nền thành ảnh đó (cắt giữa 16:9); ↩️ thì về ảnh nền mặc định |
 | 📺 Kênh nhanh → 📺 Tất cả kênh → bấm VTV3, HTV7 | Map Voice mở kênh bằng app kênh đã chọn (TV360 / VTVgo / FPT Play) |
 | Một điện thoại lạ (chưa liên kết) cast YouTube lên tivi | Tivi hỏi trên màn hình, đồng thời bot nhắn chủ kèm nút; bấm ✅ / 📅 / ⏱ / 🚫 thì máy đó cast được / bị chặn |
+| Khoá trẻ em 1.8 đang khoá cả tivi: dùng remote chọn 📩 Xin thêm giờ, OK | Màn khoá báo "Đã nhắn bố mẹ qua Telegram"; bot nhắn chủ kèm 🔓 30 phút / 1 giờ / ❌ Không cho |
+| Chủ bấm ❌ Không cho; lần khác bấm 🔓 30 phút rồi gõ mã 6 số | Màn khoá báo "Bố mẹ chưa cho xem thêm"; gõ mã đúng thì tivi mở 30 phút |
+| 🔒 Khoá trẻ em → 📊 Xem 7 ngày | Thời gian xem từng ngày (so với giới hạn) và ba app xem nhiều nhất |
+| Bật Báo tin, Hẹn giờ 1.3 hẹn tắt tivi 2 phút nữa | 1 phút trước giờ bot nhắn "sẽ tắt lúc …" kèm 😴 Hoãn 30 phút / 📴 Tắt luôn; bấm Hoãn thì màn báo trước trên tivi đóng, tivi không tắt |
 
 - **Thành viên:** cùng các việc trên trừ Hẹn giờ, Khoá trẻ em, Làm mới, chụp màn hình, tắt / khởi động lại tivi, buộc dừng app
   (bot báo chỉ chủ làm được).
