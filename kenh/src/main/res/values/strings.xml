@@ -3,4 +3,5 @@
     <!-- ten_app (tên app) đặt theo từng ô trong build.gradle.kts (resValue). -->
     <string name="chua_co_tv360">Tivi chưa có TV360. Cài TV360 từ CH Play rồi bấm lại.</string>
     <string name="chua_co_vtvgo">Tivi chưa có VTVgo. Cài VTVgo từ CH Play rồi bấm lại.</string>
+    <string name="chua_co_fptplay">Tivi chưa có FPT Play. Cài FPT Play từ CH Play rồi bấm lại.</string>
 </resources>

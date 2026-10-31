@@ -8,7 +8,7 @@ import org.json.JSONObject
  * app phụ nhỏ trên tivi (module kenh/, flavor o1 … o6) mở thẳng một kênh rồi tự đóng. Mỗi ô một app vì Home sạch mở app
  * và gán nút remote theo tên gói. Ô TV360: kênh chọn theo số kênh TV360 hiện trong danh sách kênh (shortcutKeyboard, 3
  * chữ số), tên dự phòng khi TV360 đổi số. Ô VTVgo (26/10/2026, trước là ô link của Home sạch, KenhVtvGo): mã kênh của
- * VTVgo. Ô trên Home sạch mang tên kênh qua app_labels.
+ * VTVgo. Ô FPT Play (31/10/2026, KenhFpt): mã kênh của FPT Play. Ô trên Home sạch mang tên kênh qua app_labels.
  */
 object KenhNhanh {
     /** Số ô kênh tối đa (số flavor của module kenh/). */
@@ -17,6 +17,11 @@ object KenhNhanh {
     const val GOI = "vn.tivikit.kenh"
     const val TV360 = "com.viettel.tv360.tv"
     const val VTVGO = KenhVtvGo.GOI
+    const val FPTPLAY = KenhFpt.GOI
+    /** Loại ô (khoá "app" trong JSON của app phụ; ô TV360 không ghi). */
+    const val LOAI_TV360 = "tv360"
+    const val LOAI_VTVGO = "vtvgo"
+    const val LOAI_FPT = "fptplay"
 
     fun goiCua(o: Int): String = if (o == 1) GOI else "$GOI$o"
     /** Màn mở kênh của ô [o] (bấm ô / nút remote cũng vào đây). */
@@ -27,14 +32,24 @@ object KenhNhanh {
     fun oCua(p: String): Int? = (1..SO_O).firstOrNull { goiCua(it) == p }
     fun laGoiKenh(p: String): Boolean = oCua(p) != null
 
-    /** Kênh của một ô: TV360 theo số kênh [so]; có [ma] thì là ô VTVgo (mã kênh của vtvgo://play), [so] rỗng. */
-    data class Kenh(val so: String, val ten: String, val ma: String = "") {
-        val laVtvGo: Boolean get() = ma.isNotEmpty()
+    /**
+     * Kênh của một ô: TV360 theo số kênh [so]; ô VTVgo / FPT Play ([loai]) theo mã kênh [ma] của app đó (vtvgo://play,
+     * fptplay.vn/xem-truyen-hinh), [so] rỗng. Có [ma] mà không nói [loai] là ô VTVgo (như trước khi có ô FPT Play).
+     */
+    data class Kenh(val so: String, val ten: String, val ma: String = "", val loai: String = if (ma.isEmpty()) LOAI_TV360 else LOAI_VTVGO) {
+        val laVtvGo: Boolean get() = loai == LOAI_VTVGO
+        val laFpt: Boolean get() = loai == LOAI_FPT
+        val laTv360: Boolean get() = loai == LOAI_TV360
         /** App mở kênh này. */
-        val app: String get() = if (laVtvGo) VTVGO else TV360
+        val app: String get() = when (loai) { LOAI_VTVGO -> VTVGO; LOAI_FPT -> FPTPLAY; else -> TV360 }
+        /** Tên app mở kênh này, cho người dùng. */
+        val tenApp: String get() = tenAppCua(app)
         /** Cùng một kênh trên cùng app (để không làm hai ô một kênh). */
-        fun trung(k: Kenh): Boolean = laVtvGo == k.laVtvGo && if (laVtvGo) ma == k.ma else so == k.so
+        fun trung(k: Kenh): Boolean = loai == k.loai && if (laTv360) so == k.so else ma == k.ma
     }
+
+    /** Tên app xem kênh [goi] (TV360 / VTVgo / FPT Play), cho người dùng. */
+    fun tenAppCua(goi: String): String = when (goi) { VTVGO -> "VTVgo"; FPTPLAY -> "FPT Play"; else -> "TV360" }
 
     /** Kênh hay xem, số theo danh sách kênh trên tv360.vn (25/10/2026). */
     val GOI_Y = listOf(
@@ -57,16 +72,17 @@ object KenhNhanh {
      * TiviKitLauncher.cauHinh: lệnh qua libadb nên thuần ASCII ("Hà Nội 1" làm hỏng lệnh, 28/10/2026).
      */
     fun json(k: Kenh): String = TiviKitLauncher.chiAscii(JSONObject().put("ten", k.ten)
-        .apply { if (k.laVtvGo) put("app", "vtvgo").put("ma", k.ma) else put("so", k.so) }.toString())
+        .apply { if (k.laTv360) put("so", k.so) else put("app", k.loai).put("ma", k.ma) }.toString())
 
     private val MA_GO = Regex("[A-Za-z0-9_-]{1,60}")
 
     fun tuJson(j: JSONObject?): Kenh? {
         if (j == null) return null
         val ten = j.optString("ten").trim()
-        if (j.optString("app") == "vtvgo") {
+        val loai = j.optString("app")
+        if (loai == LOAI_VTVGO || loai == LOAI_FPT) {
             val ma = j.optString("ma").trim()
-            return if (MA_GO.matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma) else null
+            return if (MA_GO.matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma, loai) else null
         }
         val so = chuanSo(j.optString("so")) ?: return null
         return Kenh(so, ten)

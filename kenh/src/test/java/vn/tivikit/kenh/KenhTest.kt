@@ -40,4 +40,24 @@ class KenhTest {
         // Ô TV360 cũ (chưa có khoá app) vẫn đọc ra ô TV360.
         assertFalse(Kenh.tuJson("""{"so":"3","ten":"VTV3"}""")!!.laVtvGo)
     }
+
+    /** Ô FPT Play (31/10/2026): mã kênh của FPT Play (vtv1-hd), link màn xem truyền hình của FPT Play. */
+    @Test fun fpt_jsonKhuHoi_vaLink() {
+        val k = Kenh("", "VTV1", "vtv1-hd", Kenh.APP_FPT)
+        assertTrue(k.laFpt)
+        assertFalse(k.laVtvGo)
+        val j = org.json.JSONObject(k.json())
+        assertEquals(listOf("fptplay", "vtv1-hd", "VTV1"), listOf(j.getString("app"), j.getString("ma"), j.getString("ten")))
+        assertFalse(j.has("so"))
+        assertEquals(k, Kenh.tuJson(k.json()))
+        assertEquals(Kenh("", "HTV Thể Thao", "htvc-the-thao", Kenh.APP_FPT), Kenh.tuJson("""{"app":"fptplay","ma":" htvc-the-thao ","ten":"HTV Thể Thao"}"""))
+        assertNull(Kenh.tuJson("""{"app":"fptplay","ma":"vtv1 hd","ten":"VTV1"}"""))
+        assertNull(Kenh.tuJson("""{"app":"fptplay","ma":"vtv1-hd'; reboot","ten":"VTV1"}"""))
+        assertEquals("https://fptplay.vn/xem-truyen-hinh/vtv1-hd", Kenh.linkFpt("vtv1-hd"))
+        // Ô VTVgo và TV360 giữ nguyên dạng JSON cũ.
+        assertEquals("vtvgo", org.json.JSONObject(Kenh("", "VTV3", "3").json()).getString("app"))
+        val tv360 = org.json.JSONObject(Kenh("001", "VTV1").json())
+        assertEquals("001", tv360.getString("so"))
+        assertFalse(tv360.has("app"))
+    }
 }

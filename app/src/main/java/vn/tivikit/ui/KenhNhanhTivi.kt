@@ -3,6 +3,7 @@ package vn.tivikit.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import vn.tivikit.dulieu.KenhFpt
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.PhimRieng
@@ -10,8 +11,9 @@ import vn.tivikit.dulieu.TiviKitLauncher
 import vn.tivikit.t
 
 /**
- * Kênh nhanh (25/10/2026, muốn một nút mở thẳng VTV1; cùng ngày thành nhiều ô; 26/10/2026 thêm ô VTVgo): tối đa
- * KenhNhanh.SO_O ô kênh, mỗi ô một app phụ trên tivi (module kenh/) mở thẳng một kênh trên TV360 hoặc VTVgo. Thêm / sửa
+ * Kênh nhanh (25/10/2026, muốn một nút mở thẳng VTV1; cùng ngày thành nhiều ô; 26/10/2026 thêm ô VTVgo; 31/10/2026 ô
+ * FPT Play): tối đa KenhNhanh.SO_O ô kênh, mỗi ô một app phụ trên tivi (module kenh/) mở thẳng một kênh trên TV360, VTVgo
+ * hoặc FPT Play. Thêm / sửa
  * ô (cài app của ô, đặt kênh, đặt tên ô theo tên kênh và logo kênh trên Home sạch và TiviKit Launcher, thêm vào dock Home
  * sạch nếu muốn), bấm thử, gán nút remote (màn Nút remote chọn sẵn ô đó), bỏ ô. Ô kênh VTVgo kiểu cũ (ô link của Home
  * sạch, KenhVtvGo; không gán được nút remote) chuyển được thành ô ở đây.
@@ -26,19 +28,30 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     var ds by mutableStateOf<List<O>>(emptyList())
         private set
 
-    // Ô soạn: thêm ô mới ([dangSua] null) hay sửa ô [dangSua]. [app]: 0 = TV360 (số + tên kênh), 1 = VTVgo ([kenhGo]).
+    // Ô soạn: thêm ô mới ([dangSua] null) hay sửa ô [dangSua]. [app]: 0 = TV360 (số + tên kênh), 1 = VTVgo ([kenhGo]),
+    // 2 = FPT Play ([kenhFpt]).
     var app by mutableStateOf(0)
     var so by mutableStateOf("1")
     var ten by mutableStateOf("VTV1")
     /** Kênh VTVgo của ô soạn: (tên, mã kênh). */
     var kenhGo by mutableStateOf<Pair<String, String>?>(null)
         private set
+    /** Kênh FPT Play của ô soạn: (tên, mã kênh). */
+    var kenhFpt by mutableStateOf<Pair<String, String>?>(null)
+        private set
+    /** Danh sách kênh FPT Play (đóng sẵn trong app, KenhFpt). */
+    var dsFpt by mutableStateOf<List<KenhFpt.Kenh>>(emptyList())
+        private set
+    var moChonFpt by mutableStateOf(false)
     var trongDock by mutableStateOf(true)
     var dangSua by mutableStateOf<Int?>(null)
         private set
 
     /** TV360 bản tivi đang cài và bật. */
     var coTv360 by mutableStateOf(true)
+        private set
+    /** FPT Play bản tivi đang cài và bật. */
+    var coFpt by mutableStateOf(false)
         private set
     /** Ô kênh VTVgo kiểu cũ đang có trên Home sạch (link_tiles): (tên, mã kênh). */
     var kenhGoCu by mutableStateOf<List<Pair<String, String>>>(emptyList())
@@ -56,8 +69,13 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         vm.damBaoKetNoi()
         bao = ""; baoLech = false; dangSua = null
         docLai()
-        // Ô soạn mở sẵn app tivi đang có (chỉ có VTVgo thì VTVgo), gợi ý kênh hay xem đầu tiên chưa có ô.
-        app = if (!coTv360 && vm.coVtvGo) 1 else 0
+        // Ô soạn mở sẵn app tivi đang có (không có TV360 thì VTVgo, rồi FPT Play), gợi ý kênh hay xem đầu tiên chưa có ô.
+        app = when {
+            coTv360 -> 0
+            vm.coVtvGo -> 1
+            coFpt -> 2
+            else -> 0
+        }
         goiYKeTiep()
         trongDock = true
         vm.man = Man.KENH_NHANH
@@ -71,6 +89,8 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         val tt = vm.io { vm.tv.docTrangThai() }
         vm.trangThai = tt
         coTv360 = KenhNhanh.TV360 in tt.caiDat && KenhNhanh.TV360 !in tt.daTat
+        coFpt = KenhNhanh.FPTPLAY in tt.caiDat && KenhNhanh.FPTPLAY !in tt.daTat
+        if (dsFpt.isEmpty()) dsFpt = vm.io { KenhFpt.ds(vm.ctx) }
         val j = if (vm.daCoHomeSach) vm.io { vm.tv.docCauHinhTv() } else null
         val dock = j?.let { KenhNhanh.trongDock(it) }.orEmpty()
         j?.let { vm.tenKenh.clear(); vm.tenKenh.putAll(KenhNhanh.tenTrong(it)); vm.anhOKenh.clear(); vm.anhOKenh.putAll(KenhNhanh.anhTrong(it)) }
@@ -84,10 +104,12 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
 
     /**
      * Logo kênh [k] cho ô: ảnh kênh của VTVgo (ô VTVgo theo mã kênh, ô TV360 theo tên trùng một kênh VTVgo: VTV1–9, HTV9,
-     * Hà Nội 1, ANTV, QPVN…), tải một lần rồi cất (KenhVtvGo.anhO). null nếu không có / không tải được: ô hiện biểu tượng
-     * và tên như trước. App không đóng sẵn logo của đài. [dsGo] = danh sách kênh VTVgo đã lấy (nhiều ô một lượt).
+     * Hà Nội 1, ANTV, QPVN…), ô FPT Play lấy ảnh kênh của FPT Play; tải một lần rồi cất (KenhVtvGo.anhO). null nếu không có /
+     * không tải được: ô hiện biểu tượng và tên như trước. App không đóng sẵn logo của đài. [dsGo] = danh sách kênh VTVgo đã
+     * lấy (nhiều ô một lượt).
      */
     private suspend fun logo(k: KenhNhanh.Kenh, dsGo: List<KenhVtvGo.Kenh>? = null): ByteArray? = vm.io {
+        if (k.laFpt) return@io KenhVtvGo.anhO(vm.ctx, k.ma, KenhFpt.ds(vm.ctx).firstOrNull { it.ma == k.ma }?.anh, KenhVtvGo.THU_MUC_FPT)
         val ds = dsGo ?: layDsGo()
         if (k.laVtvGo) KenhVtvGo.anhO(vm.ctx, k.ma, ds.firstOrNull { it.ma == k.ma }?.anh)
         else KenhVtvGo.timTheoTen(ds, k.ten)?.let { KenhVtvGo.anhO(vm.ctx, it.ma, it.anh) }
@@ -101,31 +123,47 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
 
     private fun coO(k: KenhNhanh.Kenh, truO: Int? = null) = ds.firstOrNull { it.so != truO && it.kenh?.trung(k) == true }
 
-    /** Ô soạn chuyển sang kênh hay xem kế tiếp chưa có ô, cho cả TV360 lẫn VTVgo. */
+    /** Ô soạn chuyển sang kênh hay xem kế tiếp chưa có ô, cho cả TV360, VTVgo lẫn FPT Play. */
     private fun goiYKeTiep() {
         KenhNhanh.GOI_Y.firstOrNull { coO(it) == null }?.let { chon(it) }
         KenhVtvGo.VTV.firstOrNull { (ten, ma, _) -> coO(KenhNhanh.Kenh("", ten, ma)) == null }?.let { (ten, ma, _) -> kenhGo = ten to ma }
+        KenhFpt.hayXem(dsFpt).firstOrNull { coO(oFpt(it.tenO, it.ma)) == null }?.let { kenhFpt = it.tenO to it.ma }
     }
+
+    private fun oFpt(tenK: String, ma: String) = KenhNhanh.Kenh("", tenK, ma, KenhNhanh.LOAI_FPT)
 
     fun chon(k: KenhNhanh.Kenh) { so = k.so.trimStart('0'); ten = k.ten }
 
     fun chonGo(tenK: String, ma: String) { kenhGo = tenK to ma }
 
+    fun chonFpt(tenK: String, ma: String) { kenhFpt = tenK to ma }
+
     /** Kênh [ma] trên VTVgo đã có ô (trừ ô đang sửa): để đánh dấu ✓ ở chỗ chọn kênh. */
     fun daCoGo(ma: String): Boolean = coO(KenhNhanh.Kenh("", "", ma), dangSua) != null
+    fun daCoFpt(ma: String): Boolean = coO(oFpt("", ma), dangSua) != null
     fun daCoTv360(g: KenhNhanh.Kenh): Boolean = coO(g, dangSua) != null
 
     /** Đưa ô [o] lên ô soạn để sửa kênh / dock. */
     fun sua(o: O) {
         dangSua = o.so
-        o.kenh?.let { k -> if (k.laVtvGo) { app = 1; kenhGo = k.ten to k.ma } else { app = 0; chon(k) } }
+        o.kenh?.let { k ->
+            when {
+                k.laFpt -> { app = 2; kenhFpt = k.ten to k.ma }
+                k.laVtvGo -> { app = 1; kenhGo = k.ten to k.ma }
+                else -> { app = 0; chon(k) }
+            }
+        }
         trongDock = o.trongDock; bao = ""
     }
 
     fun thoiSua() { dangSua = null; bao = "" }
 
-    /** Kênh theo ô soạn; lỗi nếu số kênh sai / chưa chọn kênh VTVgo. */
+    /** Kênh theo ô soạn; lỗi nếu số kênh sai / chưa chọn kênh VTVgo, FPT Play. */
     private fun kenhNhap(): KenhNhanh.Kenh {
+        if (app == 2) {
+            val (tenK, ma) = kenhFpt ?: error(t("Chọn một kênh FPT Play.", "Pick an FPT Play channel."))
+            return oFpt(KenhNhanh.tenSach(tenK).ifBlank { ma }, ma)
+        }
         if (app == 1) {
             val (tenK, ma) = kenhGo ?: error(t("Chọn một kênh VTVgo.", "Pick a VTVgo channel."))
             return KenhNhanh.Kenh("", KenhNhanh.tenSach(tenK).ifBlank { ma }, ma)
@@ -146,7 +184,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         val them = themO(o, k, trongDock)
         dangSua = null
         docLai()
-        bao = (if (k.laVtvGo) t("Đã lưu ô $o: ${k.ten} (mở trên VTVgo).", "Saved tile $o: ${k.ten} (opens in VTVgo).")
+        bao = (if (!k.laTv360) t("Đã lưu ô $o: ${k.ten} (mở trên ${k.tenApp}).", "Saved tile $o: ${k.ten} (opens in ${k.tenApp}).")
             else t("Đã lưu ô $o: ${k.ten} (số ${k.so.trimStart('0')} trên TV360).", "Saved tile $o: ${k.ten} (number ${k.so.trimStart('0')} in TV360).")) + them
         goiYKeTiep()
     }
@@ -233,16 +271,15 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
                 " ${con.size} old tiles are left because no tile is free: remove one and move again.")
     }
 
-    /** Mở ô [o] trên tivi như bấm ô, xem app của ô (TV360 / VTVgo) có lên không. */
+    /** Mở ô [o] trên tivi như bấm ô, xem app của ô (TV360 / VTVgo / FPT Play) có lên không. */
     fun thu(o: O) = vm.chay(t("Đang mở ô ${o.kenh?.ten ?: o.so} trên tivi…", "Opening tile ${o.kenh?.ten ?: o.so} on the TV…")) {
         vm.damBaoKetNoi()
         bao = ""; baoLech = false
         val out = vm.io { vm.tv.moKenhNhanh(o.so) }
         if (out.contains("Error")) error(t("Tivi không mở được ô này: ${out.trim().lines().lastOrNull()}. Bấm Sửa rồi lưu lại ô.",
             "The TV couldn't open this tile: ${out.trim().lines().lastOrNull()}. Tap Edit and save the tile again."))
-        val goVtv = o.kenh?.laVtvGo == true
-        val goiApp = if (goVtv) KenhNhanh.VTVGO else KenhNhanh.TV360
-        val tenApp = if (goVtv) "VTVgo" else "TV360"
+        val goiApp = o.kenh?.app ?: KenhNhanh.TV360
+        val tenApp = KenhNhanh.tenAppCua(goiApp)
         // App mở nguội mất vài giây (màn chào, tải danh sách kênh).
         var g = ""
         for (i in 1..10) {
@@ -254,21 +291,27 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         baoLech = g != goiApp
         bao = if (!baoLech) t("$tenApp đã mở. Nhìn tivi: đang phát $tenK là được. $tenApp chưa đăng nhập hoặc hiện quảng cáo thì bấm qua rồi thử lại.",
                 "$tenApp is open. Look at the TV: if $tenK is playing, it works. If $tenApp asks you to sign in or shows an ad, get past it and test again.")
-            else if (!(if (goVtv) vm.coVtvGo else coTv360)) t("Tivi chưa có $tenApp (hoặc đang bị tắt): cài $tenApp từ CH Play, hoặc bật lại ở Quản lý app.",
+            else if (!coApp(goiApp)) t("Tivi chưa có $tenApp (hoặc đang bị tắt): cài $tenApp từ CH Play, hoặc bật lại ở Quản lý app.",
                 "$tenApp isn't on the TV (or is disabled): install it from the Play Store, or re-enable it in Manage apps.")
             else t("$tenApp chưa lên trước mặt (đang thấy ${g.ifBlank { "không rõ" }}). Thử lại; vẫn vậy thì mở $tenApp một lần bằng tay rồi thử.",
                 "$tenApp didn't come to the front (seeing ${g.ifBlank { "unknown" }}). Try again; if it persists, open $tenApp by hand once and test.")
     }
 
+    private fun coApp(goi: String) = when (goi) {
+        KenhNhanh.VTVGO -> vm.coVtvGo
+        KenhNhanh.FPTPLAY -> coFpt
+        else -> coTv360
+    }
+
     /** Sang màn Nút remote với ô [o] chọn sẵn. */
     fun ganNut(o: O) { vm.ganPhim.mo(goiSan = o.goi) }
 
-    /** Mở trang của TV360 / VTVgo ([goi]) trên CH Play của tivi. */
+    /** Mở trang của TV360 / VTVgo / FPT Play ([goi]) trên CH Play của tivi. */
     fun moCHPlay(goi: String) = vm.chay(t("Đang mở CH Play trên tivi…", "Opening the Play Store on the TV…")) {
         vm.damBaoKetNoi()
         val out = vm.io { vm.tv.moCHPlay(goi) }
         if (out.contains("Error")) error(t("Tivi không mở được CH Play: ${out.trim().lines().lastOrNull()}", "The TV couldn't open the Play Store: ${out.trim().lines().lastOrNull()}"))
-        val tenApp = if (goi == KenhNhanh.VTVGO) "VTVgo" else "TV360"
+        val tenApp = KenhNhanh.tenAppCua(goi)
         bao = t("Đã mở trang $tenApp trên CH Play của tivi: cài xong, mở $tenApp một lần, rồi mở lại màn này.",
             "$tenApp's Play Store page is open on the TV: install it, open it once, then reopen this screen.")
         baoLech = false
@@ -304,7 +347,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
 
     /** Kết nối tivi khác. */
     fun quen() {
-        ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true
-        app = 0; kenhGo = null; kenhGoCu = emptyList(); homeCu = false
+        ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true; coFpt = false
+        app = 0; kenhGo = null; kenhFpt = null; moChonFpt = false; kenhGoCu = emptyList(); homeCu = false
     }
 }

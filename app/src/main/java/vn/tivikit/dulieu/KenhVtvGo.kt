@@ -126,19 +126,22 @@ object KenhVtvGo {
         return out
     }
 
+    /** Thư mục cất ảnh ô kênh FPT Play (anhO), riêng với ảnh VTVgo vì mã kênh hai app có thể trùng. */
+    const val THU_MUC_FPT = "kenh-fpt"
+
     /**
-     * Ảnh ô cho kênh [ma]: đã tải lần trước thì lấy trong bộ nhớ đệm của app, không thì tải thumbnail [url] của VTVgo,
-     * thu về 320×180 rồi cất. null nếu không tải được (launcher vẽ ô chữ).
+     * Ảnh ô cho kênh [ma]: đã tải lần trước thì lấy trong bộ nhớ đệm của app ([thuMuc]), không thì tải ảnh kênh [url] (của
+     * VTVgo, hay của FPT Play với ô FPT Play), thu về 320×180 rồi cất. null nếu không tải được (launcher vẽ ô chữ).
      */
-    fun anhO(ctx: Context, ma: String, url: String?): ByteArray? {
-        val f = File(File(ctx.cacheDir, "kenh-vtvgo").apply { mkdirs() }, "$ma.jpg")
+    fun anhO(ctx: Context, ma: String, url: String?, thuMuc: String = "kenh-vtvgo"): ByteArray? {
+        val f = File(File(ctx.cacheDir, thuMuc).apply { mkdirs() }, "$ma.jpg")
         if (f.isFile && f.length() > 0) return runCatching { f.readBytes() }.getOrNull()
         val b = url?.let { taiAnh(it) } ?: return null
         runCatching { f.writeBytes(b) }
         return b
     }
 
-    /** Ảnh ô kênh 320×180 JPEG từ thumbnail của VTVgo (webp), null nếu không tải được. */
+    /** Ảnh ô kênh 320×180 JPEG từ ảnh kênh (thumbnail webp của VTVgo, jpg / png của FPT Play), null nếu không tải được. */
     private fun taiAnh(url: String): ByteArray? = runCatching {
         if (!url.startsWith("https://")) return null
         val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection

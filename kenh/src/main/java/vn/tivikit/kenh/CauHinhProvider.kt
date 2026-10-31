@@ -10,6 +10,8 @@ import android.os.Process
 /**
  * TiviKit đặt / đọc kênh qua ADB:
  *   content call --uri content://vn.tivikit.kenh --method dat --arg '{"so":"001","ten":"VTV1"}'
+ *   content call --uri content://vn.tivikit.kenh --method dat --arg '{"app":"vtvgo","ma":"3","ten":"VTV3"}'
+ *   content call --uri content://vn.tivikit.kenh --method dat --arg '{"app":"fptplay","ma":"vtv1-hd","ten":"VTV1"}'
  *   content call --uri content://vn.tivikit.kenh --method doc
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được ô này mở gì.
  */

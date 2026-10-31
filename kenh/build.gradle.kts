@@ -5,8 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// App "Kênh nhanh" cài lên tivi (25/10/2026): mở thẳng một kênh trực tiếp của TV360 (từ 26/10/2026 cả VTVgo) khi bấm ô
-// trên Home sạch hoặc nút remote đã gán. iCM_CleanTV đóng sẵn APK này trong assets (build-nguon.ps1 / scripts/dung-kenh.sh)
+// App "Kênh nhanh" cài lên tivi (25/10/2026): mở thẳng một kênh trực tiếp của TV360 (từ 26/10/2026 cả VTVgo, 31/10/2026 cả
+// FPT Play) khi bấm ô trên Home sạch hoặc nút remote đã gán. iCM_CleanTV đóng sẵn APK này trong assets (build-nguon.ps1 / scripts/dung-kenh.sh)
 // và cài khi người dùng lưu kênh. Ký cùng khoá với iCM_CleanTV.
 val kyFile = rootProject.file("ky.properties")
 val ky = Properties().apply { if (kyFile.exists()) kyFile.inputStream().use { load(it) } }
@@ -22,8 +22,8 @@ android {
         applicationId = "vn.tivikit.kenh"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
     // Nhiều ô kênh (25/10/2026): Home sạch mở app và gán nút remote theo tên gói, nên mỗi ô là một app riêng — cùng mã,
     // khác tên gói. Ô 1 giữ tên gói cũ để bản một ô trước đây cài đè được (giữ kênh đã đặt).

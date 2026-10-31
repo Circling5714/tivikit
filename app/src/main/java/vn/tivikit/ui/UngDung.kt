@@ -980,10 +980,10 @@ private fun TheHomeNoiDung(vm: PhienLamViec) {
             }
         }
     }
-    // Ô kênh truyền hình (TV360, VTVgo) chọn ở màn Kênh nhanh (26/10/2026: gom một chỗ); ở đây chỉ trỏ sang.
+    // Ô kênh truyền hình (TV360, VTVgo, FPT Play) chọn ở màn Kênh nhanh (26/10/2026: gom một chỗ); ở đây chỉ trỏ sang.
     The(t("Kênh truyền hình trên màn chính", "TV channels on Home"), Icons.Rounded.LiveTv) {
-        Phu(t("Ô kênh mở thẳng VTV1, HTV7… trên TV360 hoặc VTVgo chọn ở màn Kênh nhanh.",
-            "Tiles that open VTV1, HTV7… straight in TV360 or VTVgo are set up under Quick channel."))
+        Phu(t("Ô kênh mở thẳng VTV1, HTV7… trên TV360, VTVgo hoặc FPT Play chọn ở màn Kênh nhanh.",
+            "Tiles that open VTV1, HTV7… straight in TV360, VTVgo or FPT Play are set up under Quick channel."))
         NutPhu(t("Mở Kênh nhanh", "Open Quick channel"), Icons.Rounded.LiveTv, enabled = !vm.dangBan) { vm.kenhNhanh.mo() }
     }
     The(t("Thời tiết", "Weather"), Icons.Rounded.WbSunny) { ChonNoiThoiTiet(vm) }

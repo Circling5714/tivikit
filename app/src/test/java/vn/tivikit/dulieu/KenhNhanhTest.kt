@@ -64,6 +64,23 @@ class KenhNhanhTest {
         assertFalse(KenhNhanh.Kenh("003", "VTV3").trung(KenhNhanh.Kenh("", "VTV3", "003")))
     }
 
+    /** Ô FPT Play (31/10/2026): cùng dạng JSON với app phụ (module kenh/, Kenh.json), mở bằng FPT Play, không trùng ô VTVgo. */
+    @Test fun oFpt_json_vaTrung() {
+        val fpt = KenhNhanh.Kenh("", "VTV1", "vtv1-hd", KenhNhanh.LOAI_FPT)
+        val j = JSONObject(KenhNhanh.json(fpt))
+        assertEquals(listOf("fptplay", "vtv1-hd", "VTV1"), listOf(j.getString("app"), j.getString("ma"), j.getString("ten")))
+        assertFalse(j.has("so"))
+        assertEquals(fpt, KenhNhanh.tuJson(j))
+        assertTrue(fpt.laFpt)
+        assertFalse(fpt.laVtvGo)
+        assertEquals(KenhNhanh.FPTPLAY, fpt.app)
+        assertEquals("FPT Play", fpt.tenApp)
+        assertEquals("VTVgo", KenhNhanh.Kenh("", "VTV1", "1").tenApp)
+        assertTrue(fpt.trung(KenhNhanh.Kenh("", "VTV1 HD", "vtv1-hd", KenhNhanh.LOAI_FPT)))
+        assertFalse(fpt.trung(KenhNhanh.Kenh("", "VTV1", "vtv1-hd")))
+        assertNull(KenhNhanh.tuJson(JSONObject("""{"app":"fptplay","ma":"vtv1 hd","ten":"VTV1"}""")))
+    }
+
     /**
      * Logo ô (26/10/2026): app_banners "gói=kenh-o<n>" (tên khớp kenh-[a-z0-9]{1,24} mà Home sạch nhận), giữ ảnh người dùng
      * đặt cho app khác ở Nâng cao, bỏ được.

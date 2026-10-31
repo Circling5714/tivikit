@@ -13,17 +13,31 @@ import android.widget.Toast
  *   gọi khi nói "Xem VTV1 trên TV360"): lệnh SWITCH_CHANNEL kèm số kênh và tên kênh, TV360 tự tìm kênh trong danh sách
  *   của nó — đang tắt thì mở lên, đang chạy nền thì đưa lên, đang xem kênh khác thì chuyển kênh.
  * - VTVgo (26/10/2026): link vtvgo://play của kênh, như ô kênh của Home sạch.
+ * - FPT Play (31/10/2026): link kênh fptplay.vn/xem-truyen-hinh/<mã>, FPT Play bản tivi mở thẳng màn xem kênh đó (chưa
+ *   đăng nhập thì FPT Play hỏi đăng nhập).
  * App không nhận (bản sau đổi cổng / link) thì mở app như thường; chưa cài thì mở trang của app trên CH Play.
  */
 class MoKenh : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         val k = Kho(this).kenh
-        val app = if (k.laVtvGo) Kenh.VTVGO else Kenh.TV360
-        val lenh = if (k.laVtvGo) Intent(Intent.ACTION_VIEW, Uri.parse(Kenh.linkVtvGo(k.ma))).setPackage(Kenh.VTVGO) else lenhKenh(k)
+        val app = when {
+            k.laFpt -> Kenh.FPTPLAY
+            k.laVtvGo -> Kenh.VTVGO
+            else -> Kenh.TV360
+        }
+        val lenh = when {
+            k.laFpt -> Intent(Intent.ACTION_VIEW, Uri.parse(Kenh.linkFpt(k.ma))).setPackage(Kenh.FPTPLAY)
+            k.laVtvGo -> Intent(Intent.ACTION_VIEW, Uri.parse(Kenh.linkVtvGo(k.ma))).setPackage(Kenh.VTVGO)
+            else -> lenhKenh(k)
+        }
         val duoc = mo(lenh) || mo(packageManager.getLeanbackLaunchIntentForPackage(app)) ||
             mo(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$app")))
-        if (!duoc) Toast.makeText(this, if (k.laVtvGo) R.string.chua_co_vtvgo else R.string.chua_co_tv360, Toast.LENGTH_LONG).show()
+        if (!duoc) Toast.makeText(this, when {
+            k.laFpt -> R.string.chua_co_fptplay
+            k.laVtvGo -> R.string.chua_co_vtvgo
+            else -> R.string.chua_co_tv360
+        }, Toast.LENGTH_LONG).show()
         finish()
     }
 
