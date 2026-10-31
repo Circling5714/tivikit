@@ -274,6 +274,67 @@ class TeleRemoteDichVu : AccessibilityService() {
             SystemClock.elapsedRealtime(), st?.totalBytes ?: 0, st?.availableBytes ?: 0)
     }
 
+    /**
+     * Bật màn hình (tivi đang chờ mà còn mạng, hay đang ở màn bảo vệ): phím WAKEUP qua ADB (thoát cả màn bảo vệ), chưa nối ADB
+     * thì khoá thức của Android. true nếu sau đó màn hình bật.
+     */
+    @Suppress("DEPRECATION")
+    fun batManHinh(): Boolean {
+        if (lenh("input keyevent 224", 4000) == null) runCatching {
+            getSystemService(PowerManager::class.java).newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE, "tivikit:teleremote-bat").acquire(3_000)
+        }
+        Thread.sleep(1500)
+        return dangSang() && manHinh().let { it.isEmpty() || it == "Awake" }
+    }
+
+    /**
+     * Âm lượng nhạc / video: [lam] "dat" (mức [so]), "to" / "nho" (hai nấc), "tat" / "bat" (tắt / bật tiếng). Trả (mức, mức tối
+     * đa, đang tắt tiếng).
+     */
+    fun amLuong(lam: String, so: Int): Triple<Int, Int, Boolean> {
+        val am = getSystemService(AudioManager::class.java)
+        val loai = AudioManager.STREAM_MUSIC
+        val max = am.getStreamMaxVolume(loai)
+        runCatching {
+            when (lam) {
+                "dat" -> am.setStreamVolume(loai, so.coerceIn(0, max), AudioManager.FLAG_SHOW_UI)
+                "to" -> repeat(2) { am.adjustStreamVolume(loai, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI) }
+                "nho" -> repeat(2) { am.adjustStreamVolume(loai, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI) }
+                "tat" -> am.adjustStreamVolume(loai, AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+                "bat" -> am.adjustStreamVolume(loai, AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
+            }
+        }
+        return Triple(am.getStreamVolume(loai), max, am.isStreamMute(loai))
+    }
+
+    /** Kiểm tra mạng như TiviKit (MangTr): đường ra Internet, Wi-Fi, ping router / Internet / YouTube; null nếu chưa nối ADB. */
+    fun kiemTraMang(): MangTr.KetQua? {
+        if (!coAdb()) return null
+        val p = lenh("ip route get 1.1.1.1 2>&1; echo @@; dumpsys wifi 2>/dev/null | grep -m 1 mWifiInfo", 10_000)?.replace("\r", "")?.split("@@") ?: return null
+        val duong = MangTr.tuIpRoute(p[0])
+        val wifi = MangTr.tuWifiInfo(p.getOrElse(1) { "" })
+        val lan = duong?.dev?.takeIf { MangTr.laLan(it) && Regex("^[A-Za-z0-9_.-]+$").matches(it) }
+            ?.let { lenh("cat /sys/class/net/$it/speed 2>/dev/null", 3000)?.trim()?.toIntOrNull()?.takeIf { s -> s > 0 } }
+        // Mỗi đích 10 gói cách 0,2 giây, chờ mỗi gói 1 giây (như TiviKit): chừng 2–3 giây một đích.
+        fun ping(dich: String) = lenh("ping -c 10 -i 0.2 -W 1 $dich 2>&1", 40_000).orEmpty()
+        val router = duong?.router?.takeIf { Regex("^[0-9a-fA-F.:]+$").matches(it) }?.let { MangTr.tuPing(ping(it)) }
+        val net = MangTr.tuPing(ping("1.1.1.1"))
+        val yt = ping("www.youtube.com")
+        return MangTr.KetQua(duong, wifi, lan, router, net, MangTr.tuPing(yt), MangTr.loiTen(yt))
+    }
+
+    /** Hiện lời nhắn [chu] của [nguoiGui] lên màn hình tivi (LoiNhan); có người bấm OK thì báo về chat [chat]. */
+    fun hienLoiNhan(chu: String, nguoiGui: String, chat: Long): Boolean = mo(Intent(this, LoiNhan::class.java)
+        .putExtra(LoiNhan.CHU, chu).putExtra(LoiNhan.NGUOI_GUI, nguoiGui).putExtra(LoiNhan.CHAT, chat).putExtra(LoiNhan.TIENG_ANH, kho.cauHinh.tiengAnh))
+
+    /** Có người bấm OK đóng lời nhắn trên tivi: báo người gửi. */
+    fun daXemLoiNhan(chat: Long) {
+        if (chat == 0L) return
+        val gio = java.text.SimpleDateFormat("HH:mm", Locale.ROOT).format(java.util.Date())
+        bot?.nhanRieng(chat, if (kho.cauHinh.tiengAnh) "👀 Someone on ${tenTivi()} read your message ($gio)." else "👀 Tivi ${tenTivi()} đã xem lời nhắn ($gio).")
+    }
+
     /** Tên tivi đặt trong Cài đặt (device_name), không có thì tên máy. */
     fun tenTivi(): String = runCatching { Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) }.getOrNull()
         ?.takeIf { it.isNotBlank() } ?: Build.MODEL

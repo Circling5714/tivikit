@@ -1958,6 +1958,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
 
     fun xoaChoTeleRemote(id: Long): Boolean = sh(TeleRemote.lenhXoaCho(id)).contains("ok=1")
 
+    /** Bỏ tạm khoá thành viên (chủ khoá từ Telegram → ⚙️ Thêm). */
+    fun moThanhVienTeleRemote(): Boolean = sh(TeleRemote.LENH_MO_THANH_VIEN).contains("ok=1")
+
     /** Bảo Tele Remote nối lại ADB ngay; false nếu dịch vụ đang tắt. */
     fun noiLaiTeleRemote(): Boolean = sh(TeleRemote.LENH_NOI_LAI).contains("ok=1")
 

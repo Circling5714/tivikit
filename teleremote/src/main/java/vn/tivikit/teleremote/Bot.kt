@@ -166,6 +166,18 @@ class Bot(private val dv: TeleRemoteDichVu) {
         LamViec(dv, ra).lam(d, nd2)
     }
 
+    /** Nhắn [chu] vào chat [chat] trên luồng riêng (báo đã xem lời nhắn…), thử lại vài lần nếu mạng chưa lên. */
+    fun nhanRieng(chat: Long, chu: String) {
+        val token = kho.token.takeIf { it.isNotEmpty() } ?: return
+        thread(name = "TeleRemote-nhan", isDaemon = true) {
+            val t = Telegram(token)
+            for (lan in 1..4) {
+                if (runCatching { t.gui(chat, chu) }.isSuccess || !chay) break
+                Thread.sleep(15_000)
+            }
+        }
+    }
+
     /**
      * Nhắn [chu] cho các chủ tivi đã nhắn bot (báo tin: tivi vừa bật / vừa tắt), trên luồng riêng. Tivi vừa thức dậy thì mạng
      * có thể chưa lên: thử lại vài lần trong chừng một phút.
@@ -197,9 +209,9 @@ class Bot(private val dv: TeleRemoteDichVu) {
         if (!kho.themCho(XinDung(d.nguoi.id, d.nguoi.ten, d.nguoi.tenHien, System.currentTimeMillis()))) return
         ra.gui(d.chat, chuaDuoc)
         val ai = listOf(d.nguoi.ten, d.nguoi.tenHien).filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "ID ${d.nguoi.id}" }
-        val bao = if (en) "🔔 $ai wants to use this TV's bot. Approve or ignore in TiviKit → Tele Remote."
-            else "🔔 $ai muốn dùng bot của tivi. Duyệt hay bỏ qua ở TiviKit → Tele Remote."
-        ch.nguoiDung.filter { it.vaiTro == VaiTro.CHU && it.id != 0L }.forEach { ra.gui(it.id, bao) }
+        val bao = if (en) "🔔 $ai wants to use this TV's bot. Approve or ignore below (or in TiviKit → Tele Remote)."
+            else "🔔 $ai muốn dùng bot của tivi. Duyệt hay bỏ qua ngay dưới đây (hay ở TiviKit → Tele Remote)."
+        ch.nguoiDung.filter { it.vaiTro == VaiTro.CHU && it.id != 0L }.forEach { ra.gui(it.id, bao, XuLyLenh.bangXinDung(d.nguoi.id, en)) }
         kho.ghi(ai, "xin-dung")
     }
 

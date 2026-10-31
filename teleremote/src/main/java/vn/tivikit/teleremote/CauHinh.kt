@@ -130,6 +130,11 @@ class Kho(ctx: Context) {
         p.edit().putString("nhat_ky", a.toString()).apply()
     }
 
+    /** Chủ tạm khoá thành viên tới lúc này (ms); 0 = không khoá. Ngoài cấu hình: TiviKit gửi cấu hình không đụng tới nó. */
+    var khoaThanhVienDen: Long
+        get() = p.getLong("khoa_thanh_vien_den", 0)
+        set(v) { p.edit().putLong("khoa_thanh_vien_den", v).apply() }
+
     companion object {
         const val CHO_TOI_DA = 10
         const val GIU = 40

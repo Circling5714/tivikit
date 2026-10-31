@@ -170,6 +170,13 @@ class TeleRemoteTivi(private val vm: PhienLamViec) {
         docLai()
     }
 
+    /** Bỏ tạm khoá thành viên chủ đặt từ Telegram. */
+    fun moThanhVien() = vm.chay(t("Đang mở lại…", "Letting them back in…")) {
+        vm.damBaoKetNoi()
+        vm.io { vm.tv.moThanhVienTeleRemote() }
+        docLai()
+    }
+
     fun noiLai() = vm.chay(t("Đang nối lại…", "Reconnecting…")) {
         vm.damBaoKetNoi()
         if (!vm.io { vm.tv.noiLaiTeleRemote() }) error(t("Dịch vụ Tele Remote trên tivi đang tắt: bấm Bật lại.", "The Tele Remote service on the TV is off: tap Turn on again."))
@@ -253,6 +260,17 @@ class TeleRemoteTivi(private val vm: PhienLamViec) {
                 "mo-tam" -> t("mở khoá trẻ em $sau phút", "unlocked Kids lock for $sau min")
                 "dong-app-nen" -> t("đóng app nền", "closed background apps")
                 "don-cache" -> t("dọn cache", "cleared the cache")
+                "nhan" -> t("nhắn lên màn hình tivi", "showed a message on the TV")
+                "bat-man-hinh" -> t("bật màn hình", "turned the screen on")
+                "am-luong" -> if (sau == "0") t("tắt tiếng", "muted") else t("chỉnh âm lượng $sau", "set the volume to $sau")
+                "kiem-tra-mang" -> t("kiểm tra mạng", "checked the network")
+                "duyet" -> t("duyệt $sau", "approved $sau")
+                "bo-qua" -> t("bỏ qua $sau", "ignored $sau")
+                "vai-tro" -> t("đổi vai trò của $sau", "changed $sau's role")
+                "bo-nguoi" -> t("bỏ $sau khỏi danh sách", "removed $sau")
+                "them" -> t("thêm $sau", "added $sau")
+                "khoa-tv" -> t("khoá thành viên tới $sau", "paused members until $sau")
+                "mo-tv" -> t("mở lại cho thành viên", "let members back in")
                 else -> n.viec
             }
         }

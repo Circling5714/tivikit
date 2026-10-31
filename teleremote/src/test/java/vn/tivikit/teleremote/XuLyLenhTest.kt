@@ -127,16 +127,20 @@ class XuLyLenhTest {
         fun nut(b: JSONObject) = b.getJSONArray("keyboard").let { a ->
             (0 until a.length()).flatMap { i -> (0 until a.getJSONArray(i).length()).map { a.getJSONArray(i).getJSONObject(it).getString("text") } }
         }
-        // Chủ, tivi chưa có Hẹn giờ / Khoá trẻ em, chưa bật chụp: 7 nút, hai cột, Tắt tivi cuối.
+        // Chủ, tivi chưa có Hẹn giờ / Khoá trẻ em, chưa bật chụp: 8 nút, hai cột, Tắt tivi cuối.
         val chuPhim = XuLyLenh.banPhimChinh(VaiTro.CHU, en = false)
         assertEquals(4, chuPhim.getJSONArray("keyboard").length())
         assertEquals("📴 Tắt tivi", nut(chuPhim).last())
-        assertEquals(listOf("🎮 Điều khiển", "📺 Kênh nhanh", "▶️ YouTube", "📱 Ứng dụng", "ℹ️ Tivi"), nut(XuLyLenh.banPhimChinh(VaiTro.THANH_VIEN, en = false)))
+        assertEquals(listOf("🎮 Điều khiển", "📺 Kênh nhanh", "▶️ YouTube", "📱 Ứng dụng", "📢 Nhắn tivi", "ℹ️ Tivi", "⚙️ Thêm"),
+            nut(XuLyLenh.banPhimChinh(VaiTro.THANH_VIEN, en = false)))
         // Đủ tính năng: mỗi nút của bàn phím chính đọc lại ra đúng việc (cả tiếng Anh).
         val du = XuLyLenh.Co(henGio = true, khoa = true, manHinh = true)
-        assertEquals(5, XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du).getJSONArray("keyboard").length())
+        assertEquals(6, XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du).getJSONArray("keyboard").length())
         assertEquals(listOf(XuLyLenh.DieuKhien, XuLyLenh.Kenh, XuLyLenh.YouTube, XuLyLenh.UngDung(0), XuLyLenh.HenGio, XuLyLenh.Khoa,
-            XuLyLenh.LamMoiTv, XuLyLenh.Tivi, XuLyLenh.ChupManHinh, XuLyLenh.HoiTat), nut(XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du)).map(XuLyLenh::viecTuChu))
+            XuLyLenh.NhanTivi(), XuLyLenh.Tivi, XuLyLenh.ChupManHinh, XuLyLenh.Them, XuLyLenh.HoiTat),
+            nut(XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du)).map(XuLyLenh::viecTuChu))
+        // Nút cũ còn trong Telegram (bàn phím trước): 🧹 Làm mới vẫn hiểu.
+        assertEquals(XuLyLenh.LamMoiTv, XuLyLenh.viecTuChu("🧹 Làm mới"))
         // Bảng điều khiển: 4 hàng ba phím + hàng Cập nhật; nút nào cũng đọc lại được.
         val b = XuLyLenh.bangDieuKhien(en = false).getJSONArray("inline_keyboard")
         assertEquals(5, b.length())
@@ -146,7 +150,10 @@ class XuLyLenhTest {
         }
         assertEquals("o:2", XuLyLenh.bangKenh(listOf(1 to "VTV1", 2 to "VTV3")).getJSONArray("inline_keyboard").getJSONArray(0).getJSONObject(1).getString("callback_data"))
         // Mọi nút trong các bảng khác cũng đọc lại được và vừa giới hạn 64 byte của Telegram.
-        listOf(XuLyLenh.sauKhiGo(en = false), XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
+        val ch2 = CauHinh(nguoiDung = listOf(NguoiDung("@caominh", 111, VaiTro.CHU), NguoiDung("@be_na", 0, VaiTro.THANH_VIEN)))
+        listOf(XuLyLenh.bangThem(true, false, 0, 1), XuLyLenh.bangThem(true, true, 99, 1), XuLyLenh.bangNguoi(ch2, listOf(XinDung(333, "", "Ông", 1)), false),
+            XuLyLenh.bangMotNguoi(ch2.nguoiDung[1], false), XuLyLenh.bangXinDung(333, true), XuLyLenh.nutBatManHinh(false),
+            XuLyLenh.sauKhiGo(en = false), XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
             XuLyLenh.bangLamMoi(en = false, ganDay = true), XuLyLenh.hoiTat(en = false),
             XuLyLenh.bangUngDung((1..30).map { "com.app.so$it" to "App $it" }, 1, en = false, chu = true)).forEach { bp ->
             val h = bp.getJSONArray("inline_keyboard")
@@ -258,5 +265,77 @@ class XuLyLenhTest {
         assertEquals("VTV3", XuLyLenh.tenKenh("""Result: Bundle[{json={"ten":"VTV3","app":"fptplay","ma":"vtv3-hd"}}]"""))
         assertNull(XuLyLenh.tenKenh("Error while accessing provider:vn.tivikit.kenh"))
         assertNull(XuLyLenh.tenKenh("""Result: Bundle[{json={"so":"001"}}]"""))
+    }
+
+    @Test
+    fun cauBotTuLam() {
+        assertEquals(XuLyLenh.AmLuong("dat", 10), XuLyLenh.viecTuChu("Âm lượng 10"))
+        assertEquals(XuLyLenh.AmLuong("dat", 5), XuLyLenh.viecTuChu("chỉnh âm lượng xuống 5"))
+        assertEquals(XuLyLenh.AmLuong("to"), XuLyLenh.viecTuChu("to lên"))
+        assertEquals(XuLyLenh.AmLuong("nho"), XuLyLenh.viecTuChu("Nhỏ xuống!"))
+        assertEquals(XuLyLenh.AmLuong("tat"), XuLyLenh.viecTuChu("tắt tiếng"))
+        assertEquals(XuLyLenh.AmLuong("bat"), XuLyLenh.viecTuChu("bật tiếng"))
+        assertEquals(XuLyLenh.BatManHinh, XuLyLenh.viecTuChu("bật tivi"))
+        assertEquals(XuLyLenh.HoiTat, XuLyLenh.viecTuChu("Tắt tivi đi"))
+        // Câu dài hơn thì vẫn để Map Voice / Trợ lý (không bắt nhầm).
+        assertEquals(XuLyLenh.Noi("bật nhạc to lên"), XuLyLenh.viecTuChu("bật nhạc to lên"))
+        assertEquals(XuLyLenh.NhanTivi("ăn cơm thôi"), XuLyLenh.viecTuChu("/nhan ăn cơm thôi"))
+        assertEquals(XuLyLenh.NhanTivi(), XuLyLenh.viecTuChu("📢 Nhắn tivi"))
+        assertEquals(XuLyLenh.Them, XuLyLenh.viecTuChu("⚙️ More"))
+        // Chữ tự do (trả lời lúc bot đang chờ) khác nút / lệnh.
+        assertTrue(XuLyLenh.laChuTuDo("to lên"))
+        assertFalse(XuLyLenh.laChuTuDo("🎮 Điều khiển"))
+        assertFalse(XuLyLenh.laChuTuDo("/start"))
+        assertFalse(XuLyLenh.laChuTuDo(" "))
+    }
+
+    @Test
+    fun nutNguoiDung() {
+        assertEquals(XuLyLenh.NguoiXem("111"), XuLyLenh.viecTuNut("ud:111"))
+        assertEquals(XuLyLenh.NguoiXem("@be_na"), XuLyLenh.viecTuNut("ud:@be_na"))
+        assertEquals(XuLyLenh.DatVaiTro("@be_na", true), XuLyLenh.viecTuNut("uv:@be_na:c"))
+        assertEquals(XuLyLenh.Duyet(333, false), XuLyLenh.viecTuNut("uy:333:t"))
+        assertEquals(XuLyLenh.BoQuaXin(333), XuLyLenh.viecTuNut("ux:333"))
+        assertEquals(XuLyLenh.KhoaThanhVien(XuLyLenh.TOI_SANG), XuLyLenh.viecTuNut("kt:s"))
+        assertEquals(XuLyLenh.KhoaThanhVien(0), XuLyLenh.viecTuNut("kt:0"))
+        assertNull(XuLyLenh.viecTuNut("kt:999"))
+        assertNull(XuLyLenh.viecTuNut("ud:x;reboot"))
+        assertNull(XuLyLenh.viecTuNut("uv:111:z"))
+        // Quản lý người dùng chỉ chủ làm; lời nhắn, mạng, âm lượng, bật màn hình thì thành viên cũng được.
+        listOf(XuLyLenh.NguoiDs, XuLyLenh.NguoiXem("1"), XuLyLenh.DatVaiTro("1", true), XuLyLenh.BoNguoi("1"), XuLyLenh.Duyet(1, false),
+            XuLyLenh.BoQuaXin(1), XuLyLenh.ThemNguoi, XuLyLenh.NhatKyXem, XuLyLenh.KhoaThanhVien(60)).forEach { assertTrue(it.toString(), XuLyLenh.chiChu(it)) }
+        listOf(XuLyLenh.NhanTivi(), XuLyLenh.Them, XuLyLenh.KiemTraMang, XuLyLenh.AmLuong("to"), XuLyLenh.BatManHinh)
+            .forEach { assertFalse(it.toString(), XuLyLenh.chiChu(it)) }
+    }
+
+    @Test
+    fun suaNguoiDung() {
+        val chu = NguoiDung("@caominh", 111, VaiTro.CHU, "Minh")
+        val ch = CauHinh(nguoiDung = listOf(chu, NguoiDung("@be_na", 0, VaiTro.THANH_VIEN)))
+        // Tivi phải còn ít nhất một chủ.
+        assertNull(XuLyLenh.doiVaiTro(ch, "111", chu = false))
+        assertNull(XuLyLenh.boNguoi(ch, "111"))
+        val hai = XuLyLenh.doiVaiTro(ch, "@be_na", chu = true)!!
+        assertEquals(VaiTro.CHU, hai.nguoiDung[1].vaiTro)
+        assertEquals(1, XuLyLenh.boNguoi(hai, "111")!!.nguoiDung.size)
+        assertNull(XuLyLenh.boNguoi(ch, "@khong_co"))
+        // Duyệt người xin dùng theo ID; thêm theo @username.
+        val duyet = XuLyLenh.duyet(ch, XinDung(333, "", "Ông", 1), chu = false)!!
+        assertEquals(NguoiDung("", 333, VaiTro.THANH_VIEN, "Ông"), duyet.nguoiDung.last())
+        assertEquals("@ba_noi", XuLyLenh.chuanTen("https://t.me/ba_noi"))
+        assertEquals("@ba_noi", XuLyLenh.chuanTen(" ba_noi "))
+        assertNull(XuLyLenh.chuanTen("bà nội"))
+        assertEquals("@ba_noi", XuLyLenh.themTen(ch, "@ba_noi")!!.nguoiDung.last().ten)
+        assertNull(XuLyLenh.themTen(ch, "@BE_NA"))
+        assertEquals("Minh · @caominh", XuLyLenh.tenXem(chu))
+    }
+
+    @Test
+    fun khoaThanhVienToiSang() {
+        val mui = java.time.ZoneId.of("Asia/Ho_Chi_Minh")
+        fun luc(ngay: Int, gio: Int) = java.time.LocalDateTime.of(2026, 11, ngay, gio, 0).atZone(mui).toInstant().toEpochMilli()
+        assertEquals(luc(2, 6), XuLyLenh.khoaTvToi(XuLyLenh.TOI_SANG, luc(1, 21), mui))
+        assertEquals(luc(1, 6), XuLyLenh.khoaTvToi(XuLyLenh.TOI_SANG, luc(1, 2), mui))
+        assertEquals(luc(1, 22), XuLyLenh.khoaTvToi(60, luc(1, 21), mui))
     }
 }

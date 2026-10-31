@@ -63,6 +63,26 @@ object XuLyLenh {
     data class Link(val url: String) : Viec
     data object ChieuTep : Viec
     data object KhongRo : Viec
+    /** 📢 Lời nhắn hiện lên màn hình tivi; [chu] rỗng thì hỏi lời nhắn ("/nhan …" thì hiện luôn). */
+    data class NhanTivi(val chu: String = "") : Viec
+    /** Menu ⚙️ Thêm. */
+    data object Them : Viec
+    data object BatManHinh : Viec
+    /** Âm lượng bằng câu: [lam] = "dat" (đặt mức [so]), "to", "nho", "tat" (tắt tiếng), "bat" (bật tiếng). */
+    data class AmLuong(val lam: String, val so: Int = 0) : Viec
+    data object KiemTraMang : Viec
+    data object NhatKyXem : Viec
+    data object NguoiDs : Viec
+    /** Một người trong danh sách; [khoa] = ID số, hay @username khi người đó chưa nhắn bot (khoaCua). */
+    data class NguoiXem(val khoa: String) : Viec
+    data class DatVaiTro(val khoa: String, val chu: Boolean) : Viec
+    data class BoNguoi(val khoa: String) : Viec
+    /** Duyệt người đang xin dùng (ID Telegram của họ). */
+    data class Duyet(val id: Long, val chu: Boolean) : Viec
+    data class BoQuaXin(val id: Long) : Viec
+    data object ThemNguoi : Viec
+    /** Tạm khoá thành viên [phut] phút; [TOI_SANG] = tới 6 giờ sáng; 0 = mở lại. */
+    data class KhoaThanhVien(val phut: Int) : Viec
 
     /**
      * Phím của bảng điều khiển (mã KeyEvent → chữ trên nút), theo thứ tự ba nút một hàng: Back ▲ Home / ◀ OK ▶ / phát-dừng
@@ -92,16 +112,19 @@ object XuLyLenh {
 
     const val APP_MOI_TRANG = 12
 
+    /** KhoaThanhVien: khoá tới 6 giờ sáng. */
+    const val TOI_SANG = -1
+
     /** Chữ trên bàn phím chính của bot. */
     class Nhan(
         val dieuKhien: String, val kenh: String, val youTube: String, val ungDung: String, val henGio: String, val khoa: String,
-        val lamMoi: String, val tivi: String, val manHinh: String, val tat: String,
+        val lamMoi: String, val tivi: String, val manHinh: String, val tat: String, val nhanTivi: String, val them: String,
     )
 
     val VI = Nhan("🎮 Điều khiển", "📺 Kênh nhanh", "▶️ YouTube", "📱 Ứng dụng", "⏰ Hẹn giờ", "🔒 Khoá trẻ em", "🧹 Làm mới",
-        "ℹ️ Tivi", "📸 Màn hình", "📴 Tắt tivi")
+        "ℹ️ Tivi", "📸 Màn hình", "📴 Tắt tivi", "📢 Nhắn tivi", "⚙️ Thêm")
     val EN = Nhan("🎮 Remote", "📺 Quick channel", "▶️ YouTube", "📱 Apps", "⏰ Timer", "🔒 Kids lock", "🧹 Refresh TV",
-        "ℹ️ TV", "📸 Screenshot", "📴 Turn off TV")
+        "ℹ️ TV", "📸 Screenshot", "📴 Turn off TV", "📢 Message TV", "⚙️ More")
 
     fun nhan(en: Boolean) = if (en) EN else VI
 
@@ -176,6 +199,17 @@ object XuLyLenh {
     private val NUT_TIVI = nut { it.tivi }
     private val NUT_MAN_HINH = nut { it.manHinh }
     private val NUT_TAT = nut { it.tat }
+    private val NUT_NHAN_TIVI = nut { it.nhanTivi }
+    private val NUT_THEM = nut { it.them }
+    private val TAT_CA_NUT = listOf(VI, EN).flatMap {
+        listOf(it.dieuKhien, it.kenh, it.youTube, it.ungDung, it.henGio, it.khoa, it.lamMoi, it.tivi, it.manHinh, it.tat, it.nhanTivi, it.them)
+    }.toSet()
+
+    /**
+     * Tin chữ tự do (không phải nút của bàn phím bot hay lệnh /…): khi bot đang chờ chữ để gõ lên tivi, lời nhắn, mã mở khoá
+     * hay @username, tin này là câu trả lời, kể cả khi nó giống câu bot tự hiểu ("to lên", "tắt tiếng").
+     */
+    fun laChuTuDo(chu: String?): Boolean = chu != null && chu.isNotBlank() && !chu.trim().startsWith("/") && chu.trim() !in TAT_CA_NUT
 
     /**
      * Việc cho một tin: ảnh / video thì chiếu lên tivi; nút bàn phím của bot (cả hai thứ tiếng) hay lệnh /…; tin có link
@@ -199,13 +233,37 @@ object XuLyLenh {
             lenh == "/manhinh" || lenh == "/screenshot" || c in NUT_MAN_HINH -> ChupManHinh
             lenh == "/go" || lenh == "/type" -> GoChu
             lenh == "/tat" || lenh == "/off" || c in NUT_TAT -> HoiTat
+            lenh == "/nhan" || lenh == "/message" -> NhanTivi(c.substringAfter(' ', "").trim().take(500))
+            c in NUT_NHAN_TIVI -> NhanTivi()
+            lenh == "/them" || lenh == "/more" || c in NUT_THEM -> Them
+            lenh == "/bat" || lenh == "/on" -> BatManHinh
+            lenh == "/mang" || lenh == "/network" -> KiemTraMang
+            lenh == "/nhatky" || lenh == "/log" -> NhatKyXem
+            lenh == "/nguoi" || lenh == "/people" -> NguoiDs
             lenh != null || c.isEmpty() -> KhongRo
-            else -> timLink(c)?.let(::Link) ?: Noi(c.take(300))
+            else -> cauDacBiet(c) ?: timLink(c)?.let(::Link) ?: Noi(c.take(300))
+        }
+    }
+
+    /** Câu bot tự làm, không đưa Map Voice: âm lượng, bật màn hình, tắt tivi (hỏi lại). null nếu không phải. */
+    fun cauDacBiet(cau: String): Viec? {
+        val c = boDau(cau).replace(Regex("""[!.?,]+$"""), "").replace(Regex("""\s+"""), " ").trim()
+        Regex("""^(?:chinh |dat )?(?:am luong|volume)(?: (?:len|xuong|ve|la|muc))? (\d{1,3})$""").find(c)?.let { return AmLuong("dat", it.groupValues[1].toInt()) }
+        return when {
+            Regex("""^(?:to (?:len|them|hon)|tang am(?: luong)?|lon len|volume up|louder)$""").matches(c) -> AmLuong("to")
+            Regex("""^(?:nho (?:xuong|lai|di|hon)|giam am(?: luong)?|be lai|volume down|quieter)$""").matches(c) -> AmLuong("nho")
+            Regex("""^(?:tat tieng|im lang|mute)$""").matches(c) -> AmLuong("tat")
+            Regex("""^(?:bat tieng|mo tieng|unmute)$""").matches(c) -> AmLuong("bat")
+            Regex("""^(?:bat|mo) (?:tivi|tv|man hinh)(?: len)?$|^turn on (?:the )?(?:tv|screen)$""").matches(c) -> BatManHinh
+            Regex("""^tat (?:tivi|tv)(?: di)?$|^turn off (?:the )?tv$""").matches(c) -> HoiTat
+            else -> null
         }
     }
 
     private val GOI = Regex("""^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$""")
     private val ID_HEN = Regex("""^[a-z]+-\d{1,15}$""")
+    /** Khoá một người trong nút: ID số, hay @username (chưa nhắn bot). */
+    private val KHOA_NGUOI = Regex("""^(?:\d{1,15}|@[A-Za-z0-9_]{4,32})$""")
 
     /** Việc cho một nút trong tin nhắn; null nếu dữ liệu nút lạ (bản bot cũ, client sửa). */
     fun viecTuNut(du: String): Viec? = when {
@@ -223,6 +281,22 @@ object XuLyLenh {
         du == "h:r" -> HenGio
         du == "kh:r" -> Khoa
         du == "kh:k" -> KhoaNgay
+        du == "m" -> Them
+        du == "on" -> BatManHinh
+        du == "net" -> KiemTraMang
+        du == "nk" -> NhatKyXem
+        du == "nt" -> NhanTivi()
+        du == "u" -> NguoiDs
+        du == "ua" -> ThemNguoi
+        du == "kt:s" -> KhoaThanhVien(TOI_SANG)
+        du.startsWith("kt:") -> du.drop(3).toIntOrNull()?.takeIf { it == 0 || it == 60 || it == 120 }?.let(::KhoaThanhVien)
+        du.startsWith("ud:") -> du.drop(3).takeIf { KHOA_NGUOI.matches(it) }?.let(::NguoiXem)
+        du.startsWith("ub:") -> du.drop(3).takeIf { KHOA_NGUOI.matches(it) }?.let(::BoNguoi)
+        du.startsWith("uv:") -> du.drop(3).let { s -> s.substringBeforeLast(':').takeIf { KHOA_NGUOI.matches(it) }?.let { k ->
+            when (s.substringAfterLast(':')) { "c" -> DatVaiTro(k, true); "t" -> DatVaiTro(k, false); else -> null } } }
+        du.startsWith("uy:") -> du.drop(3).let { s -> s.substringBefore(':').toLongOrNull()?.takeIf { it > 0 }?.let { id ->
+            when (s.substringAfter(':', "")) { "c" -> Duyet(id, true); "t" -> Duyet(id, false); else -> null } } }
+        du.startsWith("ux:") -> du.drop(3).toLongOrNull()?.takeIf { it > 0 }?.let(::BoQuaXin)
         du.startsWith("k:") -> du.drop(2).toIntOrNull()?.takeIf { it in PHIM || it in PHIM_THEM }?.let(::Phim)
         du.startsWith("o:") -> du.drop(2).toIntOrNull()?.takeIf { it in 1..SO_O }?.let(::MoKenh)
         du.startsWith("ap:") -> du.drop(3).toIntOrNull()?.takeIf { it in 0..99 }?.let(::UngDung)
@@ -233,21 +307,28 @@ object XuLyLenh {
         else -> null
     }
 
-    /** Việc chỉ chủ tivi được làm (thành viên: điều khiển, gõ chữ, kênh, YouTube, ứng dụng, nhắn như nói, link, ảnh, xem tivi). */
-    fun chiChu(v: Viec): Boolean = v is TatSau || v is HuyHen || v is MoTam || v in setOf(
-        HoiTat, Tat, KhoiDongLai, HenGio, Khoa, KhoaNgay, ChupManHinh, LamMoiTv, DongAppNen, DonCache, DungApp,
-    )
+    /**
+     * Việc chỉ chủ tivi được làm. Thành viên: điều khiển, gõ chữ, kênh, YouTube, ứng dụng, nhắn như nói, âm lượng, bật màn
+     * hình, link, ảnh, lời nhắn lên tivi, kiểm tra mạng, xem tivi.
+     */
+    fun chiChu(v: Viec): Boolean = v is TatSau || v is HuyHen || v is MoTam || v is NguoiXem || v is DatVaiTro || v is BoNguoi ||
+        v is Duyet || v is BoQuaXin || v is KhoaThanhVien || v in setOf(
+            HoiTat, Tat, KhoiDongLai, HenGio, Khoa, KhoaNgay, ChupManHinh, LamMoiTv, DongAppNen, DonCache, DungApp, NguoiDs, ThemNguoi, NhatKyXem,
+        )
 
     /** Tính năng đang dùng được trên tivi, để bàn phím chỉ hiện nút có tác dụng: Hẹn giờ, Khoá trẻ em đã cài, chủ bật chụp. */
     data class Co(val henGio: Boolean = false, val khoa: Boolean = false, val manHinh: Boolean = false)
 
-    /** Bàn phím chính (nằm cố định dưới ô gõ tin): hai cột; chủ có thêm Hẹn giờ, Khoá trẻ em, Làm mới, Màn hình, Tắt tivi. */
+    /**
+     * Bàn phím chính (nằm cố định dưới ô gõ tin): hai cột; chủ có thêm Hẹn giờ, Khoá trẻ em, Màn hình, Tắt tivi. Việc ít
+     * dùng (Làm mới, kiểm tra mạng, người dùng, nhật ký, khoá thành viên, bật màn hình) nằm trong ⚙️ Thêm.
+     */
     fun banPhimChinh(vt: VaiTro, en: Boolean, co: Co = Co()): JSONObject {
         val n = nhan(en)
         val ds = if (vt == VaiTro.CHU) listOfNotNull(
             n.dieuKhien, n.kenh, n.youTube, n.ungDung, n.henGio.takeIf { co.henGio }, n.khoa.takeIf { co.khoa },
-            n.lamMoi, n.tivi, n.manHinh.takeIf { co.manHinh }, n.tat,
-        ) else listOf(n.dieuKhien, n.kenh, n.youTube, n.ungDung, n.tivi)
+            n.nhanTivi, n.tivi, n.manHinh.takeIf { co.manHinh }, n.them, n.tat,
+        ) else listOf(n.dieuKhien, n.kenh, n.youTube, n.ungDung, n.nhanTivi, n.tivi, n.them)
         return JSONObject().put("keyboard", JSONArray(ds.chunked(2).map { h -> JSONArray(h.map { JSONObject().put("text", it) }) }))
             .put("resize_keyboard", true).put("is_persistent", true)
             .put("input_field_placeholder", if (en) "Type like talking to the Assistant…" else "Gõ như nói với Trợ lý…")
@@ -300,6 +381,87 @@ object XuLyLenh {
     fun hoiTat(en: Boolean): JSONObject = nutTrongTin(listOf(
         listOf((if (en) "📴 Turn off now" else "📴 Tắt ngay") to "t:ok", (if (en) "🔁 Restart" else "🔁 Khởi động lại") to "t:rb"),
         listOf((if (en) "Cancel" else "Thôi") to "t:x"),
+    ))
+
+    /**
+     * Menu ⚙️ Thêm: ai cũng có kiểm tra mạng, bật màn hình; chủ có thêm Làm mới, người dùng, nhật ký, tạm khoá thành viên
+     * (đang khoá tới [khoaTvDen] thì nút mở lại).
+     */
+    fun bangThem(chu: Boolean, en: Boolean, khoaTvDen: Long, bay: Long): JSONObject = nutTrongTin(listOfNotNull(
+        listOfNotNull(((if (en) "🧹 Refresh TV" else "🧹 Làm mới") to "lm:r").takeIf { chu }, (if (en) "🌐 Network check" else "🌐 Kiểm tra mạng") to "net"),
+        listOf((if (en) "👥 People" else "👥 Người dùng") to "u", (if (en) "📜 Activity" else "📜 Việc vừa làm") to "nk").takeIf { chu },
+        (if (khoaTvDen > bay) listOf((if (en) "▶️ Let members back in" else "▶️ Mở lại cho thành viên") to "kt:0")
+            else listOf((if (en) "⏸ Pause members 1 h" else "⏸ Khoá thành viên 1 giờ") to "kt:60", (if (en) "⏸ Until 6 am" else "⏸ Tới 6 giờ sáng") to "kt:s"))
+            .takeIf { chu },
+        listOf((if (en) "☀️ Turn the screen on" else "☀️ Bật màn hình") to "on"),
+    ))
+
+    /** Nút ☀️ Bật màn hình (tình trạng tivi khi màn hình đang tắt / màn bảo vệ). */
+    fun nutBatManHinh(en: Boolean): JSONObject = nutTrongTin(listOf(listOf((if (en) "☀️ Turn the screen on" else "☀️ Bật màn hình") to "on")))
+
+    /** Khoá của [nd] trong nút: ID số khi đã nhắn bot, không thì @username. */
+    fun khoaCua(nd: NguoiDung): String = if (nd.id != 0L) nd.id.toString() else nd.ten
+
+    fun timTheoKhoa(ch: CauHinh, k: String): NguoiDung? = ch.nguoiDung.firstOrNull { khoaCua(it) == k }
+
+    /** Tên cho người xem: tên hiện kèm @username. */
+    fun tenXem(nd: NguoiDung): String = listOf(nd.tenHien, nd.ten).filter { it.isNotEmpty() }.distinct().joinToString(" · ").ifEmpty { "ID ${nd.id}" }
+
+    fun tenXin(x: XinDung): String = listOf(x.tenHien, x.ten).filter { it.isNotEmpty() }.distinct().joinToString(" · ").ifEmpty { "ID ${x.id}" }
+
+    /** Cấu hình sau khi đổi vai trò người [k]; null nếu không có người đó hay tivi sẽ không còn chủ nào. */
+    fun doiVaiTro(ch: CauHinh, k: String, chu: Boolean): CauHinh? {
+        val nd = timTheoKhoa(ch, k) ?: return null
+        val moi = ch.copy(nguoiDung = ch.nguoiDung.map { if (it === nd) it.copy(vaiTro = if (chu) VaiTro.CHU else VaiTro.THANH_VIEN) else it })
+        return moi.takeIf { c -> c.nguoiDung.any { it.vaiTro == VaiTro.CHU } }
+    }
+
+    /** Cấu hình sau khi bỏ người [k]; null nếu không có người đó hay tivi sẽ không còn chủ nào. */
+    fun boNguoi(ch: CauHinh, k: String): CauHinh? {
+        val nd = timTheoKhoa(ch, k) ?: return null
+        return ch.copy(nguoiDung = ch.nguoiDung.filter { it !== nd }).takeIf { c -> c.nguoiDung.any { it.vaiTro == VaiTro.CHU } }
+    }
+
+    /** Cấu hình sau khi duyệt [x] (người đã nhắn bot, khớp theo ID); null nếu đã đủ [CauHinh.NGUOI_TOI_DA] người. */
+    fun duyet(ch: CauHinh, x: XinDung, chu: Boolean): CauHinh? {
+        val con = ch.nguoiDung.filter { it.id != x.id }
+        if (con.size >= CauHinh.NGUOI_TOI_DA) return null
+        return ch.copy(nguoiDung = con + NguoiDung(x.ten, x.id, if (chu) VaiTro.CHU else VaiTro.THANH_VIEN, x.tenHien))
+    }
+
+    /** @username chuẩn từ chữ người dùng gõ ("abc", "@abc", "t.me/abc"); null nếu không đúng dạng. */
+    fun chuanTen(s: String): String? {
+        val t = s.trim().removePrefix("https://").removePrefix("http://").removePrefix("t.me/").removePrefix("@").trim()
+        return "@$t".takeIf { CauHinh.TEN.matches(it) }
+    }
+
+    /** Cấu hình sau khi thêm @username [ten] làm thành viên; null nếu đã có, đã đủ người. */
+    fun themTen(ch: CauHinh, ten: String): CauHinh? {
+        if (ch.nguoiDung.any { it.ten.equals(ten, ignoreCase = true) } || ch.nguoiDung.size >= CauHinh.NGUOI_TOI_DA) return null
+        return ch.copy(nguoiDung = ch.nguoiDung + NguoiDung(ten, 0, VaiTro.THANH_VIEN))
+    }
+
+    /** 👥 Người dùng: mỗi người một nút (mở chi tiết), người đang xin dùng có nút duyệt / bỏ qua, thêm người. */
+    fun bangNguoi(ch: CauHinh, cho: List<XinDung>, en: Boolean): JSONObject = nutTrongTin(
+        ch.nguoiDung.map { nd -> listOf(((if (nd.vaiTro == VaiTro.CHU) "👑 " else "👤 ") + tenXem(nd)).take(40) to "ud:${khoaCua(nd)}") } +
+            cho.map { x -> listOf(("✅ " + tenXin(x)).take(30) to "uy:${x.id}:t", (if (en) "✕ Ignore" else "✕ Bỏ qua") to "ux:${x.id}") } +
+            listOf(listOf((if (en) "➕ Add by @username" else "➕ Thêm theo @username") to "ua")),
+    )
+
+    /** Chi tiết một người: đổi vai trò, bỏ khỏi danh sách, về danh sách. */
+    fun bangMotNguoi(nd: NguoiDung, en: Boolean): JSONObject {
+        val k = khoaCua(nd)
+        return nutTrongTin(listOf(
+            listOf(if (nd.vaiTro == VaiTro.CHU) (if (en) "👤 Make member" else "👤 Cho làm thành viên") to "uv:$k:t"
+                else (if (en) "👑 Make owner" else "👑 Cho làm chủ") to "uv:$k:c", (if (en) "✕ Remove" else "✕ Bỏ khỏi danh sách") to "ub:$k"),
+            listOf((if (en) "◀️ People" else "◀️ Danh sách") to "u"),
+        ))
+    }
+
+    /** Nút trong tin báo chủ có người lạ xin dùng bot. */
+    fun bangXinDung(id: Long, en: Boolean): JSONObject = nutTrongTin(listOf(
+        listOf((if (en) "✅ As member" else "✅ Duyệt thành viên") to "uy:$id:t", (if (en) "👑 As owner" else "👑 Duyệt làm chủ") to "uy:$id:c"),
+        listOf((if (en) "✕ Ignore" else "✕ Bỏ qua") to "ux:$id"),
     ))
 
     /** Sau khi gõ chữ lên tivi: Enter (tìm luôn), gõ tiếp (viết nối vào sau), gõ lại (thay hết). */
@@ -386,6 +548,13 @@ object XuLyLenh {
         if (c.length < 3) return null
         ds.firstOrNull { boDau(it.second).trim() == c }?.let { return it.first }
         return ds.filter { boDau(it.second).contains(c) }.minByOrNull { it.second.length }?.first
+    }
+
+    /** Lúc khoá thành viên kết thúc: [phut] phút nữa, hay 6 giờ sáng kế tiếp ([TOI_SANG]). */
+    fun khoaTvToi(phut: Int, bay: Long, mui: java.time.ZoneId): Long = if (phut != TOI_SANG) bay + phut * 60_000L else {
+        val luc = java.time.Instant.ofEpochMilli(bay).atZone(mui)
+        val sang = luc.toLocalDate().atTime(6, 0).atZone(mui)
+        (if (sang.isAfter(luc)) sang else sang.plusDays(1)).toInstant().toEpochMilli()
     }
 
     /** Mã mở khoá trong tin: 6 số (app xác thực) hay 8 số (mã dự phòng), cho phép dấu cách ("123 456"). */

@@ -18,6 +18,7 @@ import org.json.JSONObject
  *   content call --uri content://vn.tivikit.teleremote --method nhan-thu   (bot nhắn chủ tivi một tin thử)
  *   content call --uri content://vn.tivikit.teleremote --method xoa-cho --arg '{"id":123}'   (bỏ một người xin dùng)
  *   content call --uri content://vn.tivikit.teleremote --method noi-lai   (nối lại ADB của tivi)
+ *   content call --uri content://vn.tivikit.teleremote --method mo-thanh-vien   (bỏ tạm khoá thành viên chủ đặt từ Telegram)
  *   content call --uri content://vn.tivikit.teleremote --method thu --arg '{"chu":"ℹ️ Tivi"}' / '{"nut":"k:19"}'
  *     (làm như chủ tivi vừa nhắn / bấm, "vaiTro":"thanh-vien" thì như thành viên; trả chữ bot sẽ trả lời kèm chữ trên nút;
  *     để thử không cần Telegram)
@@ -73,6 +74,7 @@ class CauHinhProvider : ContentProvider() {
                     .put("bot", kho.bot)
                     .put("cauHinh", ch.json())
                     .put("cho", JSONArray().apply { kho.cho.forEach { put(JSONObject().put("id", it.id).put("ten", it.ten).put("tenHien", it.tenHien).put("luc", it.luc)) } })
+                    .put("khoaThanhVienDen", kho.khoaThanhVienDen)
                     .put("nhatKy", JSONArray().apply { kho.nhatKy.forEach { put(JSONObject().put("luc", it.luc).put("ai", it.ai).put("viec", it.viec)) } })
                 kq.putString("json", j.toString())
             }
@@ -105,6 +107,10 @@ class CauHinhProvider : ContentProvider() {
             "noi-lai" -> {
                 if (dv == null) return kq.apply { putString("loi", "dich-vu-tat") }
                 dv.noiLai()
+                kq.putString("ok", "1")
+            }
+            "mo-thanh-vien" -> {
+                kho.khoaThanhVienDen = 0
                 kq.putString("ok", "1")
             }
             "thu" -> {

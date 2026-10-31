@@ -36,6 +36,45 @@ object ChuBot {
         return if (a.toLocalDate() == Instant.ofEpochMilli(bay).atZone(mui).toLocalDate()) hhmm else "${a.dayOfMonth}/${a.monthValue} $hhmm"
     }
 
+    /** Một dòng nhật ký nói bằng lời (như "Việc vừa làm" của TiviKit): "kenh|VTV1" → "mở kênh VTV1". */
+    fun moTaViec(viec: String, en: Boolean, tenApp: (String) -> String): String {
+        val sau = viec.substringAfter('|', "")
+        return when (viec.substringBefore('|')) {
+            "dieu-khien" -> t(en, "mở bảng điều khiển", "opened the remote")
+            "tat" -> t(en, "tắt tivi", "turned the TV off")
+            "khoi-dong-lai" -> t(en, "khởi động lại tivi", "restarted the TV")
+            "xin-dung" -> t(en, "xin dùng bot", "asked to use the bot")
+            "kenh" -> t(en, "mở kênh ", "opened channel ") + sau
+            "mo" -> t(en, "mở ", "opened ") + tenApp(sau)
+            "dung" -> t(en, "buộc dừng ", "force-stopped ") + tenApp(sau)
+            "noi" -> t(en, "nhắn \"$sau\"", "typed \"$sau\"")
+            "tro-ly" -> t(en, "đưa Trợ lý: \"$sau\"", "asked the Assistant: \"$sau\"")
+            "link" -> t(en, "mở link ", "opened a link from ") + sau
+            "anh" -> t(en, "chiếu ảnh lên tivi", "showed a photo on the TV")
+            "video" -> t(en, "phát video lên tivi", "played a video on the TV")
+            "go-chu" -> t(en, "gõ chữ lên tivi", "typed text on the TV")
+            "chup" -> t(en, "chụp màn hình", "took a screenshot")
+            "hen" -> t(en, "hẹn tắt tivi sau ${sau.removePrefix("tat-")} phút", "set the TV to turn off in ${sau.removePrefix("tat-")} min")
+            "huy-hen" -> t(en, "huỷ một hẹn giờ", "cancelled a timer")
+            "khoa-ngay" -> t(en, "khoá trẻ em ngay", "locked the TV (Kids lock)")
+            "mo-tam" -> t(en, "mở khoá trẻ em $sau phút", "unlocked Kids lock for $sau min")
+            "dong-app-nen" -> t(en, "đóng app nền", "closed background apps")
+            "don-cache" -> t(en, "dọn cache", "cleared the cache")
+            "nhan" -> t(en, "nhắn lên màn hình tivi", "showed a message on the TV")
+            "bat-man-hinh" -> t(en, "bật màn hình", "turned the screen on")
+            "am-luong" -> if (sau == "0") t(en, "tắt tiếng", "muted") else t(en, "chỉnh âm lượng $sau", "set the volume to $sau")
+            "kiem-tra-mang" -> t(en, "kiểm tra mạng", "checked the network")
+            "duyet" -> t(en, "duyệt $sau", "approved $sau")
+            "bo-qua" -> t(en, "bỏ qua $sau", "ignored $sau")
+            "vai-tro" -> t(en, "đổi vai trò của $sau", "changed $sau's role")
+            "bo-nguoi" -> t(en, "bỏ $sau khỏi danh sách", "removed $sau")
+            "them" -> t(en, "thêm $sau", "added $sau")
+            "khoa-tv" -> t(en, "khoá thành viên tới $sau", "paused members until $sau")
+            "mo-tv" -> t(en, "mở lại cho thành viên", "let members back in")
+            else -> viec
+        }
+    }
+
     // ---------- Hẹn giờ (app vn.tivikit.hengio) ----------
 
     private val THU_VI = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")

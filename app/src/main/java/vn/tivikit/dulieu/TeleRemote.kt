@@ -66,9 +66,10 @@ object TeleRemote {
      * Trạng thái app phụ (content call … --method doc). [adb] như Map Voice (da-noi, dang-hoi, tu-choi, khong-co…); [tele] =
      * vòng hỏi Telegram: dang-nghe, chua-co-token, tam-tat, sai-token, trung-bot (bot đang chạy ở nơi khác), khong-mang, loi.
      */
+    /** [khoaThanhVienDen] = chủ tạm khoá thành viên từ Telegram tới lúc này (ms), 0 = không khoá. */
     data class TrangThai(
         val phienBan: String, val dichVuChay: Boolean, val adb: String, val tele: String, val lanCuoi: Long, val coToken: Boolean,
-        val bot: String, val cauHinh: CauHinh, val cho: List<XinDung>, val nhatKy: List<NhatKy>,
+        val bot: String, val cauHinh: CauHinh, val cho: List<XinDung>, val nhatKy: List<NhatKy>, val khoaThanhVienDen: Long = 0,
     )
 
     fun trangThai(j: JSONObject): TrangThai {
@@ -79,6 +80,7 @@ object TeleRemote {
             j.optBoolean("coToken"), j.optString("bot"), cauHinh(j.optJSONObject("cauHinh")) ?: CauHinh(),
             mang("cho") { XinDung(it.optLong("id"), it.optString("ten"), it.optString("tenHien"), it.optLong("luc")) },
             mang("nhatKy") { NhatKy(it.optLong("luc"), it.optString("ai"), it.optString("viec")) },
+            j.optLong("khoaThanhVienDen"),
         )
     }
 
@@ -104,6 +106,7 @@ object TeleRemote {
     fun lenhXoaCho(id: Long): String = lenh("xoa-cho", JSONObject().put("id", id).toString())
     val LENH_NHAN_THU = lenh("nhan-thu")
     val LENH_NOI_LAI = lenh("noi-lai")
+    val LENH_MO_THANH_VIEN = lenh("mo-thanh-vien")
 
     /** Giá trị [khoa] trong kết quả content call ("Result: Bundle[{bot=TiviNha_bot, ok=1}]"); "" nếu không có. */
     fun trong(ketQua: String, khoa: String): String = Regex("[{ ]$khoa=([^,}]*)").find(ketQua)?.groupValues?.get(1)?.trim().orEmpty()

@@ -16,7 +16,7 @@ import vn.tivikit.teleremote.XuLyLenh.Den
  * tivi; câu gõ như nói (Map Voice, không thì Trợ lý Google), link, ảnh / video chiếu lên tivi. Chạy trên luồng của Bot (một
  * việc một lúc).
  */
-class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
+class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
     /**
      * Việc đang chờ tin chữ kế tiếp của một chat: chữ để gõ lên tivi ([thay]: thay chữ đang có trong ô, không thì viết tiếp),
      * hay mã mở khoá trẻ em ([phut] phút mở tạm).
@@ -24,21 +24,34 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
     sealed interface Cho { val het: Long }
     data class ChoGo(override val het: Long, val thay: Boolean = true) : Cho
     data class ChoMa(val phut: Int, override val het: Long) : Cho
+    /** Lời nhắn để hiện lên tivi (📢). */
+    data class ChoNhan(override val het: Long) : Cho
+    /** @username của người chủ muốn thêm (👥 → ➕). */
+    data class ChoThem(override val het: Long) : Cho
 
-    private val ch = dv.kho.cauHinh
-    private val en = ch.tiengAnh
+    internal val ch = dv.kho.cauHinh
+    internal val en = ch.tiengAnh
 
-    private fun t(vi: String, enS: String) = if (en) enS else vi
+    internal fun t(vi: String, enS: String) = if (en) enS else vi
 
     fun lam(d: Den, nd: NguoiDung) {
         val viec = when {
             d.nut != null -> XuLyLenh.viecTuNut(d.nut) ?: run { ra.traLoiNut(d.idNut); return }
             else -> XuLyLenh.viecTuTin(d)
         }
-        // Bot đang chờ chữ để gõ / mã mở khoá: câu chữ kế tiếp là câu trả lời. Chờ gõ chữ thì bấm phím trên bảng điều khiển
-        // (đi tới ô nhập) vẫn chờ; chọn việc khác thì thôi chờ.
-        val cho = dv.choTin[d.chat]?.takeIf { it.het > System.currentTimeMillis() }
-        if (cho != null && d.nut == null && (viec is XuLyLenh.Noi || viec is XuLyLenh.Link)) {
+        // Chủ tạm khoá thành viên (giờ ngủ…): thành viên không dùng được gì tới lúc hết khoá.
+        val bay = System.currentTimeMillis()
+        val khoaTv = dv.kho.khoaThanhVienDen
+        if (nd.vaiTro != VaiTro.CHU && khoaTv > bay) {
+            val gio = ChuBot.gio(khoaTv, bay, ZoneId.systemDefault())
+            val loi = t("⏸ Chủ tivi đang tạm khoá bot tới $gio.", "⏸ The TV's owner has paused the bot until $gio.")
+            if (d.nut != null) ra.traLoiNut(d.idNut, loi, canhBao = true) else ra.gui(d.chat, loi)
+            return
+        }
+        // Bot đang chờ chữ để gõ / lời nhắn / mã mở khoá / @username: tin chữ tự do kế tiếp là câu trả lời (kể cả câu bot tự
+        // hiểu như "to lên"). Chờ gõ chữ thì bấm phím trên bảng điều khiển (đi tới ô nhập) vẫn chờ; chọn việc khác thì thôi chờ.
+        val cho = dv.choTin[d.chat]?.takeIf { it.het > bay }
+        if (cho != null && d.nut == null && d.tep == null && XuLyLenh.laChuTuDo(d.chu)) {
             dv.choTin.remove(d.chat)
             traLoiCho(d, nd, cho)
             return
@@ -69,7 +82,7 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
             is XuLyLenh.UngDung -> ungDung(d, nd, viec.trang)
             is XuLyLenh.MoUngDung -> moUngDung(d, nd, viec.goi)
             XuLyLenh.DungApp -> dungApp(d, nd)
-            XuLyLenh.Tivi -> ra.gui(d.chat, tinhTrang())
+            XuLyLenh.Tivi -> tinhTrang().let { (chu, tat) -> ra.gui(d.chat, chu, if (tat) XuLyLenh.nutBatManHinh(en) else null) }
             XuLyLenh.LamMoiTv -> lamMoi(d)
             XuLyLenh.DongAppNen -> dongAppNen(d, nd)
             XuLyLenh.DonCache -> donCache(d, nd)
@@ -93,12 +106,26 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
             is XuLyLenh.Noi -> noi(d, nd, viec.cau)
             is XuLyLenh.Link -> link(d, nd, viec.url)
             XuLyLenh.ChieuTep -> chieuTep(d, nd)
+            is XuLyLenh.NhanTivi -> if (viec.chu.isEmpty()) hoiNhan(d) else hienLoiNhan(d, nd, viec.chu)
+            XuLyLenh.Them -> them(d, nd)
+            XuLyLenh.BatManHinh -> batManHinh(d, nd)
+            is XuLyLenh.AmLuong -> amLuong(d, nd, viec)
+            XuLyLenh.KiemTraMang -> kiemTraMang(d, nd)
+            XuLyLenh.NhatKyXem -> nhatKy(d)
+            XuLyLenh.NguoiDs -> nguoiDs(d)
+            is XuLyLenh.NguoiXem -> nguoiXem(d, viec.khoa)
+            is XuLyLenh.DatVaiTro -> datVaiTro(d, nd, viec.khoa, viec.chu)
+            is XuLyLenh.BoNguoi -> boNguoi(d, nd, viec.khoa)
+            is XuLyLenh.Duyet -> duyet(d, nd, viec.id, viec.chu)
+            is XuLyLenh.BoQuaXin -> boQuaXin(d, nd, viec.id)
+            XuLyLenh.ThemNguoi -> hoiThemNguoi(d)
+            is XuLyLenh.KhoaThanhVien -> khoaThanhVien(d, nd, viec.phut)
             XuLyLenh.KhongRo -> ra.gui(d.chat, t("Chọn việc ở bàn phím bên dưới, hay gõ như nói với Trợ lý (VD \"mở nhạc trịnh\"). Gõ /start nếu không thấy bàn phím.",
                 "Pick from the keyboard below, or type like talking to the Assistant (e.g. \"play piano music\"). Send /start if you don't see the keyboard."), banPhim(nd))
         }
     }
 
-    private fun banPhim(nd: NguoiDung) = XuLyLenh.banPhimChinh(nd.vaiTro, en,
+    internal fun banPhim(nd: NguoiDung) = XuLyLenh.banPhimChinh(nd.vaiTro, en,
         XuLyLenh.Co(henGio = dv.coApp(HEN_GIO), khoa = dv.coApp(KHOA), manHinh = ch.chupManHinh))
 
     private fun chao(nd: NguoiDung): String {
@@ -165,6 +192,8 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
                 }, banPhim(nd))
             }
             is ChoMa -> moTam(d, nd, cho.phut, chu)
+            is ChoNhan -> hienLoiNhan(d, nd, chu)
+            is ChoThem -> themNguoi(d, nd, chu)
         }
     }
 
@@ -243,16 +272,21 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
 
     // ---------- Tình trạng, Làm mới ----------
 
-    /** Tình trạng tivi: màn hình, app đang mở, bài đang phát (Cast SmartTube), âm lượng, RAM, bộ nhớ, đã bật bao lâu, mạng, ADB. */
-    private fun tinhTrang(): String {
+    /**
+     * Tình trạng tivi: màn hình, app đang mở, bài đang phát (Cast SmartTube), âm lượng, RAM, bộ nhớ, đã bật bao lâu, mạng,
+     * ADB; kèm màn hình đang tắt / màn bảo vệ không (để hiện nút ☀️ Bật màn hình).
+     */
+    private fun tinhTrang(): Pair<String, Boolean> {
         val am = dv.getSystemService(AudioManager::class.java)
         val sd = dv.soDo(doCpu = false)
-        val man = when (dv.manHinh()) {
+        val trangThai = dv.manHinh()
+        val man = when (trangThai) {
             "Awake" -> t("đang bật", "on")
             "Dreaming" -> t("đang ở màn bảo vệ", "screensaver")
             "Asleep", "Dozing" -> t("đang tắt", "off")
             else -> if (dv.dangSang()) t("đang bật", "on") else t("đang tắt", "off")
         }
+        val tat = trangThai in setOf("Dreaming", "Asleep", "Dozing") || (trangThai.isEmpty() && !dv.dangSang())
         val dangPhat = if (dv.coApp(CAST)) dv.goiAppPhu(CAST, "dang-phat", choToiDa = 3000)?.let(XuLyLenh::jsonTrong)
             ?.let { j -> listOf(j.optString("tieuDe"), j.optString("kenh")).filter { it.isNotBlank() }.joinToString(" · ") }?.takeIf { it.isNotEmpty() } else null
         return listOfNotNull(
@@ -265,7 +299,7 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
             t("Đã bật: ", "Up for: ") + ChuBot.thoiGian(sd.msChay, en),
             t("Mạng: ", "Network: ") + dv.ip().ifEmpty { t("không rõ", "unknown") },
             "ADB: " + if (dv.coAdb()) t("đã nối", "connected") else t("chưa nối (phím ▲▼◀▶ OK chưa dùng được)", "not connected (▲▼◀▶ OK won't work)"),
-        ).joinToString("\n")
+        ).joinToString("\n") to tat
     }
 
     private fun lamMoi(d: Den) {
@@ -545,15 +579,15 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
     }
 
     /** Hiện bảng [bang] (chữ, nút): bấm nút trong tin thì sửa chính tin đó, gõ lệnh thì gửi tin mới. */
-    private fun hienBang(d: Den, bang: Pair<String, JSONObject?>, traLoi: Boolean = true) {
+    internal fun hienBang(d: Den, bang: Pair<String, JSONObject?>, traLoi: Boolean = true) {
         if (d.nut != null && traLoi) ra.traLoiNut(d.idNut)
         if (d.nut != null && d.idTin != 0L) ra.sua(d.chat, d.idTin, bang.first, bang.second) else ra.gui(d.chat, bang.first, bang.second)
     }
 
-    private fun chuChuaAdb() = t("Tivi chưa nối ADB của chính nó: mở TiviKit → Tele Remote xem cách nối.",
+    internal fun chuChuaAdb() = t("Tivi chưa nối ADB của chính nó: mở TiviKit → Tele Remote xem cách nối.",
         "The TV isn't connected to its own ADB yet: open TiviKit → Tele Remote to fix it.")
 
-    private fun ghi(nd: NguoiDung, viec: String) = dv.kho.ghi(nd.ten.ifEmpty { nd.tenHien }, viec)
+    internal fun ghi(nd: NguoiDung, viec: String) = dv.kho.ghi(nd.ten.ifEmpty { nd.tenHien }, viec)
 
     companion object {
         const val MAP_VOICE = "vn.tivikit.mapvoice"
@@ -566,7 +600,7 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
          * Chờ chữ để gõ / mã mở khoá tối đa chừng này (ms): đủ lâu để tìm mật khẩu Wi-Fi, vì quá hạn thì chữ gõ thành câu nhắn
          * như nói (đưa Map Voice / Trợ lý).
          */
-        private const val CHO_MS = 10 * 60_000L
+        internal const val CHO_MS = 10 * 60_000L
 
         /** App YouTube mở bằng nút ▶️ YouTube, theo thứ tự ưu tiên. */
         val APP_YOUTUBE = listOf(
@@ -585,11 +619,11 @@ class LamViec(private val dv: TeleRemoteDichVu, private val ra: Ra) {
 
         /** Lệnh hiện ở nút Menu của chat với bot. */
         fun lenhMenu(en: Boolean): List<Pair<String, String>> = if (en) listOf(
-            "start" to "Open the menu", "remote" to "Remote control", "go" to "Type text on the TV", "kenh" to "Quick channel",
-            "apps" to "Apps on the TV", "tivi" to "TV status",
+            "start" to "Open the menu", "remote" to "Remote control", "go" to "Type text on the TV", "nhan" to "Show a message on the TV",
+            "kenh" to "Quick channel", "apps" to "Apps on the TV", "tivi" to "TV status", "mang" to "Network check", "them" to "More",
         ) else listOf(
-            "start" to "Mở menu", "remote" to "Bảng điều khiển", "go" to "Gõ chữ lên tivi", "kenh" to "Kênh nhanh",
-            "apps" to "Ứng dụng trên tivi", "tivi" to "Tình trạng tivi",
+            "start" to "Mở menu", "remote" to "Bảng điều khiển", "go" to "Gõ chữ lên tivi", "nhan" to "Nhắn lên màn hình tivi",
+            "kenh" to "Kênh nhanh", "apps" to "Ứng dụng trên tivi", "tivi" to "Tình trạng tivi", "mang" to "Kiểm tra mạng", "them" to "Thêm",
         )
     }
 }
