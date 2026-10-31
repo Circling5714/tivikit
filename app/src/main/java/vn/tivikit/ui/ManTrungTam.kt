@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -139,6 +140,8 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
         MucChucNang(Icons.Rounded.Cast, MauO.doTuoi, t("Cast SmartTube", "Cast to SmartTube"), t("YouTube trên điện thoại cast sang SmartTube; mã TV, duyệt / chặn điện thoại", "The phone's YouTube casts to SmartTube; TV code, approve / block phones")) { vm.moChucNang { vm.cast.mo() } },
         // 29/10/2026: nói vào mic của remote, câu tìm nhạc / video mở bằng SmartTube, câu mở kênh mở bằng VTVgo / TV360.
         MucChucNang(Icons.Rounded.Mic, MauO.doTuoi, "Map Voice", t("Nói vào mic của remote: YouTube mở bằng SmartTube / TizenTube, kênh bằng VTVgo / TV360 / FPT Play, câu riêng", "Speak into the remote: YouTube opens in SmartTube / TizenTube, channels in VTVgo / TV360 / FPT Play, custom phrases")) { vm.moChucNang { vm.mapVoice.mo() } },
+        // 31/10/2026: bot Telegram riêng của tivi, người được phép điều khiển tivi từ Telegram ở đâu cũng được.
+        MucChucNang(Icons.AutoMirrored.Rounded.Send, MauO.xanh, "Tele Remote", t("Điều khiển tivi từ Telegram: bàn phím, Kênh nhanh, YouTube, tắt tivi", "Control the TV from Telegram: keys, Quick channel, YouTube, turn off")) { vm.moChucNang { vm.teleRemote.mo() } },
         MucChucNang(Icons.Rounded.LiveTv, MauO.doTuoi, t("Kênh nhanh", "Quick channel"), t("Ô kênh mở thẳng VTV1, HTV7… trên TV360, VTVgo hoặc FPT Play", "Tiles open VTV1, HTV7… straight in TV360, VTVgo or FPT Play")) { vm.moChucNang { vm.kenhNhanh.mo() } },
         MucChucNang(Icons.Rounded.Alarm, MauO.cam, t("Hẹn giờ", "Timer"), t("Bật / tắt tivi, mở app theo giờ", "Turn the TV on / off, open apps on time")) { vm.moChucNang { vm.henGio.mo() } },
         MucChucNang(Icons.Rounded.Lock, MauO.cham, t("Khoá trẻ em", "Kids lock"), t("Hẹn giờ khoá tivi hay từng app, mở bằng mã OTP", "Lock the TV or single apps on a schedule, OTP code to unlock")) { vm.moChucNang { vm.khoaTre.mo() } },

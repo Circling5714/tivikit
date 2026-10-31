@@ -13,6 +13,7 @@ import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.KhoSaoLuu
 import vn.tivikit.dulieu.Launcher
 import vn.tivikit.dulieu.MapVoice
+import vn.tivikit.dulieu.TeleRemote
 import vn.tivikit.dulieu.PhanApk
 import vn.tivikit.dulieu.PhimRieng
 import vn.tivikit.dulieu.ThongTinTv
@@ -1455,6 +1456,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
         if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
         if (mapVoiceDaCai()) { bao(t("Gỡ Map Voice…", "Removing Map Voice…")); runCatching { goMapVoice() } }
+        if (teleRemoteDaCai()) { bao(t("Gỡ Tele Remote…", "Removing Tele Remote…")); runCatching { goTeleRemote() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { goTklHet() } }
@@ -1528,6 +1530,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (henGioDaCai()) { bao(t("Gỡ Hẹn giờ…", "Removing the Timer…")); runCatching { goHenGio() } }
         if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
         if (mapVoiceDaCai()) { bao(t("Gỡ Map Voice…", "Removing Map Voice…")); runCatching { goMapVoice() } }
+        if (teleRemoteDaCai()) { bao(t("Gỡ Tele Remote…", "Removing Tele Remote…")); runCatching { goTeleRemote() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { goTklHet() } }
@@ -1922,6 +1925,47 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         sh("pm uninstall ${MapVoice.GOI}")
     }
 
+    // ---------- Tele Remote (app vn.tivikit.teleremote, 31/10/2026) ----------
+
+    fun teleRemoteDaCai(): Boolean = coGoi(TeleRemote.GOI)
+
+    /** Trạng thái app Tele Remote (bot, ADB của tivi, người được dùng, người xin dùng, nhật ký); null nếu chưa cài. */
+    fun docTeleRemote(): org.json.JSONObject? = if (!teleRemoteDaCai()) null else docQua(TeleRemote.GOI)
+
+    /**
+     * Cài / cập nhật app Tele Remote, cho nó sáng màn hình khi mở app (Android 14+), gửi [cauHinh], bật dịch vụ trợ năng
+     * (như Map Voice). Dịch vụ vừa bật thì nối ADB của tivi: tivi chưa biết khoá của Tele Remote thì hỏi trên màn hình.
+     */
+    fun caiTeleRemote(apk: ByteArray, cauHinh: TeleRemote.CauHinh, bao: (String) -> Unit) {
+        caiAppPhu(TeleRemote.GOI, apk) { bao(t("Cài app Tele Remote lên tivi…", "Installing Tele Remote on the TV…")) }
+        sh("cmd appops set ${TeleRemote.GOI} TURN_SCREEN_ON allow 2>/dev/null; true")
+        bao(t("Gửi cài đặt…", "Sending the settings…"))
+        if (!datTeleRemote(cauHinh)) error(t("Tivi không nhận cài đặt của Tele Remote.", "The TV rejected the Tele Remote settings."))
+        bao(t("Bật dịch vụ Tele Remote…", "Turning the Tele Remote service on…"))
+        val dv = TeleRemote.DICH_VU
+        sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$dv*) ;; null|'') settings put secure enabled_accessibility_services $dv ;; *) settings put secure enabled_accessibility_services \"\$s:$dv\" ;; esac; settings put secure accessibility_enabled 1")
+    }
+
+    fun datTeleRemote(c: TeleRemote.CauHinh): Boolean = sh(TeleRemote.lenhDat(c)).contains("ok=1")
+
+    /** Gửi token bot (tivi hỏi Telegram xem có đúng không); trả kết quả content call (bot=… / loi=…). */
+    fun datTokenTeleRemote(token: String): String = sh(TeleRemote.lenhToken(token))
+
+    /** Bot nhắn chủ tivi một tin thử; trả kết quả content call (so=… / loi=…). */
+    fun nhanThuTeleRemote(): String = sh(TeleRemote.LENH_NHAN_THU)
+
+    fun xoaChoTeleRemote(id: Long): Boolean = sh(TeleRemote.lenhXoaCho(id)).contains("ok=1")
+
+    /** Bảo Tele Remote nối lại ADB ngay; false nếu dịch vụ đang tắt. */
+    fun noiLaiTeleRemote(): Boolean = sh(TeleRemote.LENH_NOI_LAI).contains("ok=1")
+
+    /** Gỡ app Tele Remote: bỏ dịch vụ trợ năng rồi gỡ (token, người được dùng mất theo; bot trên Telegram vẫn còn). */
+    fun goTeleRemote() {
+        if (!teleRemoteDaCai()) return
+        boTroNang(TeleRemote.DICH_VU)
+        sh("pm uninstall ${TeleRemote.GOI}")
+    }
+
     // ---------- Gõ tiếng Việt (app vn.tivikit.go, 25/10/2026) ----------
 
     fun boGoDaCai(): Boolean = coGoi(GoChu.GOI)
@@ -2274,7 +2318,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
          * phát, thời tiết). Cách tv-remote giữ app của nó trên box RAM thấp (họ đo trên box FPT Play, Android 14): thêm vào danh
          * sách bỏ qua tối ưu pin (Doze), xếp nhóm "đang dùng" (App Standby), cho chạy nền.
          */
-        val GIU_SONG: Set<String> get() = HOME_SACH + setOf(PKG_KHOA, vn.tivikit.dulieu.HenGio.GOI, TiviKitLauncher.GOI, CastSmartTube.GOI, MapVoice.GOI)
+        val GIU_SONG: Set<String> get() = HOME_SACH + setOf(PKG_KHOA, vn.tivikit.dulieu.HenGio.GOI, TiviKitLauncher.GOI, CastSmartTube.GOI, MapVoice.GOI, TeleRemote.GOI)
 
         /**
          * Lệnh giữ [goi] chạy nền (xem GIU_SONG). Mỗi lệnh im lặng khi lỗi (Android 8 chưa có set-standby-bucket, gói vừa gỡ):

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ô xanh (màu Telegram) + hình "send" của Material Icons (Apache 2.0). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#229ED9"
+        android:pathData="M5,0h14a5,5 0,0 1,5 5v14a5,5 0,0 1,-5 5h-14a5,5 0,0 1,-5 -5v-14a5,5 0,0 1,5 -5z" />
+    <group
+        android:pivotX="12"
+        android:pivotY="12"
+        android:scaleX="0.62"
+        android:scaleY="0.62"
+        android:translateX="0.6">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M2.01,21L23,12 2.01,3 2,10l15,2 -15,2z" />
+    </group>
+</vector>

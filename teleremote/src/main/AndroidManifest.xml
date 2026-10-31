@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Hỏi Telegram (api.telegram.org) và nối ADB của chính tivi ở 127.0.0.1:5555. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Mở kênh / app thì sáng màn hình (tivi đang ở màn bảo vệ); Android 14+ cần TURN_SCREEN_ON, TiviKit cấp qua ADB. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" tools:ignore="ProtectedPermissions" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- Android 11+: thấy các ô Kênh nhanh, app YouTube (SmartTube, TizenTube, YouTube gốc), app trong danh sách app của tivi
+         và app Home (tên app đang mở). -->
+    <queries>
+        <package android:name="vn.tivikit.kenh" />
+        <package android:name="vn.tivikit.kenh2" />
+        <package android:name="vn.tivikit.kenh3" />
+        <package android:name="vn.tivikit.kenh4" />
+        <package android:name="vn.tivikit.kenh5" />
+        <package android:name="vn.tivikit.kenh6" />
+        <package android:name="org.smarttube.stable" />
+        <package android:name="org.smarttube.beta" />
+        <package android:name="com.liskovsoft.smarttubetv" />
+        <package android:name="com.liskovsoft.smarttubetv.beta" />
+        <package android:name="io.gh.reisxd.tizentube.cobalt" />
+        <package android:name="com.google.android.youtube.tv" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
+
+    <!-- Không có màn mở trong danh sách app: bật và chỉnh ở TiviKit trên điện thoại. -->
+    <application
+        android:label="@string/ten_app"
+        android:icon="@drawable/ic_tele_remote"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <!-- Giữ bot và kết nối ADB chạy suốt từ lúc tivi bật, được mở app / kênh khi app đang chạy nền, và biết app nào đang
+             hiện (để báo "Đang mở"). -->
+        <service
+            android:name=".TeleRemoteDichVu"
+            android:exported="true"
+            android:label="@string/ten_app"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/tele_remote_tro_nang" />
+        </service>
+        <!-- Token, người được dùng chỉ đặt được từ ADB (TiviKit). -->
+        <provider
+            android:name=".CauHinhProvider"
+            android:authorities="${applicationId}"
+            android:exported="true" />
+    </application>
+</manifest>

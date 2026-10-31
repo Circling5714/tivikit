@@ -81,6 +81,7 @@ jobs:
           scripts/dung-hen-gio.sh
           scripts/dung-cast.sh
           scripts/dung-mapvoice.sh
+          scripts/dung-teleremote.sh
           scripts/dung-go.sh
           scripts/dung-tivikit-launcher.sh
           scripts/dung-tren-tv.sh
