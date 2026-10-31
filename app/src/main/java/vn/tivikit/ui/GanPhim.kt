@@ -116,8 +116,10 @@ class GanPhim(private val vm: PhienLamViec) {
         val (n, g) = vuaGan ?: return@chay
         vm.damBaoKetNoi()
         thuOk = null; goiYTatYouTube = false; bao = ""
-        // Kênh nhanh mở xong là tự đóng, TV360 lên trước mặt; đích "gói/màn", "intent:…" thì chờ app của nó.
-        val mongDoi = if (KenhNhanh.laGoiKenh(g)) KenhNhanh.TV360 else PhimRieng.goiCuaDich(g) ?: g
+        // Kênh nhanh mở xong là tự đóng, app của kênh (TV360 / VTVgo / FPT Play) lên trước mặt; đích "gói/màn", "intent:…"
+        // thì chờ app của nó.
+        val mongDoi = KenhNhanh.oCua(g)?.let { o -> KenhNhanh.tuJson(vm.io { vm.tv.docKenh(o) })?.app ?: KenhNhanh.TV360 }
+            ?: PhimRieng.goiCuaDich(g) ?: g
         val kq = vm.io { vm.tv.thuNut(n, mongDoi, 20, veHome = !vn.tivikit.ManHinh.laTv) }
         thuOk = kq.daBam && kq.goi == mongDoi
         bao = when {
