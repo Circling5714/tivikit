@@ -60,7 +60,8 @@ class TeleRemoteTivi(private val vm: PhienLamViec) {
         vm.damBaoKetNoi()
         bao = ""; baoLech = false
         val apk = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, TeleRemote.APK).readBytes() }
-        vm.io { vm.tv.caiTeleRemote(apk, cauHinh.copy(tiengAnh = !vn.tivikit.NgonNgu.tiengViet)) { s -> vm.thongBao = s } }
+        val apkGo = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, "go.apk").readBytes() }
+        vm.io { vm.tv.caiTeleRemote(apk, apkGo, cauHinh.copy(tiengAnh = !vn.tivikit.NgonNgu.tiengViet)) { s -> vm.thongBao = s } }
         daCai = true
         vm.thongBao = t("Chờ Tele Remote nối ADB của tivi…", "Waiting for Tele Remote to reach the TV's ADB…")
         for (i in 1..10) {
@@ -148,6 +149,12 @@ class TeleRemoteTivi(private val vm: PhienLamViec) {
     /** Tạm tắt / bật lại bot (app vẫn cài, tivi không hỏi Telegram khi tắt). */
     fun batTat(bat: Boolean) = vm.chay(t("Đang lưu…", "Saving…")) { guiCauHinh(cauHinh.copy(bat = bat)) }
 
+    /** Cho chủ tivi chụp màn hình tivi gửi qua Telegram (tắt sẵn: ảnh màn hình đi qua máy chủ Telegram). */
+    fun datChupManHinh(bat: Boolean) = vm.chay(t("Đang lưu…", "Saving…")) { guiCauHinh(cauHinh.copy(chupManHinh = bat)) }
+
+    /** Bot nhắn các chủ tivi khi tivi vừa bật / vừa tắt. */
+    fun datBaoTin(bat: Boolean) = vm.chay(t("Đang lưu…", "Saving…")) { guiCauHinh(cauHinh.copy(baoTin = bat)) }
+
     /** Bot nhắn chủ tivi một tin thử. */
     fun nhanThu() = vm.chay(t("Bot đang nhắn thử…", "The bot is sending a test message…")) {
         vm.damBaoKetNoi()
@@ -223,13 +230,31 @@ class TeleRemoteTivi(private val vm: PhienLamViec) {
         }
 
         /** Một dòng nhật ký, nói cho người dùng. */
-        fun moTa(n: TeleRemote.NhatKy): String = when {
-            n.viec == "dieu-khien" -> t("mở bảng điều khiển", "opened the remote")
-            n.viec == "tat" -> t("tắt tivi", "turned the TV off")
-            n.viec == "xin-dung" -> t("xin dùng bot", "asked to use the bot")
-            n.viec.startsWith("kenh|") -> t("mở kênh ", "opened channel ") + n.viec.substringAfter('|')
-            n.viec.startsWith("mo|") -> t("mở ", "opened ") + (MapVoiceTivi.tenAppMv(n.viec.substringAfter('|')) ?: n.viec.substringAfter('|'))
-            else -> n.viec
+        fun moTa(n: TeleRemote.NhatKy): String {
+            val sau = n.viec.substringAfter('|', "")
+            return when (n.viec.substringBefore('|')) {
+                "dieu-khien" -> t("mở bảng điều khiển", "opened the remote")
+                "tat" -> t("tắt tivi", "turned the TV off")
+                "khoi-dong-lai" -> t("khởi động lại tivi", "restarted the TV")
+                "xin-dung" -> t("xin dùng bot", "asked to use the bot")
+                "kenh" -> t("mở kênh ", "opened channel ") + sau
+                "mo" -> t("mở ", "opened ") + (MapVoiceTivi.tenAppMv(sau) ?: sau)
+                "dung" -> t("buộc dừng ", "force-stopped ") + (MapVoiceTivi.tenAppMv(sau) ?: sau)
+                "noi" -> t("nhắn \"$sau\"", "typed \"$sau\"")
+                "tro-ly" -> t("đưa Trợ lý: \"$sau\"", "asked the Assistant: \"$sau\"")
+                "link" -> t("mở link ", "opened a link from ") + sau
+                "anh" -> t("chiếu ảnh lên tivi", "showed a photo on the TV")
+                "video" -> t("phát video lên tivi", "played a video on the TV")
+                "go-chu" -> t("gõ chữ lên tivi", "typed text on the TV")
+                "chup" -> t("chụp màn hình tivi", "took a screenshot")
+                "hen" -> t("hẹn tắt tivi sau ", "set the TV to turn off in ") + sau.removePrefix("tat-") + t(" phút", " min")
+                "huy-hen" -> t("huỷ một hẹn giờ", "cancelled a timer")
+                "khoa-ngay" -> t("khoá trẻ em ngay", "locked the TV (Kids lock)")
+                "mo-tam" -> t("mở khoá trẻ em $sau phút", "unlocked Kids lock for $sau min")
+                "dong-app-nen" -> t("đóng app nền", "closed background apps")
+                "don-cache" -> t("dọn cache", "cleared the cache")
+                else -> n.viec
+            }
         }
     }
 }

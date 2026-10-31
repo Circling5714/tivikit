@@ -1,5 +1,7 @@
 package vn.tivikit.teleremote
 
+import android.os.SystemClock
+import java.io.File
 import java.io.IOException
 import kotlin.concurrent.thread
 import org.json.JSONObject
@@ -9,6 +11,12 @@ interface Ra {
     fun gui(chat: Long, chu: String, banPhim: JSONObject? = null)
     fun sua(chat: Long, idTin: Long, chu: String, banPhim: JSONObject? = null)
     fun traLoiNut(id: String, chu: String = "", canhBao: Boolean = false)
+    fun guiAnh(chat: Long, anh: ByteArray, chuThich: String)
+    fun xoaTin(chat: Long, idTin: Long)
+    /** "typing" / "upload_photo": hiện trong chat lúc tivi làm việc lâu. */
+    fun dangLam(chat: Long, viec: String)
+    /** Tải ảnh / video [id] người dùng vừa gửi về [dich]; false nếu không tải được (mạng, lớn quá [toiDa]). */
+    fun taiTep(id: String, dich: File, toiDa: Long): Boolean
 }
 
 /** Trả lời qua Telegram; lỗi gửi (người dùng chặn bot, mạng chập chờn) thì bỏ, không làm hỏng vòng nghe. */
@@ -16,6 +24,10 @@ class TelegramRa(private val t: Telegram) : Ra {
     override fun gui(chat: Long, chu: String, banPhim: JSONObject?) { runCatching { t.gui(chat, chu, banPhim) } }
     override fun sua(chat: Long, idTin: Long, chu: String, banPhim: JSONObject?) { runCatching { t.sua(chat, idTin, chu, banPhim) } }
     override fun traLoiNut(id: String, chu: String, canhBao: Boolean) { if (id.isNotEmpty()) runCatching { t.traLoiNut(id, chu, canhBao) } }
+    override fun guiAnh(chat: Long, anh: ByteArray, chuThich: String) { runCatching { t.guiAnh(chat, anh, chuThich) } }
+    override fun xoaTin(chat: Long, idTin: Long) { if (idTin != 0L) runCatching { t.xoaTin(chat, idTin) } }
+    override fun dangLam(chat: Long, viec: String) { runCatching { t.dangLam(chat, viec) } }
+    override fun taiTep(id: String, dich: File, toiDa: Long): Boolean = runCatching { t.taiTep(id, dich, toiDa) }.isSuccess
 }
 
 /** Ghi lại những gì bot định trả lời (lệnh thu: TiviKit / người thử xem bot làm gì mà không cần Telegram). */
@@ -24,6 +36,10 @@ class GhiRa : Ra {
     override fun gui(chat: Long, chu: String, banPhim: JSONObject?) { ds += chu + nut(banPhim) }
     override fun sua(chat: Long, idTin: Long, chu: String, banPhim: JSONObject?) { ds += chu + nut(banPhim) }
     override fun traLoiNut(id: String, chu: String, canhBao: Boolean) { if (chu.isNotEmpty()) ds += chu }
+    override fun guiAnh(chat: Long, anh: ByteArray, chuThich: String) { ds += "[ảnh ${anh.size / 1024} KB] $chuThich" }
+    override fun xoaTin(chat: Long, idTin: Long) {}
+    override fun dangLam(chat: Long, viec: String) {}
+    override fun taiTep(id: String, dich: File, toiDa: Long) = false
 
     /** Chữ trên các nút đi kèm (bàn phím chính hay nút trong tin) để người thử thấy: " [a · b]"; không có nút thì "". */
     private fun nut(b: JSONObject?): String {
@@ -36,7 +52,8 @@ class GhiRa : Ra {
 /**
  * Vòng hỏi Telegram của bot gắn với tivi (31/10/2026): getUpdates chờ tới 50 giây mỗi lần (long polling, không cần mở cổng
  * modem hay máy chủ). Mỗi tivi một bot: Telegram chỉ cho một nơi hỏi một bot, tivi khác dùng cùng token thì Telegram báo
- * 409 (TRUNG_BOT). Mỗi lần nối lại thì bỏ tin dồn từ lúc tivi tắt / mất mạng. Người lạ nhắn thì ghi vào danh sách chờ
+ * 409 (TRUNG_BOT). Mỗi lần nối lại chỉ làm tin chữ vừa gửi trong tin dồn (bỏ tin cũ và nút bấm cũ từ lúc tivi tắt / mất
+ * mạng). Người lạ nhắn thì ghi vào danh sách chờ
  * duyệt và báo chủ tivi một lần.
  */
 class Bot(private val dv: TeleRemoteDichVu) {
@@ -55,6 +72,8 @@ class Bot(private val dv: TeleRemoteDichVu) {
     /** Vừa được gọi dậy (token / cấu hình đổi): lần chờ kế tiếp khỏi chờ, khỏi lỡ lời gọi tới trước lúc bắt đầu chờ. */
     @Volatile private var doi = false
     private val danhThuc = Object()
+    /** Đã báo "tivi vừa bật" cho lần khởi động này (báo tin). */
+    @Volatile private var daBaoBat = false
     private val kho get() = dv.kho
 
     fun batDau() {
@@ -89,10 +108,19 @@ class Bot(private val dv: TeleRemoteDichVu) {
                 t.toi().optString("username").takeIf { it.isNotEmpty() }?.let { if (it != kho.bot) kho.bot = it }
                 t.boWebhook()
                 runCatching { t.datLenh(LamViec.lenhMenu(kho.cauHinh.tiengAnh)) }
-                var offset = t.boTinCu()
+                val (don, dau) = t.tinDon()
+                var offset = dau
+                // Tin dồn: chỉ làm tin chữ vừa gửi (xuLy bỏ tin cũ hơn 2 phút: tivi vừa cài đè, mạng chập chờn vài giây). Nút bấm
+                // không biết bấm lúc nào nên bỏ cả: "Tắt tivi" bấm từ tối qua không tắt tivi vừa bật sáng nay.
+                for (u in don) if (u.has("message")) runCatching { xuLy(u, t) }
                 trangThai = TrangThai.DANG_NGHE
                 lanCuoi = System.currentTimeMillis()
                 cho = CHO_DAU
+                // Báo tin: tivi vừa khởi động (dịch vụ chạy từ lúc bật tivi; cài đè / bật lại dịch vụ giữa chừng thì không báo).
+                if (!daBaoBat) {
+                    daBaoBat = true
+                    if (kho.cauHinh.baoTin && SystemClock.elapsedRealtime() < MOI_KHOI_DONG) dv.baoTin(LamViec.chuBat(dv))
+                }
                 while (chay && kho.token == token && kho.cauHinh.bat) {
                     val ds = t.capNhat(offset)
                     lanCuoi = System.currentTimeMillis()
@@ -138,6 +166,25 @@ class Bot(private val dv: TeleRemoteDichVu) {
         LamViec(dv, ra).lam(d, nd2)
     }
 
+    /**
+     * Nhắn [chu] cho các chủ tivi đã nhắn bot (báo tin: tivi vừa bật / vừa tắt), trên luồng riêng. Tivi vừa thức dậy thì mạng
+     * có thể chưa lên: thử lại vài lần trong chừng một phút.
+     */
+    fun baoChu(chu: String) {
+        val token = kho.token.takeIf { it.isNotEmpty() } ?: return
+        val chuTivi = kho.cauHinh.nguoiDung.filter { it.vaiTro == VaiTro.CHU && it.id != 0L }
+        if (chuTivi.isEmpty()) return
+        thread(name = "TeleRemote-bao", isDaemon = true) {
+            val t = Telegram(token)
+            val conLai = chuTivi.map { it.id }.toMutableList()
+            for (lan in 1..4) {
+                conLai.removeAll { id -> runCatching { t.gui(id, chu) }.isSuccess }
+                if (conLai.isEmpty() || !chay) break
+                Thread.sleep(15_000)
+            }
+        }
+    }
+
     /** Người không có trong danh sách: nút thì báo không được phép; tin thì ghi chờ duyệt, nhắn họ và chủ tivi một lần. */
     private fun nguoiLa(d: XuLyLenh.Den, ra: Ra, ch: CauHinh) {
         val en = ch.tiengAnh
@@ -165,5 +212,7 @@ class Bot(private val dv: TeleRemoteDichVu) {
     companion object {
         private const val CHO_DAU = 5_000L
         private const val CHO_TOI_DA = 120_000L
+        /** Dịch vụ chạy trong chừng này ms đầu sau khi bật tivi là tivi vừa khởi động (báo tin). */
+        private const val MOI_KHOI_DONG = 10 * 60_000L
     }
 }

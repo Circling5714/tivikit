@@ -64,7 +64,16 @@ class XuLyLenhTest {
         assertEquals(XuLyLenh.YouTube, XuLyLenh.viecTuChu("▶️ YouTube"))
         assertEquals(XuLyLenh.Tivi, XuLyLenh.viecTuChu("/tivi"))
         assertEquals(XuLyLenh.HoiTat, XuLyLenh.viecTuChu("📴 Tắt tivi"))
-        assertEquals(XuLyLenh.KhongRo, XuLyLenh.viecTuChu("xin chào"))
+        assertEquals(XuLyLenh.UngDung(0), XuLyLenh.viecTuChu("📱 Ứng dụng"))
+        assertEquals(XuLyLenh.HenGio, XuLyLenh.viecTuChu("⏰ Timer"))
+        assertEquals(XuLyLenh.Khoa, XuLyLenh.viecTuChu("🔒 Khoá trẻ em"))
+        assertEquals(XuLyLenh.LamMoiTv, XuLyLenh.viecTuChu("🧹 Làm mới"))
+        assertEquals(XuLyLenh.ChupManHinh, XuLyLenh.viecTuChu("/manhinh"))
+        assertEquals(XuLyLenh.GoChu, XuLyLenh.viecTuChu("/go"))
+        // Chữ khác là câu nhắn như nói; có link thì mở link; lệnh / lạ và tin rỗng thì không rõ.
+        assertEquals(XuLyLenh.Noi("mở nhạc trịnh"), XuLyLenh.viecTuChu("  mở nhạc trịnh "))
+        assertEquals(XuLyLenh.Link("https://youtu.be/dQw4w9WgXcQ"), XuLyLenh.viecTuChu("xem này https://youtu.be/dQw4w9WgXcQ!"))
+        assertEquals(XuLyLenh.KhongRo, XuLyLenh.viecTuChu("/abc"))
         assertEquals(XuLyLenh.KhongRo, XuLyLenh.viecTuChu(""))
     }
 
@@ -74,7 +83,20 @@ class XuLyLenhTest {
         assertEquals(XuLyLenh.MoKenh(3), XuLyLenh.viecTuNut("o:3"))
         assertEquals(XuLyLenh.Tat, XuLyLenh.viecTuNut("t:ok"))
         assertEquals(XuLyLenh.ThoiTat, XuLyLenh.viecTuNut("t:x"))
-        assertEquals(XuLyLenh.LamMoi, XuLyLenh.viecTuNut("r"))
+        assertEquals(XuLyLenh.CapNhat, XuLyLenh.viecTuNut("r"))
+        assertEquals(XuLyLenh.GoChu, XuLyLenh.viecTuNut("g"))
+        assertEquals(XuLyLenh.KhoiDongLai, XuLyLenh.viecTuNut("t:rb"))
+        assertEquals(XuLyLenh.UngDung(2), XuLyLenh.viecTuNut("ap:2"))
+        assertEquals(XuLyLenh.MoUngDung("com.netflix.ninja"), XuLyLenh.viecTuNut("a:com.netflix.ninja"))
+        assertEquals(XuLyLenh.TatSau(30), XuLyLenh.viecTuNut("h:t:30"))
+        assertEquals(XuLyLenh.HuyHen("tat-1793422740000"), XuLyLenh.viecTuNut("h:x:tat-1793422740000"))
+        assertEquals(XuLyLenh.MoTam(60), XuLyLenh.viecTuNut("kh:m:60"))
+        assertEquals(XuLyLenh.KhoaNgay, XuLyLenh.viecTuNut("kh:k"))
+        // Gói lạ (có lệnh shell), phút ngoài danh sách nút: bỏ.
+        assertNull(XuLyLenh.viecTuNut("a:com.x;reboot"))
+        assertNull(XuLyLenh.viecTuNut("h:t:7"))
+        assertNull(XuLyLenh.viecTuNut("h:x:tat-1'; reboot"))
+        assertNull(XuLyLenh.viecTuNut("kh:m:999"))
         // Phím ngoài bảng (nút nguồn, phím lạ) và ô ngoài 1..6: dữ liệu giả, bỏ.
         assertNull(XuLyLenh.viecTuNut("k:26"))
         assertNull(XuLyLenh.viecTuNut("k:abc"))
@@ -83,6 +105,10 @@ class XuLyLenhTest {
         assertTrue(XuLyLenh.chiChu(XuLyLenh.Tat))
         assertTrue(XuLyLenh.chiChu(XuLyLenh.HoiTat))
         assertFalse(XuLyLenh.chiChu(XuLyLenh.Phim(23)))
+        listOf(XuLyLenh.KhoiDongLai, XuLyLenh.HenGio, XuLyLenh.TatSau(30), XuLyLenh.Khoa, XuLyLenh.MoTam(30), XuLyLenh.ChupManHinh,
+            XuLyLenh.LamMoiTv, XuLyLenh.DungApp).forEach { assertTrue(it.toString(), XuLyLenh.chiChu(it)) }
+        listOf(XuLyLenh.GoChu, XuLyLenh.UngDung(0), XuLyLenh.MoUngDung("a.b"), XuLyLenh.Noi("x"), XuLyLenh.Link("https://a.b"), XuLyLenh.ChieuTep)
+            .forEach { assertFalse(it.toString(), XuLyLenh.chiChu(it)) }
     }
 
     @Test
@@ -95,14 +121,19 @@ class XuLyLenhTest {
 
     @Test
     fun banPhim() {
+        fun nut(b: JSONObject) = b.getJSONArray("keyboard").let { a ->
+            (0 until a.length()).flatMap { i -> (0 until a.getJSONArray(i).length()).map { a.getJSONArray(i).getJSONObject(it).getString("text") } }
+        }
+        // Chủ, tivi chưa có Hẹn giờ / Khoá trẻ em, chưa bật chụp: 7 nút, hai cột, Tắt tivi cuối.
         val chuPhim = XuLyLenh.banPhimChinh(VaiTro.CHU, en = false)
-        assertEquals(3, chuPhim.getJSONArray("keyboard").length())
-        assertEquals("📴 Tắt tivi", chuPhim.getJSONArray("keyboard").getJSONArray(2).getJSONObject(0).getString("text"))
-        assertEquals(2, XuLyLenh.banPhimChinh(VaiTro.THANH_VIEN, en = true).getJSONArray("keyboard").length())
-        // Mỗi nút của bàn phím chính đọc lại ra đúng việc.
-        val a = XuLyLenh.banPhimChinh(VaiTro.CHU, en = true).getJSONArray("keyboard")
-        val viec = (0 until a.length()).flatMap { i -> (0 until a.getJSONArray(i).length()).map { XuLyLenh.viecTuChu(a.getJSONArray(i).getJSONObject(it).getString("text")) } }
-        assertEquals(listOf(XuLyLenh.DieuKhien, XuLyLenh.Kenh, XuLyLenh.YouTube, XuLyLenh.Tivi, XuLyLenh.HoiTat), viec)
+        assertEquals(4, chuPhim.getJSONArray("keyboard").length())
+        assertEquals("📴 Tắt tivi", nut(chuPhim).last())
+        assertEquals(listOf("🎮 Điều khiển", "📺 Kênh nhanh", "▶️ YouTube", "📱 Ứng dụng", "ℹ️ Tivi"), nut(XuLyLenh.banPhimChinh(VaiTro.THANH_VIEN, en = false)))
+        // Đủ tính năng: mỗi nút của bàn phím chính đọc lại ra đúng việc (cả tiếng Anh).
+        val du = XuLyLenh.Co(henGio = true, khoa = true, manHinh = true)
+        assertEquals(5, XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du).getJSONArray("keyboard").length())
+        assertEquals(listOf(XuLyLenh.DieuKhien, XuLyLenh.Kenh, XuLyLenh.YouTube, XuLyLenh.UngDung(0), XuLyLenh.HenGio, XuLyLenh.Khoa,
+            XuLyLenh.LamMoiTv, XuLyLenh.Tivi, XuLyLenh.ChupManHinh, XuLyLenh.HoiTat), nut(XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du)).map(XuLyLenh::viecTuChu))
         // Bảng điều khiển: 4 hàng ba phím + hàng Cập nhật; nút nào cũng đọc lại được.
         val b = XuLyLenh.bangDieuKhien(en = false).getJSONArray("inline_keyboard")
         assertEquals(5, b.length())
@@ -111,6 +142,104 @@ class XuLyLenhTest {
             assertTrue(du, XuLyLenh.viecTuNut(du) != null && du.length <= 64)
         }
         assertEquals("o:2", XuLyLenh.bangKenh(listOf(1 to "VTV1", 2 to "VTV3")).getJSONArray("inline_keyboard").getJSONArray(0).getJSONObject(1).getString("callback_data"))
+        // Mọi nút trong các bảng khác cũng đọc lại được và vừa giới hạn 64 byte của Telegram.
+        listOf(XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
+            XuLyLenh.bangLamMoi(en = false, ganDay = true), XuLyLenh.hoiTat(en = false),
+            XuLyLenh.bangUngDung((1..30).map { "com.app.so$it" to "App $it" }, 1, en = false, chu = true)).forEach { bp ->
+            val h = bp.getJSONArray("inline_keyboard")
+            for (i in 0 until h.length()) for (k in 0 until h.getJSONArray(i).length()) {
+                val d = h.getJSONArray(i).getJSONObject(k).getString("callback_data")
+                assertTrue(d, XuLyLenh.viecTuNut(d) != null && d.toByteArray().size <= 64)
+            }
+        }
+        // Chưa có mã bố mẹ thì không có nút Khoá ngay.
+        assertEquals(2, XuLyLenh.bangKhoa(en = false, coMa = false).getJSONArray("inline_keyboard").length())
+    }
+
+    @Test
+    fun trangUngDung() {
+        val ds = (1..30).map { "com.app.so$it" to "App $it" }
+        assertEquals(3, XuLyLenh.soTrang(30))
+        assertEquals(1, XuLyLenh.soTrang(0))
+        val h = XuLyLenh.bangUngDung(ds, 1, en = false, chu = false).getJSONArray("inline_keyboard")
+        // 12 app (6 hàng hai app) rồi hàng chuyển trang ◀️ 2/3 ▶️.
+        assertEquals(7, h.length())
+        assertEquals("a:com.app.so13", h.getJSONArray(0).getJSONObject(0).getString("callback_data"))
+        assertEquals(listOf("ap:0", "ap:1", "ap:2"), (0 until 3).map { h.getJSONArray(6).getJSONObject(it).getString("callback_data") })
+        // Trang cuối: chỉ nút lùi; chủ có thêm nút buộc dừng.
+        val cuoi = XuLyLenh.bangUngDung(ds, 9, en = false, chu = true).getJSONArray("inline_keyboard")
+        assertEquals("as", cuoi.getJSONArray(cuoi.length() - 1).getJSONObject(0).getString("callback_data"))
+        assertEquals(2, cuoi.getJSONArray(cuoi.length() - 2).length())
+    }
+
+    @Test
+    fun anhVideoNguoiDungGui() {
+        val anh = JSONObject("""{"update_id":9,"message":{"message_id":12,"date":5,"from":{"id":111,"first_name":"Minh"},"chat":{"id":111,"type":"private"},
+            "photo":[{"file_id":"nho","file_size":900},{"file_id":"vua","file_size":90000},{"file_id":"to","file_size":25000000}]}}""")
+        val d = XuLyLenh.docCapNhat(anh)!!
+        // Cỡ lớn nhất bot tải được (bỏ cỡ quá 20 MB).
+        assertEquals(XuLyLenh.Tep("vua", false, 90000), d.tep)
+        assertEquals(12L, d.idTin)
+        assertEquals(XuLyLenh.ChieuTep, XuLyLenh.viecTuTin(d))
+        val tep = JSONObject("""{"update_id":10,"message":{"message_id":13,"date":5,"from":{"id":111},"chat":{"id":111,"type":"private"},
+            "document":{"file_id":"v1","mime_type":"video/mp4","file_size":5000}}}""")
+        assertEquals(XuLyLenh.Tep("v1", true, 5000), XuLyLenh.docCapNhat(tep)!!.tep)
+        val pdf = JSONObject("""{"update_id":11,"message":{"message_id":14,"date":5,"from":{"id":111},"chat":{"id":111,"type":"private"},
+            "document":{"file_id":"p","mime_type":"application/pdf"}}}""")
+        assertNull(XuLyLenh.docCapNhat(pdf)!!.tep)
+        assertEquals(XuLyLenh.KhongRo, XuLyLenh.viecTuTin(XuLyLenh.docCapNhat(pdf)!!))
+    }
+
+    @Test
+    fun link() {
+        assertEquals("dQw4w9WgXcQ", XuLyLenh.maYouTube("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s"))
+        assertEquals("dQw4w9WgXcQ", XuLyLenh.maYouTube("https://youtu.be/dQw4w9WgXcQ?si=abc"))
+        assertEquals("dQw4w9WgXcQ", XuLyLenh.maYouTube("https://m.youtube.com/shorts/dQw4w9WgXcQ"))
+        assertEquals("dQw4w9WgXcQ", XuLyLenh.maYouTube("https://music.youtube.com/watch?list=RD1&v=dQw4w9WgXcQ"))
+        assertNull(XuLyLenh.maYouTube("https://www.youtube.com/playlist?list=PL123"))
+        assertTrue(XuLyLenh.laYouTube("https://www.youtube.com/playlist?list=PL123"))
+        assertFalse(XuLyLenh.laYouTube("https://notyoutube.com/watch?v=dQw4w9WgXcQ"))
+        assertTrue(XuLyLenh.laFpt("https://fptplay.vn/xem-truyen-hinh/vtv1-hd"))
+        assertFalse(XuLyLenh.laFpt("https://fptplay.vn.evil.com/x"))
+        assertEquals("fptplay.vn", XuLyLenh.tenMien("https://FPTPlay.vn/xem-video/abc?x=1"))
+        assertEquals("https://vnexpress.net/a.html", XuLyLenh.timLink("đọc (https://vnexpress.net/a.html)."))
+        assertNull(XuLyLenh.timLink("không có link"))
+    }
+
+    @Test
+    fun appTheoTen() {
+        val ds = listOf("com.netflix.ninja" to "Netflix", "net.fptplay.ottbox" to "FPT Play", "com.android.tv.settings" to "Cài đặt",
+            "org.videolan.vlc" to "VLC")
+        assertEquals("com.netflix.ninja", XuLyLenh.timApp("mở Netflix", ds))
+        assertEquals("com.netflix.ninja", XuLyLenh.timApp("NETFLIX", ds))
+        assertEquals("net.fptplay.ottbox", XuLyLenh.timApp("mở app fpt play", ds))
+        assertEquals("com.android.tv.settings", XuLyLenh.timApp("vào cài đặt", ds))
+        assertEquals("org.videolan.vlc", XuLyLenh.timApp("open vlc", ds))
+        assertNull(XuLyLenh.timApp("mở nhạc trịnh", ds))
+        assertNull(XuLyLenh.timApp("mở", ds))
+    }
+
+    @Test
+    fun maMoKhoa() {
+        assertEquals("123456", XuLyLenh.maKhoa("123 456"))
+        assertEquals("12345678", XuLyLenh.maKhoa("1234-5678"))
+        assertNull(XuLyLenh.maKhoa("12345"))
+        assertNull(XuLyLenh.maKhoa("mã 123456"))
+    }
+
+    @Test
+    fun ketQuaContentCall() {
+        val kq = "Result: Bundle[{viec=yt-tim|nhạc trịnh, bolero, app=org.smarttube.stable, ok=1}]"
+        assertEquals("yt-tim|nhạc trịnh, bolero", XuLyLenh.giaTri(kq, "viec"))
+        assertEquals("org.smarttube.stable", XuLyLenh.giaTri(kq, "app"))
+        assertEquals("1", XuLyLenh.giaTri(kq, "ok"))
+        assertEquals("", XuLyLenh.giaTri(kq, "loi"))
+        assertEquals("1793422740000", XuLyLenh.giaTri("Result: Bundle[{id=tat-1793422740000, ok=1, luc=1793422740000}]", "luc"))
+        assertEquals(true, XuLyLenh.jsonTrong("Result: Bundle[{json={\"ok\":true,\"phien\":\"ab\"}}]")?.optBoolean("ok"))
+        // Tham số gửi qua ADB thuần ASCII, không có nháy đơn, đọc lại ra đúng chữ.
+        val ts = XuLyLenh.thamSo(JSONObject().put("cau", "mở nhạc 'Trịnh' 🎵"))
+        assertTrue(ts, ts.all { it.code in 0x20..0x7e } && '\'' !in ts)
+        assertEquals("mở nhạc 'Trịnh' 🎵", JSONObject(ts).getString("cau"))
     }
 
     @Test

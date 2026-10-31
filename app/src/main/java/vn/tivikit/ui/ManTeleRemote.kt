@@ -26,7 +26,8 @@ import vn.tivikit.t
 
 /**
  * Màn Tele Remote (31/10/2026): bot Telegram riêng của tivi chạy ngay trên tivi; người chủ tivi cho phép điều khiển tivi từ
- * Telegram (bàn phím remote, Kênh nhanh, YouTube, tình trạng tivi, tắt tivi). Mỗi tivi một bot, hai vai trò chủ / thành viên.
+ * Telegram (bàn phím remote, gõ chữ, Kênh nhanh, YouTube, ứng dụng, nhắn như nói, link, ảnh / video, Hẹn giờ, Khoá trẻ em,
+ * Làm mới, chụp màn hình, tắt / khởi động lại tivi). Mỗi tivi một bot, hai vai trò chủ / thành viên.
  */
 @Composable
 internal fun ManTeleRemote(vm: PhienLamViec) = Cuon {
@@ -34,8 +35,8 @@ internal fun ManTeleRemote(vm: PhienLamViec) = Cuon {
     val uri = LocalUriHandler.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Tele Remote", style = KieuTieuDeLon)
-        Phu(t("Điều khiển tivi từ Telegram, ở đâu cũng được: bot Telegram riêng của tivi chạy ngay trên tivi, người bạn cho phép bấm bàn phím remote, mở Kênh nhanh, mở YouTube, xem tivi đang làm gì; chủ tivi tắt được tivi. Không cần mở cổng modem hay máy chủ, không cần điện thoại cài TiviKit khi dùng.",
-            "Control the TV from Telegram, from anywhere: the TV's own Telegram bot runs on the TV itself; the people you allow can press remote keys, open Quick channel, open YouTube and see what the TV is doing; owners can turn the TV off. No port forwarding or server, and no TiviKit needed once it's set up."))
+        Phu(t("Điều khiển tivi từ Telegram, ở đâu cũng được: bot Telegram riêng của tivi chạy ngay trên tivi. Người bạn cho phép bấm bàn phím remote, gõ chữ lên tivi, mở Kênh nhanh, YouTube, ứng dụng; gõ như nói với Trợ lý (\"mở nhạc trịnh\", \"mở VTV3\": Map Voice làm); gửi link YouTube / FPT Play hay ảnh, video để mở trên tivi. Chủ tivi có thêm Hẹn giờ, Khoá trẻ em, Làm mới, chụp màn hình, tắt / khởi động lại tivi. Không cần mở cổng modem hay máy chủ, không cần điện thoại cài TiviKit khi dùng.",
+            "Control the TV from Telegram, from anywhere: the TV's own Telegram bot runs on the TV itself. The people you allow can press remote keys, type on the TV, open Quick channel, YouTube and apps; type like talking to the Assistant (\"play piano music\": Map Voice does it); send a YouTube / FPT Play link or a photo or video to open it on the TV. Owners also get Timer, Kids lock, Refresh, screenshots and turning the TV off / restarting it. No port forwarding or server, and no TiviKit needed once it's set up."))
     }
     if (!m.duocCai) CanhBaoTr(t("Tele Remote cần Android 8 trở lên; tivi này là Android ${vm.thongTin?.android}.",
         "Tele Remote needs Android 8 or later; this TV runs Android ${vm.thongTin?.android}."))
@@ -50,6 +51,9 @@ internal fun ManTeleRemote(vm: PhienLamViec) = Cuon {
             }
             if (tt.dichVuChay && tt.adb in listOf("tu-choi", "khong-co", "loi")) NutPhu(t("Nối lại ADB", "Reconnect ADB"), Icons.Rounded.Sync, enabled = !vm.dangBan) { m.noiLai() }
             Hang(t("Bật Tele Remote", "Tele Remote on"), t("Tắt thì bot thôi nghe lệnh, app vẫn cài", "Off stops the bot listening; the app stays installed"), tt.cauHinh.bat) { m.batTat(it) }
+            Hang(t("Chụp màn hình qua Telegram", "Screenshots over Telegram"), t("Chủ tivi bấm 📸 Màn hình để bot gửi ảnh màn hình tivi (ảnh đi qua máy chủ Telegram; phim có bản quyền thì ảnh đen)",
+                "Owners tap 📸 Screenshot to get a picture of the TV screen (it goes through Telegram's servers; protected films come out black)"), tt.cauHinh.chupManHinh) { m.datChupManHinh(it) }
+            Hang(t("Báo tin", "Notifications"), t("Bot nhắn các chủ tivi khi tivi vừa bật / vừa tắt", "The bot messages the owners when the TV turns on / off"), tt.cauHinh.baoTin) { m.datBaoTin(it) }
             if (tt.coToken) NutPhu(t("Bot nhắn thử cho chủ tivi", "Send a test message to the owners"), Icons.AutoMirrored.Rounded.Send, enabled = !vm.dangBan) { m.nhanThu() }
             if (tt.nhatKy.isNotEmpty()) Gap(t("Việc vừa làm", "Recent activity"), Icons.Rounded.History) {
                 tt.nhatKy.reversed().forEach { n ->
@@ -75,8 +79,10 @@ internal fun ManTeleRemote(vm: PhienLamViec) = Cuon {
             "1. Tap Turn on Tele Remote. The first time, the TV shows \"Allow debugging?\": tick Always allow and press OK with the remote (just for Tele Remote, only once)."))
         Phu(t("2. Tạo bot ở @BotFather trên Telegram (mỗi tivi một bot), dán token vào mục Bot Telegram.",
             "2. Create a bot with @BotFather on Telegram (one bot per TV) and paste its token under Telegram bot."))
-        Phu(t("3. Thêm người được dùng bằng @username. Người đó mở bot, bấm Start (Bắt đầu), dưới ô gõ tin hiện bàn phím: 🎮 Điều khiển, 📺 Kênh nhanh, ▶️ YouTube, ℹ️ Tivi, và 📴 Tắt tivi với chủ tivi.",
-            "3. Add people by @username. They open the bot and tap Start; a keyboard appears under the message box: 🎮 Remote, 📺 Quick channel, ▶️ YouTube, ℹ️ TV, plus 📴 Turn off TV for owners."))
+        Phu(t("3. Thêm người được dùng bằng @username. Người đó mở bot, bấm Start (Bắt đầu), dưới ô gõ tin hiện bàn phím: 🎮 Điều khiển (có ⌨️ Gõ chữ), 📺 Kênh nhanh, ▶️ YouTube, 📱 Ứng dụng, ℹ️ Tivi; chủ tivi có thêm ⏰ Hẹn giờ, 🔒 Khoá trẻ em, 🧹 Làm mới, 📸 Màn hình, 📴 Tắt tivi.",
+            "3. Add people by @username. They open the bot and tap Start; a keyboard appears under the message box: 🎮 Remote (with ⌨️ Type), 📺 Quick channel, ▶️ YouTube, 📱 Apps, ℹ️ TV; owners also get ⏰ Timer, 🔒 Kids lock, 🧹 Refresh TV, 📸 Screenshot, 📴 Turn off TV."))
+        Phu(t("4. Gõ như nói với Trợ lý: \"mở nhạc trịnh\", \"mở VTV3\" thì Map Voice làm (cùng câu riêng, app đã chọn ở màn Map Voice); \"mở Netflix\" mở app trùng tên; câu khác đưa cho Trợ lý Google của tivi. Dán link YouTube / FPT Play để mở trên tivi; gửi ảnh, video (tới 20 MB) để chiếu lên tivi.",
+            "4. Type like talking to the Assistant: \"play piano music\" and channel requests go to Map Voice (same custom phrases and apps as on the Map Voice screen); \"open Netflix\" opens the matching app; anything else goes to the TV's Google Assistant. Paste a YouTube / FPT Play link to open it on the TV; send a photo or video (up to 20 MB) to show it on the TV."))
         Phu(t("Tele Remote cần ADB qua mạng của tivi luôn bật (cổng 5555) để bấm ▲▼◀▶ OK: đừng bấm Tắt ADB trong TiviKit. Tivi đang tắt hẳn (ngủ sâu, mất mạng) thì bot cũng nghỉ: lệnh gửi lúc đó bị bỏ, không làm khi tivi bật lại.",
             "Tele Remote needs the TV's network ADB to stay on (port 5555) for ▲▼◀▶ OK: don't tap Turn off ADB in TiviKit. When the TV is fully off (deep sleep, no network) the bot rests too: requests sent then are dropped, not run when the TV comes back."))
     }
@@ -94,8 +100,8 @@ internal fun ManTeleRemote(vm: PhienLamViec) = Cuon {
         confirmButton = { TextButton(onClick = { hoiGo = false; m.go() }) { Text(t("Gỡ", "Remove"), color = Cam) } },
         dismissButton = { TextButton(onClick = { hoiGo = false }) { Text(t("Thôi", "Cancel")) } },
     )
-    Phu(t("Bật sẽ cài app nhỏ \"Tele Remote (TiviKit)\" và bật dịch vụ trợ năng của nó (để chạy suốt từ lúc bật tivi, được mở app khi đang chạy nền và biết app nào đang hiện; không đọc nội dung màn hình, không bắt phím). App nối ADB của chính tivi bằng khoá riêng để bấm phím. Tin nhắn với bot đi qua máy chủ Telegram; token chỉ lưu trên tivi. Lệnh tới từ người không có trong danh sách thì không làm; tivi chỉ nhận lệnh gửi từ lúc nó đang nghe. Gỡ hoặc Khôi phục tivi là xoá hết.",
-        "Turning it on installs the small \"Tele Remote (TiviKit)\" app and turns on its accessibility service (to keep running from power-on, be allowed to open apps from the background and know which app is showing; it doesn't read the screen or catch keys). The app connects to the TV's own ADB with its own key to press keys. Messages with the bot go through Telegram's servers; the token is stored only on the TV. Requests from anyone not on the list are ignored, and the TV only takes requests sent while it's listening. Remove or Restore deletes everything."))
+    Phu(t("Bật sẽ cài app nhỏ \"Tele Remote (TiviKit)\" và bật dịch vụ trợ năng của nó (để chạy suốt từ lúc bật tivi, được mở app khi đang chạy nền và biết app nào đang hiện; không đọc nội dung màn hình, không bắt phím). App nối ADB của chính tivi bằng khoá riêng để bấm phím. Tin nhắn với bot (kể cả ảnh, video bạn gửi và ảnh chụp màn hình nếu bật) đi qua máy chủ Telegram; token chỉ lưu trên tivi. Lệnh tới từ người không có trong danh sách thì không làm; tivi chỉ nhận lệnh gửi từ lúc nó đang nghe. Gỡ hoặc Khôi phục tivi là xoá hết.",
+        "Turning it on installs the small \"Tele Remote (TiviKit)\" app and turns on its accessibility service (to keep running from power-on, be allowed to open apps from the background and know which app is showing; it doesn't read the screen or catch keys). The app connects to the TV's own ADB with its own key to press keys. Messages with the bot (including photos and videos you send, and screenshots if turned on) go through Telegram's servers; the token is stored only on the TV. Requests from anyone not on the list are ignored, and the TV only takes requests sent while it's listening. Remove or Restore deletes everything."))
 }
 
 /** Bot Telegram của tivi: hướng dẫn tạo bot ở @BotFather, ô dán token; có bot rồi thì tên bot, mở trên Telegram, đổi bot. */
@@ -127,8 +133,8 @@ private fun TheBotTr(vm: PhienLamViec, m: TeleRemoteTivi, mo: (String) -> Unit) 
 @Composable
 private fun TheNguoiTr(vm: PhienLamViec, m: TeleRemoteTivi) = The(t("Người được dùng", "People allowed"), Icons.Rounded.Group) {
     val c = m.cauHinh
-    Phu(t("Chủ: mọi việc, kể cả tắt tivi. Thành viên: điều khiển, Kênh nhanh, YouTube, xem tivi.",
-        "Owner: everything, including turning the TV off. Member: remote, Quick channel, YouTube, TV status."))
+    Phu(t("Chủ: mọi việc, kể cả tắt / khởi động lại tivi, Hẹn giờ, Khoá trẻ em (mở tạm vẫn cần mã bố mẹ), Làm mới, chụp màn hình. Thành viên: điều khiển, gõ chữ, Kênh nhanh, YouTube, ứng dụng, nhắn như nói, link, ảnh / video, xem tivi.",
+        "Owner: everything, including turning the TV off / restarting it, Timer, Kids lock (unlocking still needs the parent code), Refresh and screenshots. Member: remote, typing, Quick channel, YouTube, apps, typed requests, links, photos / videos, TV status."))
     if (c.nguoiDung.isEmpty()) Phu(t("Chưa có ai. Thêm chủ tivi trước (thường là bạn).", "Nobody yet. Add the owner first (usually you)."))
     c.nguoiDung.forEach { nd ->
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(The2).padding(horizontal = 12.dp, vertical = 8.dp)) {

@@ -4,7 +4,10 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Vai trò người dùng bot: chủ (mọi lệnh, kể cả tắt tivi) / thành viên (điều khiển, kênh, YouTube, xem tivi). */
+/**
+ * Vai trò người dùng bot: chủ (mọi lệnh: tắt / khởi động lại tivi, Hẹn giờ, Khoá trẻ em, Làm mới, chụp màn hình) / thành
+ * viên (điều khiển, gõ chữ, Kênh nhanh, YouTube, ứng dụng, nhắn như nói, gửi link / ảnh / video, xem tivi).
+ */
 enum class VaiTro(val ma: String) {
     CHU("chu"), THANH_VIEN("thanh-vien");
 
@@ -29,16 +32,18 @@ data class NhatKy(val luc: Long, val ai: String, val viec: String)
 
 /**
  * Cấu hình TiviKit gửi qua ADB (content call … --method dat). [bat] = tạm tắt bot (không hỏi Telegram), [nguoiDung] =
- * người được dùng, [chupManHinh] = cho chủ chụp màn hình tivi qua Telegram (đợt 2; tắt sẵn), [tiengAnh] = bot nói tiếng
- * Anh (theo ngôn ngữ của TiviKit lúc cài). Token của bot gửi riêng (lệnh token), không nằm trong cấu hình.
+ * người được dùng, [chupManHinh] = cho chủ chụp màn hình tivi gửi qua Telegram (tắt sẵn), [baoTin] = bot nhắn các chủ khi
+ * tivi vừa bật / vừa tắt (tắt sẵn), [tiengAnh] = bot nói tiếng Anh (theo ngôn ngữ của TiviKit lúc cài). Token của bot gửi
+ * riêng (lệnh token), không nằm trong cấu hình.
  */
 data class CauHinh(
     val bat: Boolean = true,
     val nguoiDung: List<NguoiDung> = emptyList(),
     val chupManHinh: Boolean = false,
     val tiengAnh: Boolean = false,
+    val baoTin: Boolean = false,
 ) {
-    fun json(): JSONObject = JSONObject().put("bat", bat).put("chupManHinh", chupManHinh).put("tiengAnh", tiengAnh)
+    fun json(): JSONObject = JSONObject().put("bat", bat).put("chupManHinh", chupManHinh).put("tiengAnh", tiengAnh).put("baoTin", baoTin)
         .put("nguoiDung", JSONArray().apply {
             nguoiDung.forEach { put(JSONObject().put("ten", it.ten).put("id", it.id).put("vaiTro", it.vaiTro.ma).put("tenHien", it.tenHien)) }
         })
@@ -62,7 +67,7 @@ data class CauHinh(
                 ds += NguoiDung(ten, id, VaiTro.tuMa(o.optString("vaiTro")), o.optString("tenHien").trim().take(64))
                 if (ds.size >= NGUOI_TOI_DA) break
             }
-            return CauHinh(j.optBoolean("bat", true), ds, j.optBoolean("chupManHinh", false), j.optBoolean("tiengAnh", false))
+            return CauHinh(j.optBoolean("bat", true), ds, j.optBoolean("chupManHinh", false), j.optBoolean("tiengAnh", false), j.optBoolean("baoTin", false))
         }
     }
 }

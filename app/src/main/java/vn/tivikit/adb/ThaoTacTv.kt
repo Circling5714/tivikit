@@ -1936,8 +1936,10 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      * Cài / cập nhật app Tele Remote, cho nó sáng màn hình khi mở app (Android 14+), gửi [cauHinh], bật dịch vụ trợ năng
      * (như Map Voice). Dịch vụ vừa bật thì nối ADB của tivi: tivi chưa biết khoá của Tele Remote thì hỏi trên màn hình.
      */
-    fun caiTeleRemote(apk: ByteArray, cauHinh: TeleRemote.CauHinh, bao: (String) -> Unit) {
+    /** Cài / cập nhật Tele Remote, kèm bộ gõ tiếng Việt [apkGo] (gõ chữ có dấu từ Telegram), gửi cấu hình, bật dịch vụ. */
+    fun caiTeleRemote(apk: ByteArray, apkGo: ByteArray, cauHinh: TeleRemote.CauHinh, bao: (String) -> Unit) {
         caiAppPhu(TeleRemote.GOI, apk) { bao(t("Cài app Tele Remote lên tivi…", "Installing Tele Remote on the TV…")) }
+        caiAppPhu(GoChu.GOI, apkGo) { bao(t("Cài bộ gõ tiếng Việt lên tivi…", "Installing the Vietnamese typing helper on the TV…")) }
         sh("cmd appops set ${TeleRemote.GOI} TURN_SCREEN_ON allow 2>/dev/null; true")
         bao(t("Gửi cài đặt…", "Sending the settings…"))
         if (!datTeleRemote(cauHinh)) error(t("Tivi không nhận cài đặt của Tele Remote.", "The TV rejected the Tele Remote settings."))

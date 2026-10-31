@@ -6,8 +6,9 @@ import org.json.JSONObject
 /**
  * Tele Remote (31/10/2026): app phụ vn.tivikit.teleremote trên tivi (module teleremote/). Bot Telegram riêng của tivi chạy
  * ngay trên tivi (hỏi Telegram liên tục, không cần mở cổng hay máy chủ); người chủ tivi cho phép điều khiển tivi từ
- * Telegram: bàn phím remote, Kênh nhanh, YouTube, tình trạng tivi, tắt tivi (chỉ chủ). Mỗi tivi một bot (tạo ở @BotFather).
- * Ở đây: tên gói, cấu hình, lệnh, trạng thái app phụ trả về.
+ * Telegram: bàn phím remote, gõ chữ, Kênh nhanh, YouTube, ứng dụng, nhắn như nói (Map Voice), link, ảnh / video, tình trạng
+ * tivi; chủ có thêm Hẹn giờ, Khoá trẻ em, Làm mới, chụp màn hình, tắt / khởi động lại tivi. Mỗi tivi một bot (tạo ở
+ * @BotFather). Ở đây: tên gói, cấu hình, lệnh, trạng thái app phụ trả về.
  */
 object TeleRemote {
     const val GOI = "vn.tivikit.teleremote"
@@ -35,8 +36,9 @@ object TeleRemote {
         val nguoiDung: List<NguoiDung> = emptyList(),
         val chupManHinh: Boolean = false,
         val tiengAnh: Boolean = false,
+        val baoTin: Boolean = false,
     ) {
-        fun json(): JSONObject = JSONObject().put("bat", bat).put("chupManHinh", chupManHinh).put("tiengAnh", tiengAnh)
+        fun json(): JSONObject = JSONObject().put("bat", bat).put("chupManHinh", chupManHinh).put("tiengAnh", tiengAnh).put("baoTin", baoTin)
             .put("nguoiDung", JSONArray().apply {
                 nguoiDung.forEach { put(JSONObject().put("ten", it.ten).put("id", it.id).put("vaiTro", it.vaiTro.ma).put("tenHien", it.tenHien)) }
             })
@@ -48,7 +50,7 @@ object TeleRemote {
             it.optBoolean("bat", true),
             (0 until a.length()).mapNotNull { i -> a.optJSONObject(i) }
                 .map { o -> NguoiDung(o.optString("ten"), o.optLong("id"), VaiTro.tuMa(o.optString("vaiTro")), o.optString("tenHien")) },
-            it.optBoolean("chupManHinh", false), it.optBoolean("tiengAnh", false),
+            it.optBoolean("chupManHinh", false), it.optBoolean("tiengAnh", false), it.optBoolean("baoTin", false),
         )
     }
 

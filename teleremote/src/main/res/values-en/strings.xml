@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ten_app">Tele Remote (TiviKit)</string>
-    <string name="mo_ta">Control the TV from Telegram: the TV\'s own Telegram bot takes commands from the people its owner allows (remote keys, Quick channel, YouTube, TV status, turn off). It only knows which app just appeared, to report status; it doesn\'t read the screen or catch remote keys.</string>
+    <string name="mo_ta">Control the TV from Telegram: the TV\'s own Telegram bot takes commands from the people its owner allows (remote keys, typing, Quick channel, YouTube, apps, typed requests like voice, links, photos / videos, Timer, Kids lock, Refresh, turn off / restart). It only knows which app just appeared, to report status; it doesn\'t read the screen or catch remote keys.</string>
     <string name="dang_hoi">Tele Remote: the TV is asking \"Allow debugging?\". Choose Always allow, then OK, so the TV can be controlled from Telegram.</string>
 </resources>

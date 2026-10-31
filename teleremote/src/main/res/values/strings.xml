@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ten_app">Tele Remote (TiviKit)</string>
-    <string name="mo_ta">Điều khiển tivi từ Telegram: bot Telegram riêng của tivi nhận lệnh từ những người chủ tivi cho phép (bàn phím remote, Kênh nhanh, YouTube, tình trạng tivi, tắt tivi). Chỉ biết app nào vừa hiện để báo tình trạng, không đọc nội dung màn hình, không bắt phím remote.</string>
+    <string name="mo_ta">Điều khiển tivi từ Telegram: bot Telegram riêng của tivi nhận lệnh từ những người chủ tivi cho phép (bàn phím remote, gõ chữ, Kênh nhanh, YouTube, ứng dụng, nhắn như nói, link, ảnh / video, Hẹn giờ, Khoá trẻ em, Làm mới, tắt / khởi động lại tivi). Chỉ biết app nào vừa hiện để báo tình trạng, không đọc nội dung màn hình, không bắt phím remote.</string>
     <string name="dang_hoi">Tele Remote: tivi đang hỏi \"Cho phép gỡ lỗi?\". Chọn Luôn cho phép rồi OK để điều khiển được tivi từ Telegram.</string>
 </resources>

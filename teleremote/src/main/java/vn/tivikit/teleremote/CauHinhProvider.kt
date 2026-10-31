@@ -113,7 +113,9 @@ class CauHinhProvider : ContentProvider() {
                 val vt = if (j.optString("vaiTro") == VaiTro.THANH_VIEN.ma) VaiTro.THANH_VIEN else VaiTro.CHU
                 val nd = kho.cauHinh.nguoiDung.firstOrNull { it.vaiTro == vt } ?: NguoiDung("@thu", 1, vt, "TiviKit")
                 val ra = GhiRa()
-                val d = XuLyLenh.Den(0, XuLyLenh.Nguoi(nd.id, nd.ten, nd.tenHien), nd.id, true, System.currentTimeMillis() / 1000,
+                // Chat riêng của lệnh thử (không phải chat thật của người đó): việc đang chờ trả lời (gõ chữ, mã mở khoá) của
+                // người đang dùng bot trên Telegram không bị lệnh thử lấy mất.
+                val d = XuLyLenh.Den(0, XuLyLenh.Nguoi(nd.id, nd.ten, nd.tenHien), CHAT_THU, true, System.currentTimeMillis() / 1000,
                     chu = j.optString("chu", "").takeIf { j.has("chu") }, nut = j.optString("nut", "").takeIf { j.has("nut") })
                 LamViec(dv, ra).lam(d, nd)
                 kq.putString("ok", "1"); kq.putString("ra", ra.ds.joinToString(" | "))
@@ -138,4 +140,9 @@ class CauHinhProvider : ContentProvider() {
     override fun insert(u: Uri, v: ContentValues?): Uri? = null
     override fun delete(u: Uri, s: String?, a: Array<out String>?) = 0
     override fun update(u: Uri, v: ContentValues?, s: String?, a: Array<out String>?) = 0
+
+    companion object {
+        /** Chat của lệnh thu (ID chat Telegram thật luôn khác 0). */
+        private const val CHAT_THU = 0L
+    }
 }

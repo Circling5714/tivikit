@@ -32,7 +32,7 @@ class TeleRemoteTest {
     @Test
     fun lenhChiAsciiVaKhuHoi() {
         val c = TeleRemote.CauHinh(nguoiDung = listOf(TeleRemote.NguoiDung("@caominh", 111, TeleRemote.VaiTro.CHU, "Cao Minh"),
-            TeleRemote.NguoiDung("", 333, TeleRemote.VaiTro.THANH_VIEN, "Ông Bà'")), tiengAnh = false)
+            TeleRemote.NguoiDung("", 333, TeleRemote.VaiTro.THANH_VIEN, "Ông Bà'")), tiengAnh = false, chupManHinh = true, baoTin = true)
         listOf(TeleRemote.lenhDat(c), TeleRemote.lenhToken("123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"), TeleRemote.lenhXoaCho(333)).forEach { l ->
             assertTrue(l, l.all { it.code < 0x80 })
             assertEquals(l, 2, l.count { it == '\'' })

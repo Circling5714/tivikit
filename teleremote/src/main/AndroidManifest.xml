@@ -8,9 +8,17 @@
     <uses-permission android:name="android.permission.TURN_SCREEN_ON" tools:ignore="ProtectedPermissions" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <!-- Android 11+: thấy các ô Kênh nhanh, app YouTube (SmartTube, TizenTube, YouTube gốc), app trong danh sách app của tivi
-         và app Home (tên app đang mở). -->
+    <!-- Android 11+: thấy các ô Kênh nhanh, app phụ của TiviKit (Map Voice, Hẹn giờ, Khoá trẻ em, Cast, bộ gõ), app YouTube
+         (SmartTube, TizenTube, YouTube gốc), FPT Play, Trợ lý Google, app trong danh sách app của tivi và app Home (tên app
+         đang mở). -->
     <queries>
+        <package android:name="vn.tivikit.mapvoice" />
+        <package android:name="vn.tivikit.hengio" />
+        <package android:name="vn.tivikit.khoa" />
+        <package android:name="vn.tivikit.cast" />
+        <package android:name="vn.tivikit.go" />
+        <package android:name="net.fptplay.ottbox" />
+        <package android:name="com.google.android.katniss" />
         <package android:name="vn.tivikit.kenh" />
         <package android:name="vn.tivikit.kenh2" />
         <package android:name="vn.tivikit.kenh3" />
@@ -35,6 +43,9 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <intent>
+            <action android:name="android.search.action.GLOBAL_SEARCH" />
+        </intent>
     </queries>
 
     <!-- Không có màn mở trong danh sách app: bật và chỉnh ở TiviKit trên điện thoại. -->
@@ -55,6 +66,19 @@
             </intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/tele_remote_tro_nang" />
         </service>
+        <!-- Chiếu ảnh / phát video người dùng gửi qua Telegram; Back để tắt. -->
+        <activity
+            android:name=".XemTep"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        <!-- Gọi Khoá trẻ em ngay của app khoá (cần startActivityForResult, dịch vụ không gọi được). -->
+        <activity
+            android:name=".GoiKhoaNgay"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- Token, người được dùng chỉ đặt được từ ADB (TiviKit). -->
         <provider
             android:name=".CauHinhProvider"

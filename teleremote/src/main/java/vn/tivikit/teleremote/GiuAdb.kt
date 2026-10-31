@@ -40,6 +40,9 @@ class GiuAdb(private val thuMuc: File, private val dangHoi: () -> Unit) {
     /** Chạy một lệnh shell ngắn trên kết nối đang mở; null nếu chưa nối (hay quá [choToiDa] ms). */
     fun lenh(lenh: String, choToiDa: Long = 5000): String? = phien?.chay(lenh, choToiDa)
 
+    /** Lệnh in ra dữ liệu nhị phân (chụp màn hình); null nếu chưa nối / quá giờ. */
+    fun lenhByte(lenh: String, choToiDa: Long = 15_000): ByteArray? = phien?.chayByte(lenh, choToiDa)
+
     private fun vong() {
         var cho = CHO_DAU
         while (chay) {

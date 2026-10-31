@@ -115,22 +115,30 @@ class PhienAdb(private val thuMuc: File, private val may: String = "127.0.0.1", 
      * Mở luồng chạy lệnh shell [lenh]: mỗi dòng in ra gọi [dong], luồng đóng (lệnh thoát) gọi [het]; cả hai trên luồng của
      * [docMai]. Trả số luồng.
      */
-    fun mo(lenh: String, dong: (String) -> Unit, het: () -> Unit = {}): Int = moLuong(lenh, Luong(dong, het))
+    fun mo(lenh: String, dong: (String) -> Unit, het: () -> Unit = {}): Int = moLuong("shell:$lenh", Luong(dong, het))
 
     /**
      * Chạy lệnh shell [lenh] tới khi xong, trả chữ in ra; null nếu chưa nối, tivi từ chối hay quá [choToiDa] ms. Cần [docMai]
      * đang chạy ở luồng khác.
      */
-    fun chay(lenh: String, choToiDa: Long = 10_000): String? {
+    fun chay(lenh: String, choToiDa: Long = 10_000): String? = chayLuong("shell:$lenh", choToiDa)?.toString(Charsets.UTF_8)
+
+    /**
+     * Như [chay] nhưng trả nguyên byte in ra, qua dịch vụ exec: của adbd (không qua terminal, dữ liệu nhị phân như ảnh của
+     * `screencap -p` giữ nguyên).
+     */
+    fun chayByte(lenh: String, choToiDa: Long = 15_000): ByteArray? = chayLuong("exec:$lenh", choToiDa)
+
+    private fun chayLuong(dichVu: String, choToiDa: Long): ByteArray? {
         if (!daNoi) return null
         val l = Luong(null, null)
-        val so = try { moLuong(lenh, l) } catch (_: IOException) { return null }
+        val so = try { moLuong(dichVu, l) } catch (_: IOException) { return null }
         if (!l.xong.await(choToiDa, TimeUnit.MILLISECONDS)) {
             dsLuong.remove(so)
             runCatching { if (l.xa != 0) gui(CLSE, so, ByteArray(0), l.xa) }
             return null
         }
-        return synchronized(l) { l.chu.toString(Charsets.UTF_8.name()) }
+        return synchronized(l) { l.chu.toByteArray() }
     }
 
     /** Đọc và chia gói cho các luồng tới khi mất kết nối (hay [close]); chặn luồng gọi. */
@@ -170,11 +178,12 @@ class PhienAdb(private val thuMuc: File, private val may: String = "127.0.0.1", 
         runCatching { s.close() }
     }
 
-    private fun moLuong(lenh: String, l: Luong): Int {
+    /** Mở luồng tới dịch vụ [dichVu] của adbd ("shell:<lệnh>" / "exec:<lệnh>"). */
+    private fun moLuong(dichVu: String, l: Luong): Int {
         val so = soKeTiep.getAndIncrement()
         dsLuong[so] = l
         try {
-            gui(OPEN, so, ("shell:$lenh\u0000").toByteArray(Charsets.UTF_8))
+            gui(OPEN, so, ("$dichVu\u0000").toByteArray(Charsets.UTF_8))
         } catch (e: IOException) {
             dsLuong.remove(so)
             throw e
