@@ -177,7 +177,8 @@ Cần một app xác thực (Google Authenticator, Microsoft Authenticator, app 
 
 ## 9c. Map Voice
 
-Cần remote có mic (nút Trợ lý Google) và SmartTube trên tivi; muốn thử kênh thì cần VTVgo hay TV360 bản tivi.
+Cần remote có mic (nút Trợ lý Google) và SmartTube hay TizenTube trên tivi; muốn thử kênh thì cần VTVgo, TV360 hay FPT Play bản
+tivi (FPT Play phải đăng nhập).
 
 | Thử | Đạt khi |
 | --- | --- |
@@ -192,6 +193,12 @@ Cần remote có mic (nút Trợ lý Google) và SmartTube trên tivi; muốn th
 | Màn Map Voice → Câu vừa nghe | Có đúng các câu vừa nói và việc đã làm |
 | Thử một câu → gõ "mo VTV3" → Xem Map Voice hiểu thế nào, rồi Chạy trên tivi | Hiện "Mở kênh VTV3 bằng …"; Chạy thì tivi mở kênh đó |
 | Khởi động lại tivi, nói lại một câu | Map Voice tự chạy và nghe lại, không hỏi cho phép lần nữa |
+| Cách chuyển → Mở YouTube bằng → TizenTube → Lưu; đóng hẳn TizenTube rồi nói "tìm hoạt hình" | TizenTube mở trang kết quả "hoạt hình" (chữ tìm có thể hiện sau vài giây) |
+| Nói "mở nhạc piano" khi chọn TizenTube | TizenTube phát video đầu tiên |
+| Tivi có YouTube gốc thật: Mở YouTube bằng → YouTube gốc → nói "tìm nhạc piano" | YouTube gốc mở trang kết quả, không bị đóng ngay |
+| Câu riêng: "giá vàng" → Trợ lý Google → Lưu; nói "tìm giá vàng SJC hôm nay" | Trợ lý trả lời, Map Voice không chen vào (Câu vừa nghe: "Câu riêng … để Trợ lý Google làm") |
+| Câu riêng: "phim" → Mở app khác… → FPT Play → Lưu; nói "xem phim hay" | FPT Play mở |
+| App mở kênh: FPT Play (FPT Play đã đăng nhập) → nói "mở VTV3", rồi "xem VTV1 trên FPT Play" | FPT Play phát đúng kênh |
 | Tắt Gỡ lỗi USB / ADB qua mạng trên tivi, mở màn Map Voice | Báo tivi không mở ADB qua mạng; bật lại rồi Nối lại thì nghe lại |
 
 - **Hỏng thì:** tắt công tắc Bật Map Voice rồi Lưu (câu nói về Trợ lý như cũ), hay Gỡ Map Voice khỏi tivi. Trợ lý Google không
@@ -230,6 +237,7 @@ Nên có SmartTube hay một ô Kênh nhanh trên tivi để hẹn mở.
 | Bộ cài đặt mẫu → tạo bộ có 1 app + DNS → Cài cho tivi này | App được cài, DNS đặt đúng |
 | Sao lưu & chuyển máy → Lưu ra file → Nhập trên điện thoại khác | Tivi đã dọn, bộ cài đặt hiện đủ trên máy mới |
 | Kênh nhanh với 2 ô trở lên (TV360 và VTVgo lẫn nhau) | Mỗi ô mở đúng kênh trong đúng app của nó |
+| Kênh nhanh → FPT Play → VTV3 → Thêm lên tivi (FPT Play đã đăng nhập), bấm ô trên Home rồi gán một nút remote cho ô | Ô mang logo VTV3; bấm ô hay nút thì FPT Play phát VTV3; Thử nút báo được |
 | Home sạch → Áp dụng (lên bản mới), rồi Nút remote → dò một nút → "SmartTube – tìm bằng giọng nói" → Lưu → Thử nút | SmartTube mở màn tìm kiếm; đã bật "Tìm kiếm bằng giọng nói tức thì" trong SmartTube thì mic bật ngay |
 | Nối TiviKit vào một điện thoại (Gỡ lỗi không dây) | Hiện cảnh báo đỏ "không khai là tivi", nút dọn bị khoá |
 | Chế độ tivi LG (nếu có tivi LG) | Ghép đôi được, remote và gõ chữ chạy |
