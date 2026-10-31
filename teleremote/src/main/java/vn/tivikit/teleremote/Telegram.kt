@@ -101,23 +101,34 @@ class Telegram(private val token: String) {
         })
     }
 
-    /** Gửi ảnh JPEG [anh] (chụp màn hình tivi) kèm [chuThich], tải lên kiểu multipart/form-data. */
-    fun guiAnh(chat: Long, anh: ByteArray, chuThich: String) {
+    /** Gửi ảnh JPEG [anh] (chụp màn hình tivi) kèm [chuThich] và nút [banPhim]. */
+    fun guiAnh(chat: Long, anh: ByteArray, chuThich: String, banPhim: JSONObject? = null) =
+        guiTep("sendPhoto", "photo", "tivi.jpg", "image/jpeg", anh, chat, chuThich, banPhim)
+
+    /** Gửi video MP4 [video] (quay màn hình tivi) kèm [chuThich] và nút [banPhim]; xem được ngay khi đang tải. */
+    fun guiVideo(chat: Long, video: ByteArray, chuThich: String, banPhim: JSONObject? = null) =
+        guiTep("sendVideo", "video", "tivi.mp4", "video/mp4", video, chat, chuThich, banPhim, mapOf("supports_streaming" to "true"))
+
+    /** Tải tệp lên kiểu multipart/form-data (sendPhoto, sendVideo). */
+    private fun guiTep(lenh: String, truong: String, tenTep: String, loai: String, du: ByteArray, chat: Long, chuThich: String,
+                       banPhim: JSONObject?, them: Map<String, String> = emptyMap()) {
         val ranh = "tivikit" + System.nanoTime()
         val than = ByteArrayOutputStream().apply {
             fun phan(ten: String, giaTri: String) = write("--$ranh\r\nContent-Disposition: form-data; name=\"$ten\"\r\n\r\n$giaTri\r\n".toByteArray(Charsets.UTF_8))
             phan("chat_id", chat.toString())
             if (chuThich.isNotEmpty()) phan("caption", chuThich.take(1000))
-            write("--$ranh\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"tivi.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".toByteArray(Charsets.UTF_8))
-            write(anh)
+            if (banPhim != null) phan("reply_markup", banPhim.toString())
+            them.forEach { (k, v) -> phan(k, v) }
+            write("--$ranh\r\nContent-Disposition: form-data; name=\"$truong\"; filename=\"$tenTep\"\r\nContent-Type: $loai\r\n\r\n".toByteArray(Charsets.UTF_8))
+            write(du)
             write("\r\n--$ranh--\r\n".toByteArray(Charsets.UTF_8))
         }.toByteArray()
-        val c = URL("$GOC/bot$token/sendPhoto").openConnection() as HttpURLConnection
+        val c = URL("$GOC/bot$token/$lenh").openConnection() as HttpURLConnection
         try {
             c.requestMethod = "POST"
             c.doOutput = true
             c.connectTimeout = 10_000
-            c.readTimeout = 60_000
+            c.readTimeout = 120_000
             c.setFixedLengthStreamingMode(than.size)
             c.setRequestProperty("Content-Type", "multipart/form-data; boundary=$ranh")
             c.outputStream.use { it.write(than) }

@@ -120,6 +120,12 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
             is XuLyLenh.BoQuaXin -> boQuaXin(d, nd, viec.id)
             XuLyLenh.ThemNguoi -> hoiThemNguoi(d)
             is XuLyLenh.KhoaThanhVien -> khoaThanhVien(d, nd, viec.phut)
+            XuLyLenh.QuayManHinh -> quayManHinh(d, nd)
+            XuLyLenh.DatNen -> datNen(d, nd)
+            XuLyLenh.BoNen -> boNen(d, nd)
+            is XuLyLenh.TatCaKenh -> tatCaKenh(d, viec.trang)
+            is XuLyLenh.MoKenhTen -> moKenhTen(d, nd, viec.i)
+            is XuLyLenh.CastDuyet -> castDuyet(d, nd, viec.so, viec.lam)
             XuLyLenh.KhongRo -> ra.gui(d.chat, t("Chọn việc ở bàn phím bên dưới, hay gõ như nói với Trợ lý (VD \"mở nhạc trịnh\"). Gõ /start nếu không thấy bàn phím.",
                 "Pick from the keyboard below, or type like talking to the Assistant (e.g. \"play piano music\"). Send /start if you don't see the keyboard."), banPhim(nd))
         }
@@ -201,9 +207,13 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
 
     private fun kenh(d: Den) {
         val ds = dv.dsKenh()
-        if (ds.isEmpty()) ra.gui(d.chat, t("Tivi chưa có ô Kênh nhanh nào. Thêm ở TiviKit → Kênh nhanh, hay gõ \"mở VTV3\" (Map Voice).",
-            "The TV has no Quick channel tiles yet. Add them in TiviKit → Quick channel, or type \"open VTV3\" (Map Voice)."))
-        else ra.gui(d.chat, t("📺 Kênh nhanh: bấm một kênh để mở.", "📺 Quick channel: tap a channel to open it."), XuLyLenh.bangKenh(ds))
+        val tatCa = dv.coApp(MAP_VOICE)
+        when {
+            ds.isNotEmpty() -> ra.gui(d.chat, t("📺 Kênh nhanh: bấm một kênh để mở.", "📺 Quick channel: tap a channel to open it."), XuLyLenh.bangKenh(ds, tatCa, en))
+            tatCa -> ra.gui(d.chat, t("Tivi chưa có ô Kênh nhanh: bấm 📺 Tất cả kênh, hay gõ \"mở VTV3\".", "The TV has no Quick channel tiles: tap 📺 All channels, or type \"open VTV3\"."),
+                XuLyLenh.bangKenh(ds, true, en))
+            else -> ra.gui(d.chat, t("Tivi chưa có ô Kênh nhanh nào. Thêm ở TiviKit → Kênh nhanh.", "The TV has no Quick channel tiles yet. Add them in TiviKit → Quick channel."))
+        }
     }
 
     private fun moKenh(d: Den, nd: NguoiDung, o: Int) {
@@ -470,7 +480,7 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
             ra.gui(d.chat, if (dv.coAdb()) t("Chưa chụp được màn hình tivi.", "Couldn't take a screenshot.") else chuChuaAdb())
             return
         }
-        ra.guiAnh(d.chat, anh, "📸 ${dv.tenTivi()} · " + SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date()))
+        ra.guiAnh(d.chat, anh, "📸 ${dv.tenTivi()} · " + SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date()), XuLyLenh.sauKhiChup(en))
         ghi(nd, "chup")
     }
 
@@ -570,11 +580,14 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
             return
         }
         val ok = dv.chieu(dich, tep.laVideo)
+        if (ok && !tep.laVideo) dv.anhCuoi = dich
+        // Chủ, tivi có TiviKit Launcher: ảnh vừa chiếu đặt được làm ảnh nền Home.
+        val nen = ok && !tep.laVideo && nd.vaiTro == VaiTro.CHU && dv.coApp(TKL)
         ra.gui(d.chat, when {
             !ok -> t("Không mở được màn chiếu trên tivi.", "Couldn't open the viewer on the TV.")
             tep.laVideo -> t("🎬 Đang phát video trên tivi. Bấm Back trên remote để tắt.", "🎬 Playing the video on the TV. Press Back on the remote to close it.")
             else -> t("🖼 Đang chiếu ảnh trên tivi. Bấm Back trên remote để tắt.", "🖼 Showing the photo on the TV. Press Back on the remote to close it.")
-        })
+        }, if (nen) XuLyLenh.nutDatNen(en) else null)
         if (ok) ghi(nd, if (tep.laVideo) "video" else "anh")
     }
 
@@ -595,6 +608,7 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
         const val KHOA = "vn.tivikit.khoa"
         const val CAST = "vn.tivikit.cast"
         const val FPT = "net.fptplay.ottbox"
+        const val TKL = "vn.tivikit.launcher"
 
         /**
          * Chờ chữ để gõ / mã mở khoá tối đa chừng này (ms): đủ lâu để tìm mật khẩu Wi-Fi, vì quá hạn thì chữ gõ thành câu nhắn

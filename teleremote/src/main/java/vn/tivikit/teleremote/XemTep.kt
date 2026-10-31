@@ -2,11 +2,7 @@ package vn.tivikit.teleremote
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.Matrix
-import android.media.ExifInterface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -60,32 +56,12 @@ class XemTep : Activity() {
             v.requestFocus()
             v.start()
         } else {
-            val anh = docAnh(tep) ?: return finish()
+            val anh = AnhTr.doc(tep, resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels) ?: return finish()
             khung.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER; setImageBitmap(anh) },
                 FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
             setContentView(khung)
             tay.postDelayed(dong, ANH_TOI_DA)
         }
-    }
-
-    /** Ảnh thu nhỏ vừa màn hình (ảnh gốc 12 MP đọc nguyên dễ hết RAM của box), xoay theo EXIF (ảnh gửi dạng tệp). */
-    private fun docAnh(tep: File): Bitmap? {
-        val co = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(tep.path, co)
-        if (co.outWidth <= 0 || co.outHeight <= 0) return null
-        val man = resources.displayMetrics
-        var mau = 1
-        while (co.outWidth / (mau * 2) >= man.widthPixels && co.outHeight / (mau * 2) >= man.heightPixels) mau *= 2
-        val anh = BitmapFactory.decodeFile(tep.path, BitmapFactory.Options().apply { inSampleSize = mau }) ?: return null
-        val huong = runCatching { ExifInterface(tep.path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) }
-            .getOrDefault(ExifInterface.ORIENTATION_NORMAL)
-        val xoay = when (huong) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-            else -> return anh
-        }
-        return Bitmap.createBitmap(anh, 0, 0, anh.width, anh.height, Matrix().apply { postRotate(xoay) }, true)
     }
 
     companion object {

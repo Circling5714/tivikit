@@ -71,6 +71,15 @@ object ChuBot {
             "them" -> t(en, "thêm $sau", "added $sau")
             "khoa-tv" -> t(en, "khoá thành viên tới $sau", "paused members until $sau")
             "mo-tv" -> t(en, "mở lại cho thành viên", "let members back in")
+            "quay" -> t(en, "quay màn hình 10 giây", "recorded the screen for 10 s")
+            "nen" -> t(en, "đặt ảnh nền Home", "set the Home wallpaper")
+            "bo-nen" -> t(en, "về ảnh nền mặc định", "went back to the default wallpaper")
+            "cast" -> sau.substringAfter('|').let { may ->
+                when (sau.substringBefore('|')) {
+                    "chan" -> t(en, "chặn máy cast \"$may\"", "blocked casting from \"$may\"")
+                    else -> t(en, "cho máy \"$may\" cast", "allowed \"$may\" to cast")
+                }
+            }
             else -> viec
         }
     }

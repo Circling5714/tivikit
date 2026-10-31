@@ -83,6 +83,16 @@ object XuLyLenh {
     data object ThemNguoi : Viec
     /** Tạm khoá thành viên [phut] phút; [TOI_SANG] = tới 6 giờ sáng; 0 = mở lại. */
     data class KhoaThanhVien(val phut: Int) : Viec
+    /** 📹 Quay màn hình tivi 10 giây gửi về Telegram. */
+    data object QuayManHinh : Viec
+    /** Đặt ảnh vừa gửi làm ảnh nền TiviKit Launcher / về ảnh nền mặc định. */
+    data object DatNen : Viec
+    data object BoNen : Viec
+    /** 📺 Tất cả kênh (trang [trang]) / mở kênh thứ [i] trong [KENH_TV] (qua Map Voice). */
+    data class TatCaKenh(val trang: Int) : Viec
+    data class MoKenhTen(val i: Int) : Viec
+    /** Duyệt điện thoại xin cast: [so] = số bot đặt cho máy đó, [lam] = "cho-phep" / "hom-nay" / "24h" / "chan" (app Cast). */
+    data class CastDuyet(val so: Int, val lam: String) : Viec
 
     /**
      * Phím của bảng điều khiển (mã KeyEvent → chữ trên nút), theo thứ tự ba nút một hàng: Back ▲ Home / ◀ OK ▶ / phát-dừng
@@ -114,6 +124,21 @@ object XuLyLenh {
 
     /** KhoaThanhVien: khoá tới 6 giờ sáng. */
     const val TOI_SANG = -1
+
+    /**
+     * Kênh của 📺 Tất cả kênh: tên Map Voice hiểu khi nói "mở …" (thử trên TX3 với danh sách kênh TiviKit gửi, 1/11/2026);
+     * Map Voice mở bằng app kênh đã chọn, app đó không có kênh thì app kia.
+     */
+    val KENH_TV = listOf(
+        "VTV1", "VTV2", "VTV3", "VTV4", "VTV5", "VTV7", "VTV8", "VTV9", "HTV7", "HTV9", "HTV2", "HTV3", "HTV Thể Thao", "HTVC Thuần Việt",
+        "ANTV", "QPVN", "Hà Nội 1", "Hà Nội 2", "THVL1", "THVL2", "THVL3", "THVL4", "Đà Nẵng 1", "Đồng Nai 1", "Hải Phòng",
+        "Quảng Ninh 1", "Nghệ An", "Thanh Hoá", "Khánh Hoà", "Lâm Đồng", "An Giang", "Tây Ninh", "Đắk Lắk", "Gia Lai",
+    )
+
+    const val KENH_MOI_TRANG = 15
+
+    /** Việc với máy xin cast (lệnh dien-thoai của app Cast). */
+    val CAST_LAM = listOf("cho-phep", "hom-nay", "24h", "chan")
 
     /** Chữ trên bàn phím chính của bot. */
     class Nhan(
@@ -297,6 +322,14 @@ object XuLyLenh {
         du.startsWith("uy:") -> du.drop(3).let { s -> s.substringBefore(':').toLongOrNull()?.takeIf { it > 0 }?.let { id ->
             when (s.substringAfter(':', "")) { "c" -> Duyet(id, true); "t" -> Duyet(id, false); else -> null } } }
         du.startsWith("ux:") -> du.drop(3).toLongOrNull()?.takeIf { it > 0 }?.let(::BoQuaXin)
+        du == "cm" -> ChupManHinh
+        du == "qv" -> QuayManHinh
+        du == "nen" -> DatNen
+        du == "nen:x" -> BoNen
+        du.startsWith("kd:") -> du.drop(3).toIntOrNull()?.takeIf { it in 0..20 }?.let(::TatCaKenh)
+        du.startsWith("kc:") -> du.drop(3).toIntOrNull()?.takeIf { it in KENH_TV.indices }?.let(::MoKenhTen)
+        du.startsWith("cd:") -> du.drop(3).let { s -> s.substringBefore(':').toIntOrNull()?.takeIf { it >= 0 }?.let { so ->
+            s.substringAfter(':', "").takeIf { it in CAST_LAM }?.let { CastDuyet(so, it) } } }
         du.startsWith("k:") -> du.drop(2).toIntOrNull()?.takeIf { it in PHIM || it in PHIM_THEM }?.let(::Phim)
         du.startsWith("o:") -> du.drop(2).toIntOrNull()?.takeIf { it in 1..SO_O }?.let(::MoKenh)
         du.startsWith("ap:") -> du.drop(3).toIntOrNull()?.takeIf { it in 0..99 }?.let(::UngDung)
@@ -312,8 +345,9 @@ object XuLyLenh {
      * hình, link, ảnh, lời nhắn lên tivi, kiểm tra mạng, xem tivi.
      */
     fun chiChu(v: Viec): Boolean = v is TatSau || v is HuyHen || v is MoTam || v is NguoiXem || v is DatVaiTro || v is BoNguoi ||
-        v is Duyet || v is BoQuaXin || v is KhoaThanhVien || v in setOf(
+        v is Duyet || v is BoQuaXin || v is KhoaThanhVien || v is CastDuyet || v in setOf(
             HoiTat, Tat, KhoiDongLai, HenGio, Khoa, KhoaNgay, ChupManHinh, LamMoiTv, DongAppNen, DonCache, DungApp, NguoiDs, ThemNguoi, NhatKyXem,
+            QuayManHinh, DatNen, BoNen,
         )
 
     /** Tính năng đang dùng được trên tivi, để bàn phím chỉ hiện nút có tác dụng: Hẹn giờ, Khoá trẻ em đã cài, chủ bật chụp. */
@@ -338,8 +372,36 @@ object XuLyLenh {
     fun bangDieuKhien(en: Boolean): JSONObject = nutTrongTin(PHIM.entries.chunked(3).map { h -> h.map { (ma, chu) -> chu to "k:$ma" } } +
         listOf(listOf((if (en) "⌨️ Type" else "⌨️ Gõ chữ") to "g", (if (en) "🔄 Refresh" else "🔄 Cập nhật") to "r")))
 
-    /** Các ô Kênh nhanh đang có trên tivi: (số ô, tên kênh), hai nút một hàng. */
-    fun bangKenh(ds: List<Pair<Int, String>>): JSONObject = nutTrongTin(ds.chunked(2).map { h -> h.map { (o, ten) -> "📺 $ten" to "o:$o" } })
+    /** Các ô Kênh nhanh đang có trên tivi: (số ô, tên kênh), hai nút một hàng; [tatCa] thì thêm nút 📺 Tất cả kênh (có Map Voice). */
+    fun bangKenh(ds: List<Pair<Int, String>>, tatCa: Boolean = false, en: Boolean = false): JSONObject = nutTrongTin(
+        ds.chunked(2).map { h -> h.map { (o, ten) -> "📺 $ten" to "o:$o" } } +
+            listOfNotNull(listOf((if (en) "📺 All channels" else "📺 Tất cả kênh") to "kd:0").takeIf { tatCa }),
+    )
+
+    /** 📺 Tất cả kênh: [KENH_MOI_TRANG] kênh một trang, ba kênh một hàng, hàng chuyển trang. */
+    fun bangTatCaKenh(trang: Int): JSONObject {
+        val soTrang = (KENH_TV.size + KENH_MOI_TRANG - 1) / KENH_MOI_TRANG
+        val t = trang.coerceIn(0, soTrang - 1)
+        val hang = KENH_TV.withIndex().drop(t * KENH_MOI_TRANG).take(KENH_MOI_TRANG).map { (i, ten) -> ten to "kc:$i" }.chunked(3).toMutableList()
+        if (soTrang > 1) hang += listOfNotNull(("◀️" to "kd:${t - 1}").takeIf { t > 0 }, "${t + 1}/$soTrang" to "kd:$t",
+            ("▶️" to "kd:${t + 1}").takeIf { t < soTrang - 1 })
+        return nutTrongTin(hang)
+    }
+
+    /** Sau khi chụp / quay màn hình: chụp lại, quay 10 giây. */
+    fun sauKhiChup(en: Boolean): JSONObject = nutTrongTin(listOf(listOf((if (en) "📸 Again" else "📸 Chụp lại") to "cm",
+        (if (en) "📹 Record 10 s" else "📹 Quay 10 giây") to "qv")))
+
+    /** Sau khi chiếu ảnh lên tivi (chủ, tivi có TiviKit Launcher): đặt ảnh đó làm ảnh nền Home. */
+    fun nutDatNen(en: Boolean): JSONObject = nutTrongTin(listOf(listOf((if (en) "🖼 Set as Home wallpaper" else "🖼 Đặt làm ảnh nền Home") to "nen")))
+
+    fun nutBoNen(en: Boolean): JSONObject = nutTrongTin(listOf(listOf((if (en) "↩️ Back to the default wallpaper" else "↩️ Về ảnh nền mặc định") to "nen:x")))
+
+    /** Tin báo có điện thoại lạ xin cast: cho phép luôn / tới hết hôm nay / 24 giờ, chặn. */
+    fun bangCast(so: Int, en: Boolean): JSONObject = nutTrongTin(listOf(
+        listOf((if (en) "✅ Always" else "✅ Cho phép luôn") to "cd:$so:cho-phep", (if (en) "📅 Today" else "📅 Hôm nay") to "cd:$so:hom-nay"),
+        listOf((if (en) "⏱ 24 hours" else "⏱ 24 giờ") to "cd:$so:24h", (if (en) "🚫 Block" else "🚫 Chặn") to "cd:$so:chan"),
+    ))
 
     /**
      * Một trang danh sách app ([ds]: gói, tên), hai app một hàng, [APP_MOI_TRANG] app một trang, hàng chuyển trang; chủ có

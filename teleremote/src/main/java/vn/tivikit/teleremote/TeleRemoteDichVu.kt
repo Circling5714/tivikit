@@ -51,6 +51,11 @@ class TeleRemoteDichVu : AccessibilityService() {
     private val laApp = ConcurrentHashMap<String, Boolean>()
     /** Việc đang chờ tin chữ kế tiếp của từng chat (gõ chữ, mã mở khoá), giữ qua các tin và cả lệnh thu. */
     val choTin = ConcurrentHashMap<Long, LamViec.Cho>()
+    /** Ảnh người dùng gửi gần nhất (🖼 Đặt làm ảnh nền). */
+    @Volatile var anhCuoi: File? = null
+    /** Việc bot tự để ý (máy lạ xin cast). */
+    var theoDoi: TheoDoi? = null
+        private set
     /** Lúc Tele Remote vừa tự tắt tivi (báo tin khỏi báo "vừa tắt" thêm lần nữa) và lúc màn hình đổi gần nhất. */
     @Volatile private var lucTuTat = 0L
     @Volatile private var lucManHinh = SystemClock.elapsedRealtime()
@@ -82,8 +87,16 @@ class TeleRemoteDichVu : AccessibilityService() {
             chinh.postDelayed({ hien(getString(R.string.dang_hoi), dai = true) }, 4000)
         }.also { it.batDau() }
         if (bot == null) bot = Bot(this).also { it.batDau() }
+        if (theoDoi == null) theoDoi = TheoDoi(this).also { it.batDau() }
         val f = IntentFilter().apply { addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF) }
         runCatching { if (Build.VERSION.SDK_INT >= 33) registerReceiver(manHinhDoi, f, RECEIVER_NOT_EXPORTED) else registerReceiver(manHinhDoi, f) }
+    }
+
+    val botDangNghe: Boolean get() = bot?.dangNghe == true
+
+    /** Nhắn [chu] kèm nút [banPhim] cho các chủ tivi (máy lạ xin cast…). */
+    fun baoChuKemNut(chu: String, banPhim: org.json.JSONObject) {
+        bot?.baoChu(chu, banPhim)
     }
 
     /** Nhắn [chu] cho các chủ tivi (báo tin); giữ máy thức một lúc cho kịp gửi khi tivi vừa tắt màn hình. */
@@ -335,6 +348,41 @@ class TeleRemoteDichVu : AccessibilityService() {
         bot?.nhanRieng(chat, if (kho.cauHinh.tiengAnh) "👀 Someone on ${tenTivi()} read your message ($gio)." else "👀 Tivi ${tenTivi()} đã xem lời nhắn ($gio).")
     }
 
+    /** Thư mục riêng của app trên bộ nhớ chung: shell (ADB) ghi / đọc được, app đọc được (quay màn hình, ảnh nền). */
+    private fun thuMucChung(): File? = getExternalFilesDir(null)?.apply { mkdirs() }
+
+    /** Quay màn hình tivi [giay] giây (screenrecord qua ADB, 720p, 2 Mbps), trả MP4; null nếu chưa nối ADB / không quay được. */
+    fun quayManHinh(giay: Int): ByteArray? {
+        val tep = File(thuMucChung() ?: return null, "quay.mp4")
+        tep.delete()
+        lenh("screenrecord --time-limit $giay --size 1280x720 --bit-rate 2000000 '${tep.absolutePath}'", (giay + 20) * 1000L) ?: return null
+        return runCatching { tep.readBytes() }.getOrNull()?.takeIf { it.size > 1000 }.also { tep.delete() }
+    }
+
+    /**
+     * Đặt [anh] (cắt giữa 16:9) làm ảnh nền TiviKit Launcher như TiviKit (content write anh-nen.jpg qua ADB, đọc lại cỡ ảnh
+     * launcher đang dùng); [anh] null = về ảnh nền mặc định. false nếu chưa nối ADB / launcher không nhận.
+     */
+    fun datNenTkl(anh: File?): Boolean {
+        if (!coAdb()) return false
+        val uri = "content://${LamViec.TKL}/anh-nen.jpg"
+        if (anh == null) return lenh("content delete --uri $uri 2>/dev/null; true", 5000) != null
+        val du = AnhTr.nen(anh) ?: return false
+        val tam = File(thuMucChung() ?: return false, "nen.jpg")
+        tam.writeBytes(du)
+        lenh("content write --uri $uri < '${tam.absolutePath}' 2>/dev/null", 15_000)
+        var ok = false
+        for (i in 1..10) {
+            if (lenh("content call --uri content://${LamViec.TKL} --method doc", 3000)?.let(XuLyLenh::jsonTrong)?.optLong("nen") == du.size.toLong()) {
+                ok = true
+                break
+            }
+            Thread.sleep(300)
+        }
+        tam.delete()
+        return ok
+    }
+
     /** Tên tivi đặt trong Cài đặt (device_name), không có thì tên máy. */
     fun tenTivi(): String = runCatching { Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) }.getOrNull()
         ?.takeIf { it.isNotBlank() } ?: Build.MODEL
@@ -397,6 +445,8 @@ class TeleRemoteDichVu : AccessibilityService() {
 
     private fun tat() {
         runCatching { unregisterReceiver(manHinhDoi) }
+        theoDoi?.dung()
+        theoDoi = null
         bot?.dung()
         bot = null
         adb?.dung()

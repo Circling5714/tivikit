@@ -153,6 +153,8 @@ class XuLyLenhTest {
         val ch2 = CauHinh(nguoiDung = listOf(NguoiDung("@caominh", 111, VaiTro.CHU), NguoiDung("@be_na", 0, VaiTro.THANH_VIEN)))
         listOf(XuLyLenh.bangThem(true, false, 0, 1), XuLyLenh.bangThem(true, true, 99, 1), XuLyLenh.bangNguoi(ch2, listOf(XinDung(333, "", "Ông", 1)), false),
             XuLyLenh.bangMotNguoi(ch2.nguoiDung[1], false), XuLyLenh.bangXinDung(333, true), XuLyLenh.nutBatManHinh(false),
+            XuLyLenh.sauKhiChup(false), XuLyLenh.nutDatNen(true), XuLyLenh.nutBoNen(false), XuLyLenh.bangCast(7, false),
+            XuLyLenh.bangTatCaKenh(1), XuLyLenh.bangKenh(listOf(1 to "VTV1"), tatCa = true),
             XuLyLenh.sauKhiGo(en = false), XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
             XuLyLenh.bangLamMoi(en = false, ganDay = true), XuLyLenh.hoiTat(en = false),
             XuLyLenh.bangUngDung((1..30).map { "com.app.so$it" to "App $it" }, 1, en = false, chu = true)).forEach { bp ->
@@ -337,5 +339,26 @@ class XuLyLenhTest {
         assertEquals(luc(2, 6), XuLyLenh.khoaTvToi(XuLyLenh.TOI_SANG, luc(1, 21), mui))
         assertEquals(luc(1, 6), XuLyLenh.khoaTvToi(XuLyLenh.TOI_SANG, luc(1, 2), mui))
         assertEquals(luc(1, 22), XuLyLenh.khoaTvToi(60, luc(1, 21), mui))
+    }
+
+    @Test
+    fun nhom2() {
+        assertEquals(XuLyLenh.ChupManHinh, XuLyLenh.viecTuNut("cm"))
+        assertEquals(XuLyLenh.QuayManHinh, XuLyLenh.viecTuNut("qv"))
+        assertEquals(XuLyLenh.DatNen, XuLyLenh.viecTuNut("nen"))
+        assertEquals(XuLyLenh.BoNen, XuLyLenh.viecTuNut("nen:x"))
+        assertEquals(XuLyLenh.TatCaKenh(2), XuLyLenh.viecTuNut("kd:2"))
+        assertEquals(XuLyLenh.MoKenhTen(0), XuLyLenh.viecTuNut("kc:0"))
+        assertNull(XuLyLenh.viecTuNut("kc:${XuLyLenh.KENH_TV.size}"))
+        assertEquals(XuLyLenh.CastDuyet(7, "hom-nay"), XuLyLenh.viecTuNut("cd:7:hom-nay"))
+        assertNull(XuLyLenh.viecTuNut("cd:7:xoa"))
+        listOf(XuLyLenh.QuayManHinh, XuLyLenh.DatNen, XuLyLenh.BoNen, XuLyLenh.CastDuyet(1, "chan")).forEach { assertTrue(it.toString(), XuLyLenh.chiChu(it)) }
+        listOf(XuLyLenh.TatCaKenh(0), XuLyLenh.MoKenhTen(1)).forEach { assertFalse(it.toString(), XuLyLenh.chiChu(it)) }
+        // Tất cả kênh: 34 kênh, 15 kênh một trang (ba một hàng), trang cuối chỉ có nút lùi.
+        val h = XuLyLenh.bangTatCaKenh(0).getJSONArray("inline_keyboard")
+        assertEquals(6, h.length())
+        assertEquals("VTV1", h.getJSONArray(0).getJSONObject(0).getString("text"))
+        val cuoi = XuLyLenh.bangTatCaKenh(99).getJSONArray("inline_keyboard")
+        assertEquals("kd:1", cuoi.getJSONArray(cuoi.length() - 1).getJSONObject(0).getString("callback_data"))
     }
 }

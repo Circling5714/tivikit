@@ -11,7 +11,8 @@ interface Ra {
     fun gui(chat: Long, chu: String, banPhim: JSONObject? = null)
     fun sua(chat: Long, idTin: Long, chu: String, banPhim: JSONObject? = null)
     fun traLoiNut(id: String, chu: String = "", canhBao: Boolean = false)
-    fun guiAnh(chat: Long, anh: ByteArray, chuThich: String)
+    fun guiAnh(chat: Long, anh: ByteArray, chuThich: String, banPhim: JSONObject? = null)
+    fun guiVideo(chat: Long, video: ByteArray, chuThich: String, banPhim: JSONObject? = null)
     fun xoaTin(chat: Long, idTin: Long)
     /** "typing" / "upload_photo": hiện trong chat lúc tivi làm việc lâu. */
     fun dangLam(chat: Long, viec: String)
@@ -24,7 +25,8 @@ class TelegramRa(private val t: Telegram) : Ra {
     override fun gui(chat: Long, chu: String, banPhim: JSONObject?) { runCatching { t.gui(chat, chu, banPhim) } }
     override fun sua(chat: Long, idTin: Long, chu: String, banPhim: JSONObject?) { runCatching { t.sua(chat, idTin, chu, banPhim) } }
     override fun traLoiNut(id: String, chu: String, canhBao: Boolean) { if (id.isNotEmpty()) runCatching { t.traLoiNut(id, chu, canhBao) } }
-    override fun guiAnh(chat: Long, anh: ByteArray, chuThich: String) { runCatching { t.guiAnh(chat, anh, chuThich) } }
+    override fun guiAnh(chat: Long, anh: ByteArray, chuThich: String, banPhim: JSONObject?) { runCatching { t.guiAnh(chat, anh, chuThich, banPhim) } }
+    override fun guiVideo(chat: Long, video: ByteArray, chuThich: String, banPhim: JSONObject?) { runCatching { t.guiVideo(chat, video, chuThich, banPhim) } }
     override fun xoaTin(chat: Long, idTin: Long) { if (idTin != 0L) runCatching { t.xoaTin(chat, idTin) } }
     override fun dangLam(chat: Long, viec: String) { runCatching { t.dangLam(chat, viec) } }
     override fun taiTep(id: String, dich: File, toiDa: Long): Boolean = runCatching { t.taiTep(id, dich, toiDa) }.isSuccess
@@ -36,7 +38,8 @@ class GhiRa : Ra {
     override fun gui(chat: Long, chu: String, banPhim: JSONObject?) { ds += chu + nut(banPhim) }
     override fun sua(chat: Long, idTin: Long, chu: String, banPhim: JSONObject?) { ds += chu + nut(banPhim) }
     override fun traLoiNut(id: String, chu: String, canhBao: Boolean) { if (chu.isNotEmpty()) ds += chu }
-    override fun guiAnh(chat: Long, anh: ByteArray, chuThich: String) { ds += "[ảnh ${anh.size / 1024} KB] $chuThich" }
+    override fun guiAnh(chat: Long, anh: ByteArray, chuThich: String, banPhim: JSONObject?) { ds += "[ảnh ${anh.size / 1024} KB] $chuThich" + nut(banPhim) }
+    override fun guiVideo(chat: Long, video: ByteArray, chuThich: String, banPhim: JSONObject?) { ds += "[video ${video.size / 1024} KB] $chuThich" + nut(banPhim) }
     override fun xoaTin(chat: Long, idTin: Long) {}
     override fun dangLam(chat: Long, viec: String) {}
     override fun taiTep(id: String, dich: File, toiDa: Long) = false
@@ -178,11 +181,14 @@ class Bot(private val dv: TeleRemoteDichVu) {
         }
     }
 
+    /** Bot đang hỏi Telegram được (để TheoDoi chỉ làm việc khi nhắn được cho chủ). */
+    val dangNghe: Boolean get() = trangThai == TrangThai.DANG_NGHE
+
     /**
-     * Nhắn [chu] cho các chủ tivi đã nhắn bot (báo tin: tivi vừa bật / vừa tắt), trên luồng riêng. Tivi vừa thức dậy thì mạng
-     * có thể chưa lên: thử lại vài lần trong chừng một phút.
+     * Nhắn [chu] (kèm nút [banPhim]) cho các chủ tivi đã nhắn bot (báo tin: tivi vừa bật / vừa tắt, máy lạ xin cast…), trên
+     * luồng riêng. Tivi vừa thức dậy thì mạng có thể chưa lên: thử lại vài lần trong chừng một phút.
      */
-    fun baoChu(chu: String) {
+    fun baoChu(chu: String, banPhim: JSONObject? = null) {
         val token = kho.token.takeIf { it.isNotEmpty() } ?: return
         val chuTivi = kho.cauHinh.nguoiDung.filter { it.vaiTro == VaiTro.CHU && it.id != 0L }
         if (chuTivi.isEmpty()) return
@@ -190,7 +196,7 @@ class Bot(private val dv: TeleRemoteDichVu) {
             val t = Telegram(token)
             val conLai = chuTivi.map { it.id }.toMutableList()
             for (lan in 1..4) {
-                conLai.removeAll { id -> runCatching { t.gui(id, chu) }.isSuccess }
+                conLai.removeAll { id -> runCatching { t.gui(id, chu, banPhim) }.isSuccess }
                 if (conLai.isEmpty() || !chay) break
                 Thread.sleep(15_000)
             }

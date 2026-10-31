@@ -17,6 +17,7 @@
         <package android:name="vn.tivikit.khoa" />
         <package android:name="vn.tivikit.cast" />
         <package android:name="vn.tivikit.go" />
+        <package android:name="vn.tivikit.launcher" />
         <package android:name="net.fptplay.ottbox" />
         <package android:name="com.google.android.katniss" />
         <package android:name="vn.tivikit.kenh" />

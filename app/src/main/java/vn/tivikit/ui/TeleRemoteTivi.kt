@@ -271,6 +271,13 @@ class TeleRemoteTivi(private val vm: PhienLamViec) {
                 "them" -> t("thêm $sau", "added $sau")
                 "khoa-tv" -> t("khoá thành viên tới $sau", "paused members until $sau")
                 "mo-tv" -> t("mở lại cho thành viên", "let members back in")
+                "quay" -> t("quay màn hình 10 giây", "recorded the screen for 10 s")
+                "nen" -> t("đặt ảnh nền Home", "set the Home wallpaper")
+                "bo-nen" -> t("về ảnh nền mặc định", "went back to the default wallpaper")
+                "cast" -> sau.substringAfter('|').let { may ->
+                    if (sau.substringBefore('|') == "chan") t("chặn máy cast \"$may\"", "blocked casting from \"$may\"")
+                    else t("cho máy \"$may\" cast", "allowed \"$may\" to cast")
+                }
                 else -> n.viec
             }
         }

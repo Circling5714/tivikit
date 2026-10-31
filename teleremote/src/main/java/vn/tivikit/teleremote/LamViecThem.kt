@@ -1,12 +1,17 @@
 package vn.tivikit.teleremote
 
+import java.text.SimpleDateFormat
 import java.time.ZoneId
+import java.util.Date
+import java.util.Locale
+import org.json.JSONObject
 import vn.tivikit.teleremote.XuLyLenh.Den
 
 /*
  * Việc thêm của bot (1/11/2026): lời nhắn hiện lên tivi, menu ⚙️ Thêm, bật màn hình, âm lượng bằng câu, kiểm tra mạng,
- * nhật ký, người dùng (duyệt người xin dùng, đổi vai trò, bỏ, thêm theo @username), tạm khoá thành viên. Hàm mở rộng của
- * LamViec, gọi từ LamViec.lam (quyền chủ / thành viên đã xét ở đó).
+ * nhật ký, người dùng (duyệt người xin dùng, đổi vai trò, bỏ, thêm theo @username), tạm khoá thành viên; quay màn hình, ảnh
+ * nền TiviKit Launcher, tất cả kênh (qua Map Voice), duyệt máy xin cast. Hàm mở rộng của LamViec, gọi từ LamViec.lam (quyền
+ * chủ / thành viên đã xét ở đó).
  */
 
 private val mui: ZoneId get() = ZoneId.systemDefault()
@@ -203,4 +208,97 @@ internal fun LamViec.khoaThanhVien(d: Den, nd: NguoiDung, phut: Int) {
         else t("⏸ Đã khoá thành viên tới $gio", "⏸ Members are paused until $gio"))
     ghi(nd, if (den == 0L) "mo-tv" else "khoa-tv|$gio")
     them(d, nd, traLoi = false)
+}
+
+// ---------- 📹 Quay màn hình ----------
+
+internal fun LamViec.quayManHinh(d: Den, nd: NguoiDung) {
+    if (!ch.chupManHinh) {
+        if (d.nut != null) ra.traLoiNut(d.idNut)
+        ra.gui(d.chat, t("Chụp / quay màn hình đang tắt: bật ở TiviKit → Tele Remote.", "Screenshots / recordings are off: turn them on in TiviKit → Tele Remote."))
+        return
+    }
+    if (d.nut != null) ra.traLoiNut(d.idNut, t("Đang quay 10 giây…", "Recording 10 seconds…"))
+    ra.dangLam(d.chat, "record_video")
+    val video = dv.quayManHinh(10)
+    if (video == null) {
+        ra.gui(d.chat, if (dv.coAdb()) t("Chưa quay được màn hình tivi.", "Couldn't record the TV screen.") else chuChuaAdb())
+        return
+    }
+    ra.dangLam(d.chat, "upload_video")
+    ra.guiVideo(d.chat, video, "📹 ${dv.tenTivi()} · " + SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date()), XuLyLenh.sauKhiChup(en))
+    ghi(nd, "quay")
+}
+
+// ---------- 🖼 Ảnh nền TiviKit Launcher ----------
+
+internal fun LamViec.datNen(d: Den, nd: NguoiDung) {
+    val anh = dv.anhCuoi?.takeIf { it.isFile }
+    if (anh == null || !dv.coApp(LamViec.TKL)) {
+        ra.traLoiNut(d.idNut, if (anh == null) t("Gửi lại ảnh rồi bấm 🖼 lần nữa (ảnh đó đã bị thay).", "Send the photo again, then tap 🖼 (that one was replaced).")
+            else t("Tivi chưa có TiviKit Launcher.", "The TV doesn't have TiviKit Launcher."), canhBao = true)
+        return
+    }
+    ra.traLoiNut(d.idNut, t("Đang đặt ảnh nền…", "Setting the wallpaper…"))
+    val ok = dv.datNenTkl(anh)
+    ra.gui(d.chat, when {
+        ok -> t("🖼 Đã đặt làm ảnh nền TiviKit Launcher (cắt giữa cho vừa màn hình 16:9).", "🖼 Set as the TiviKit Launcher wallpaper (centre-cropped to 16:9).")
+        !dv.coAdb() -> chuChuaAdb()
+        else -> t("TiviKit Launcher chưa nhận ảnh: cập nhật launcher ở TiviKit → Quản lý launcher rồi thử lại.",
+            "TiviKit Launcher didn't take the picture: update it in TiviKit → Launcher manager and try again.")
+    }, if (ok) XuLyLenh.nutBoNen(en) else null)
+    if (ok) ghi(nd, "nen")
+}
+
+internal fun LamViec.boNen(d: Den, nd: NguoiDung) {
+    val ok = dv.datNenTkl(null)
+    ra.traLoiNut(d.idNut, if (ok) t("↩️ Đã về ảnh nền mặc định", "↩️ Back to the default wallpaper") else chuChuaAdb(), canhBao = !ok)
+    if (!ok) return
+    ra.sua(d.chat, d.idTin, t("↩️ TiviKit Launcher đã về ảnh nền mặc định.", "↩️ TiviKit Launcher is back to its default wallpaper."))
+    ghi(nd, "bo-nen")
+}
+
+// ---------- 📺 Tất cả kênh ----------
+
+internal fun LamViec.tatCaKenh(d: Den, trang: Int) {
+    if (!dv.coApp(LamViec.MAP_VOICE)) {
+        ra.traLoiNut(d.idNut, t("Cần Map Voice (cài ở TiviKit → Map Voice) để mở kênh theo tên.", "Map Voice is needed (install it in TiviKit → Map Voice) to open channels by name."), canhBao = true)
+        return
+    }
+    hienBang(d, t("📺 Tất cả kênh: bấm để mở. Map Voice mở bằng app kênh đã chọn, như khi nói \"mở VTV3\".",
+        "📺 All channels: tap one to open it. Map Voice opens it in the chosen channel app, as when you say \"open VTV3\".") to XuLyLenh.bangTatCaKenh(trang))
+}
+
+internal fun LamViec.moKenhTen(d: Den, nd: NguoiDung, i: Int) {
+    val ten = XuLyLenh.KENH_TV[i]
+    val kq = dv.goiAppPhu(LamViec.MAP_VOICE, "thu", XuLyLenh.thamSo(JSONObject().put("cau", "mở $ten")), 20_000)
+    val viec = kq?.let { XuLyLenh.giaTri(it, "viec") }.orEmpty()
+    val ok = viec.startsWith("kenh|")
+    val bao = kq?.let { ChuBot.mapVoice(viec, XuLyLenh.giaTri(it, "app"), en, dv::tenApp) }
+    ra.traLoiNut(d.idNut, bao ?: if (kq == null) chuChuaAdb() else t("Map Voice chưa biết kênh $ten.", "Map Voice doesn't know $ten."), canhBao = !ok)
+    if (ok) ghi(nd, "kenh|$ten")
+}
+
+// ---------- 📱 Máy xin cast ----------
+
+internal fun LamViec.castDuyet(d: Den, nd: NguoiDung, so: Int, lam: String) {
+    val may = dv.theoDoi?.castMay?.get(so)
+    if (may == null) {
+        ra.traLoiNut(d.idNut, t("Yêu cầu này đã cũ (bot vừa chạy lại): duyệt ở TiviKit → Cast SmartTube.", "This request is stale (the bot restarted): handle it in TiviKit → Cast SmartTube."), canhBao = true)
+        return
+    }
+    val (id, ten) = may
+    val kq = dv.goiAppPhu(LamViec.CAST, "dien-thoai", XuLyLenh.thamSo(JSONObject().put("id", id).put("lam", lam)))
+    if (kq?.contains("ok=1") != true) {
+        ra.traLoiNut(d.idNut, if (kq == null) chuChuaAdb() else t("App Cast không nhận (${XuLyLenh.giaTri(kq, "loi")}).", "The Cast app refused it (${XuLyLenh.giaTri(kq, "loi")})."), canhBao = true)
+        return
+    }
+    ra.traLoiNut(d.idNut)
+    ra.sua(d.chat, d.idTin, when (lam) {
+        "cho-phep" -> t("✅ Đã cho phép máy \"$ten\" cast lên tivi.", "✅ \"$ten\" can now cast to the TV.")
+        "hom-nay" -> t("📅 Máy \"$ten\" cast được tới hết hôm nay.", "📅 \"$ten\" can cast until the end of today.")
+        "24h" -> t("⏱ Máy \"$ten\" cast được trong 24 giờ.", "⏱ \"$ten\" can cast for 24 hours.")
+        else -> t("🚫 Đã chặn máy \"$ten\".", "🚫 \"$ten\" is blocked.")
+    })
+    ghi(nd, "cast|$lam|$ten")
 }

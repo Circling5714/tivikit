@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Bundle
 import android.os.Process
+import java.io.File
 import java.io.IOException
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,8 +21,8 @@ import org.json.JSONObject
  *   content call --uri content://vn.tivikit.teleremote --method noi-lai   (nối lại ADB của tivi)
  *   content call --uri content://vn.tivikit.teleremote --method mo-thanh-vien   (bỏ tạm khoá thành viên chủ đặt từ Telegram)
  *   content call --uri content://vn.tivikit.teleremote --method thu --arg '{"chu":"ℹ️ Tivi"}' / '{"nut":"k:19"}'
- *     (làm như chủ tivi vừa nhắn / bấm, "vaiTro":"thanh-vien" thì như thành viên; trả chữ bot sẽ trả lời kèm chữ trên nút;
- *     để thử không cần Telegram)
+ *     (làm như chủ tivi vừa nhắn / bấm, "vaiTro":"thanh-vien" thì như thành viên, "anh":"<đường dẫn>" = ảnh coi như vừa gửi
+ *     (trong thư mục của app); trả chữ bot sẽ trả lời kèm chữ trên nút; để thử không cần Telegram)
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đọc được token hay đổi người được dùng.
  */
 class CauHinhProvider : ContentProvider() {
@@ -117,6 +118,9 @@ class CauHinhProvider : ContentProvider() {
                 if (dv == null) return kq.apply { putString("loi", "dich-vu-tat") }
                 val j = runCatching { JSONObject(arg ?: "") }.getOrDefault(JSONObject())
                 val vt = if (j.optString("vaiTro") == VaiTro.THANH_VIEN.ma) VaiTro.THANH_VIEN else VaiTro.CHU
+                // "anh": ảnh coi như người dùng vừa gửi (thử 🖼 Đặt làm ảnh nền không cần Telegram); chỉ ảnh trong thư mục của app.
+                j.optString("anh").takeIf { it.isNotEmpty() }?.let(::File)?.takeIf { it.isFile && it.canonicalPath.contains("/vn.tivikit.teleremote/") }
+                    ?.let { dv.anhCuoi = it }
                 val nd = kho.cauHinh.nguoiDung.firstOrNull { it.vaiTro == vt } ?: NguoiDung("@thu", 1, vt, "TiviKit")
                 val ra = GhiRa()
                 // Chat riêng của lệnh thử (không phải chat thật của người đó): việc đang chờ trả lời (gõ chữ, mã mở khoá) của
