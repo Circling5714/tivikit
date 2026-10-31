@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Màn Hẹn giờ trên tivi: toàn màn hình, nền tối (BangHenGio vẽ nền chuyển màu). -->
+    <style name="NenToi" parent="android:Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

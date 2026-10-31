@@ -24,14 +24,31 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <!-- Màn hỏi mã bố mẹ (XacNhan) của Khoá trẻ em, trước việc đổi lịch trên tivi. -->
+        <package android:name="vn.tivikit.khoa" />
     </queries>
 
-    <!-- Không có màn mở trong danh sách app: đặt lịch ở TiviKit trên điện thoại. -->
+    <!-- Đặt lịch ở TiviKit trên điện thoại, hay ở màn Hẹn giờ trên tivi (biểu tượng trong danh sách app, dùng remote). -->
     <application
         android:label="@string/ten_app"
         android:icon="@drawable/ic_hen_gio"
+        android:banner="@drawable/banner"
         android:allowBackup="false"
         android:supportsRtl="true">
+        <!-- Lịch hằng tuần, hẹn tắt sau X phút, việc một lần, lần chạy gần đây (31/10/2026). -->
+        <activity
+            android:name=".BangHenGio"
+            android:exported="true"
+            android:theme="@style/NenToi"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode|locale|layoutDirection|fontScale">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <service
             android:name=".HenGioDichVu"
             android:exported="true"
