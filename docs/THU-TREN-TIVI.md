@@ -226,6 +226,26 @@ Nên có SmartTube hay một ô Kênh nhanh trên tivi để hẹn mở.
 
 - **Hỏng thì:** tắt công tắc của việc đó rồi Lưu lên tivi, hay Gỡ Hẹn giờ khỏi tivi (cuối màn Hẹn giờ).
 
+## 9e. Tele Remote
+
+Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này) và tài khoản Telegram có @username.
+
+| Thử | Đạt khi |
+| --- | --- |
+| Tiện ích → Tele Remote → Bật Tele Remote | Tivi hiện "Cho phép gỡ lỗi?" (lần đầu); chọn Luôn cho phép rồi OK; Làm mới thì ghi "Đã nối ADB của tivi" |
+| Dán token của bot → Nối bot | Hiện "Đã nối bot @…"; Làm mới thì ghi "Bot đang nghe lệnh" |
+| Thêm @username của bạn làm chủ, mở bot trên Telegram, bấm Start | Bot chào kèm tên tivi, hiện bàn phím 🎮 📺 ▶️ ℹ️ 📴; ở TiviKit người đó ghi "đã nhắn bot" |
+| 🎮 Điều khiển → bấm ⬆️ ⬇️ OK ↩️ 🏠, 🔉 🔊 | Tivi làm đúng phím; tin bảng điều khiển đổi "Vừa bấm …" và app đang mở, khung chat không trôi |
+| 📺 Kênh nhanh (tivi có ô Kênh nhanh) → bấm một kênh | Tivi mở kênh đó |
+| ▶️ YouTube, ℹ️ Tivi | SmartTube (hay TizenTube) mở; bot gửi màn hình, app đang mở, âm lượng, RAM, mạng |
+| 📴 Tắt tivi → Tắt ngay | Tivi về chế độ chờ; thành viên bấm thì bot báo chỉ chủ mới tắt được |
+| Một tài khoản Telegram khác (không có trong danh sách) nhắn bot | Bot báo chưa được phép, chủ nhận tin "muốn dùng bot"; TiviKit hiện ở Đang xin dùng; Duyệt thì người đó dùng được |
+| Tắt tivi hẳn, nhắn bot một lệnh, bật tivi lại | Lệnh cũ không làm; lệnh mới sau khi tivi bật thì làm |
+| Đổi sang bot khác, hay dùng cùng token cho tivi thứ hai | Bot mới nghe lệnh; tivi thứ hai báo "Bot này đang chạy ở tivi / máy khác" |
+
+- **Hỏng thì:** tắt công tắc Bật Tele Remote (bot thôi nghe), hay Gỡ Tele Remote khỏi tivi. Bot nhắn chậm hay không trả lời:
+  xem dòng Telegram ở mục Trên tivi (tivi chưa vào được Telegram thì đặt DNS ở mục DNS chặn quảng cáo).
+
 ## 10. Các tính năng còn lại
 
 | Thử | Đạt khi |
