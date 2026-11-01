@@ -288,6 +288,7 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | Sao lưu & chuyển máy → Lưu ra file → Nhập trên điện thoại khác | Tivi đã dọn, bộ cài đặt hiện đủ trên máy mới |
 | Kênh nhanh với 2 ô trở lên (TV360 và VTVgo lẫn nhau) | Mỗi ô mở đúng kênh trong đúng app của nó |
 | Kênh nhanh → FPT Play → VTV3 → Thêm lên tivi (FPT Play đã đăng nhập), bấm ô trên Home rồi gán một nút remote cho ô | Ô mang logo VTV3; bấm ô hay nút thì FPT Play phát VTV3; Thử nút báo được |
+| M3U (Gợi ý app) có danh sách kênh: trong M3U giữ OK trên một kênh → Create Shortcut; Kênh nhanh → M3U → Tải lại kênh M3U, chọn kênh → Thêm lên tivi; bấm ô trên Home | Ô mang tên kênh; bấm ô (hay ▶ ở màn Kênh nhanh) thì M3U mở và phát ngay kênh đó |
 | Home sạch → Áp dụng (lên bản mới), rồi Nút remote → dò một nút → "SmartTube – tìm bằng giọng nói" → Lưu → Thử nút | SmartTube mở màn tìm kiếm; đã bật "Tìm kiếm bằng giọng nói tức thì" trong SmartTube thì mic bật ngay |
 | Nối TiviKit vào một điện thoại (Gỡ lỗi không dây) | Hiện cảnh báo đỏ "không khai là tivi", nút dọn bị khoá |
 | Chế độ tivi LG (nếu có tivi LG) | Ghép đôi được, remote và gõ chữ chạy |
