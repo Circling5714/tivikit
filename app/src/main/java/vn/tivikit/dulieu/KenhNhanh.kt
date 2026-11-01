@@ -28,6 +28,8 @@ object KenhNhanh {
     const val LOAI_VTVGO = "vtvgo"
     const val LOAI_FPT = "fptplay"
     const val LOAI_M3U = "m3u"
+    /** Ô Auto (1/11/2026): một kênh, nhiều nguồn; Map Voice mở nguồn phát được, mất tiếng thì đổi nguồn. */
+    const val LOAI_AUTO = "auto"
 
     fun goiCua(o: Int): String = if (o == 1) GOI else "$GOI$o"
     /** Màn mở kênh của ô [o] (bấm ô / nút remote cũng vào đây). */
@@ -42,21 +44,62 @@ object KenhNhanh {
      * Kênh của một ô: TV360 theo số kênh [so]; ô VTVgo / FPT Play ([loai]) theo mã kênh [ma] của app đó (vtvgo://play,
      * fptplay.vn/xem-truyen-hinh), [so] rỗng. Có [ma] mà không nói [loai] là ô VTVgo (như trước khi có ô FPT Play).
      */
-    data class Kenh(val so: String, val ten: String, val ma: String = "", val loai: String = if (ma.isEmpty()) LOAI_TV360 else LOAI_VTVGO) {
+    data class Kenh(
+        val so: String, val ten: String, val ma: String = "", val loai: String = if (ma.isEmpty()) LOAI_TV360 else LOAI_VTVGO,
+        /** Ô Auto: các nguồn (mỗi nguồn một Kenh VTVgo / TV360 / FPT Play / M3U), theo thứ tự thử mặc định. */
+        val nguon: List<Kenh> = emptyList(),
+    ) {
         val laVtvGo: Boolean get() = loai == LOAI_VTVGO
         val laFpt: Boolean get() = loai == LOAI_FPT
         val laM3u: Boolean get() = loai == LOAI_M3U
         val laTv360: Boolean get() = loai == LOAI_TV360
-        /** App mở kênh này. */
-        val app: String get() = when (loai) { LOAI_VTVGO -> VTVGO; LOAI_FPT -> FPTPLAY; LOAI_M3U -> M3U; else -> TV360 }
+        val laAuto: Boolean get() = loai == LOAI_AUTO
+        /** App mở kênh này (ô Auto: Map Voice). */
+        val app: String get() = when (loai) { LOAI_VTVGO -> VTVGO; LOAI_FPT -> FPTPLAY; LOAI_M3U -> M3U; LOAI_AUTO -> MapVoice.GOI; else -> TV360 }
         /** Tên app mở kênh này, cho người dùng. */
         val tenApp: String get() = tenAppCua(app)
-        /** Cùng một kênh trên cùng app (để không làm hai ô một kênh). */
-        fun trung(k: Kenh): Boolean = loai == k.loai && if (laTv360) so == k.so else ma == k.ma
+        /** Cùng một kênh trên cùng app (để không làm hai ô một kênh); ô Auto: cùng tên kênh. */
+        fun trung(k: Kenh): Boolean = loai == k.loai && when {
+            laTv360 -> so == k.so
+            laAuto -> khoaTen(ten) == khoaTen(k.ten)
+            else -> ma == k.ma
+        }
     }
 
-    /** Tên app xem kênh [goi] (TV360 / VTVgo / FPT Play / M3U), cho người dùng. */
-    fun tenAppCua(goi: String): String = when (goi) { VTVGO -> "VTVgo"; FPTPLAY -> "FPT Play"; M3U -> "M3U"; else -> "TV360" }
+    /** Tên app xem kênh [goi] (TV360 / VTVgo / FPT Play / M3U; Map Voice = ô Auto), cho người dùng. */
+    fun tenAppCua(goi: String): String = when (goi) {
+        VTVGO -> "VTVgo"; FPTPLAY -> "FPT Play"; M3U -> "M3U"; MapVoice.GOI -> vn.tivikit.t("Tự động", "Auto"); else -> "TV360"
+    }
+
+    /**
+     * Tên kênh để so giữa các nguồn (như khoaKenh của Map Voice): không dấu, bỏ "kênh", "truyền hình", HD / FHD / UHD / 4K,
+     * chỉ giữ a-z 0-9, tên khác gộp về một ("QPVN HD" = "Quốc phòng Việt Nam", "HaNoiTV 1" = "Hà Nội 1").
+     */
+    fun khoaTen(ten: String): String {
+        val k = XaPhuong.boDau(ten).replace(Regex("\\b(kenh|truyen hinh|hd|fhd|uhd|4k)\\b"), " ").replace(Regex("[^a-z0-9]"), "")
+        return BI_DANH[k] ?: k
+    }
+
+    private val BI_DANH = mapOf(
+        "qpvn" to "quocphongvietnam", "quocphongvn" to "quocphongvietnam", "antv" to "congannhandan",
+        "hanoitv1" to "hanoi1", "hanoitv2" to "hanoi2",
+        "thvl1" to "vinhlong1", "thvl2" to "vinhlong2", "thvl3" to "vinhlong3", "thvl4" to "vinhlong4",
+    )
+
+    /**
+     * Nguồn cho ô Auto kênh [ten] (1/11/2026), theo thứ tự thử mặc định VTVgo → TV360 → FPT Play → M3U: kênh cùng tên trong
+     * danh sách VTVgo [dsGo], FPT Play [dsFpt], phím tắt M3U [dsM3u] (tên, mã); TV360 chỉ khi biết số kênh ([tv360]: gợi ý và
+     * ô TV360 đang có) — TV360 tìm theo tên có khi mở nhầm kênh mà vẫn có tiếng.
+     */
+    fun nguonAuto(ten: String, dsGo: List<KenhVtvGo.Kenh>, dsFpt: List<KenhFpt.Kenh>, dsM3u: List<Pair<String, String>>, tv360: List<Kenh>): List<Kenh> {
+        val k = khoaTen(ten)
+        if (k.isEmpty()) return emptyList()
+        return listOfNotNull(
+            dsGo.firstOrNull { khoaTen(it.ten) == k }?.let { Kenh("", tenSach(it.tenO), it.ma) },
+            tv360.firstOrNull { it.laTv360 && it.so.isNotEmpty() && khoaTen(it.ten) == k }?.let { Kenh(it.so, tenSach(it.ten)) },
+            dsFpt.firstOrNull { khoaTen(it.ten) == k }?.let { Kenh("", tenSach(it.tenO), it.ma, LOAI_FPT) },
+        ) + dsM3u.filter { khoaTen(it.first) == k }.take(2).map { (t, m) -> Kenh("", tenSach(t), m, LOAI_M3U) }
+    }
 
     /** Kênh hay xem, số theo danh sách kênh trên tv360.vn (25/10/2026). */
     val GOI_Y = listOf(
@@ -78,8 +121,16 @@ object KenhNhanh {
      * Cấu hình gửi cho app phụ (content call … --method dat), như Kenh.json của module kenh/. Chữ có dấu thành \uXXXX như
      * TiviKitLauncher.cauHinh: lệnh qua libadb nên thuần ASCII ("Hà Nội 1" làm hỏng lệnh, 28/10/2026).
      */
-    fun json(k: Kenh): String = TiviKitLauncher.chiAscii(JSONObject().put("ten", k.ten)
-        .apply { if (k.laTv360) put("so", k.so) else put("app", k.loai).put("ma", k.ma) }.toString())
+    fun json(k: Kenh): String = TiviKitLauncher.chiAscii(jsonO(k).toString())
+
+    /** Ô Auto: nguồn ghi rõ app (cả TV360), như Kenh.jsonNguon của app phụ. */
+    private fun jsonO(k: Kenh): JSONObject = JSONObject().put("ten", k.ten).apply {
+        when {
+            k.laTv360 -> put("so", k.so)
+            k.laAuto -> put("app", k.loai).put("nguon", JSONArray().apply { k.nguon.forEach { n -> put(jsonO(n).put("app", n.loai)) } })
+            else -> put("app", k.loai).put("ma", k.ma)
+        }
+    }
 
     private val MA_GO = Regex("[A-Za-z0-9_-]{1,60}")
     /** Mã kênh của M3U: số nguyên dương (như app phụ, đi vào extra kiểu int của M3U). */
@@ -89,6 +140,11 @@ object KenhNhanh {
         if (j == null) return null
         val ten = j.optString("ten").trim()
         val loai = j.optString("app")
+        if (loai == LOAI_AUTO) {
+            val a = j.optJSONArray("nguon") ?: return null
+            val ds = (0 until a.length()).mapNotNull { a.optJSONObject(it) }.mapNotNull { o -> tuJson(o)?.takeIf { !it.laAuto } }
+            return if (ten.isNotEmpty() && ds.isNotEmpty()) Kenh("", ten, "", LOAI_AUTO, ds) else null
+        }
         if (loai == LOAI_VTVGO || loai == LOAI_FPT || loai == LOAI_M3U) {
             val ma = j.optString("ma").trim()
             return if ((if (loai == LOAI_M3U) MA_M3U else MA_GO).matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma, loai) else null

@@ -1,21 +1,38 @@
 package vn.tivikit.kenh
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * Kênh của ô Kênh nhanh. Ô TV360: số kênh trong TV360 (3 chữ số, VD 001 = VTV1) và tên (dự phòng khi TV360 đổi số kênh).
  * Ô VTVgo (26/10/2026, [app] vtvgo): mã kênh của VTVgo (contentId trong vtvgo://play) và tên. Ô FPT Play (31/10/2026, [app]
  * fptplay): mã kênh của FPT Play (fptplay.vn/xem-truyen-hinh/<mã>, VD vtv1-hd) và tên. Ô M3U (1/11/2026, [app] m3u): mã kênh
- * (số) trong M3UAndroid, lấy từ phím tắt "channel_<mã>" người dùng tạo trong M3U (Create Shortcut), và tên.
+ * (số) trong M3UAndroid, lấy từ phím tắt "channel_<mã>" người dùng tạo trong M3U (Create Shortcut), và tên. Ô Auto (cùng
+ * ngày, [app] auto): tên kênh và các [nguon] TiviKit tìm được (mỗi nguồn một Kenh VTVgo / TV360 / FPT Play / M3U); Map Voice
+ * thử lần lượt tới khi có tiếng.
  */
-data class Kenh(val so: String, val ten: String, val ma: String = "", val app: String = if (ma.isEmpty()) APP_TV360 else APP_VTVGO) {
+data class Kenh(
+    val so: String, val ten: String, val ma: String = "", val app: String = if (ma.isEmpty()) APP_TV360 else APP_VTVGO,
+    val nguon: List<Kenh> = emptyList(),
+) {
     val laVtvGo: Boolean get() = app == APP_VTVGO
     val laFpt: Boolean get() = app == APP_FPT
     val laM3u: Boolean get() = app == APP_M3U
+    val laAuto: Boolean get() = app == APP_AUTO
 
-    fun json(): String = JSONObject().put("ten", ten)
-        .apply { if (app == APP_TV360) put("so", so) else put("app", app).put("ma", ma) }.toString()
+    fun json(): String = JSONObject().put("ten", ten).apply {
+        when (app) {
+            APP_TV360 -> put("so", so)
+            APP_AUTO -> put("app", app).put("nguon", JSONArray(jsonNguon()))
+            else -> put("app", app).put("ma", ma)
+        }
+    }.toString()
+
+    /** Nguồn của ô Auto gửi cho Map Voice (MoTuDong, TuChonNguon.tuJson): mỗi nguồn ghi rõ app, kể cả TV360. */
+    fun jsonNguon(): String = JSONArray().apply {
+        nguon.forEach { n -> put(JSONObject().put("app", n.app).put("ten", n.ten).apply { if (n.app == APP_TV360) put("so", n.so) else put("ma", n.ma) }) }
+    }.toString()
 
     companion object {
         const val TV360 = "com.viettel.tv360.tv"
@@ -25,6 +42,12 @@ data class Kenh(val so: String, val ten: String, val ma: String = "", val app: S
         const val APP_VTVGO = "vtvgo"
         const val APP_FPT = "fptplay"
         const val APP_M3U = "m3u"
+        const val APP_AUTO = "auto"
+        /** Map Voice: tự chọn nguồn cho ô Auto (màn MoTuDong nhận tên kênh và nguồn). */
+        const val MAP_VOICE = "vn.tivikit.mapvoice"
+        const val MAP_VOICE_MO = "vn.tivikit.mapvoice.MoTuDong"
+        /** Thứ tự thử nguồn khi không có Map Voice (như TuChonNguon.MAC_DINH của Map Voice). */
+        val THU_TU = listOf(APP_VTVGO, APP_TV360, APP_FPT, APP_M3U)
         /** M3UAndroid (github.com/oxyroid/M3UAndroid), bản 1.15.0 (Android TV dùng bản này, gói smartphone). */
         const val M3U = "com.m3u.smartphone"
         /**
@@ -57,6 +80,16 @@ data class Kenh(val so: String, val ten: String, val ma: String = "", val app: S
             val j = runCatching { JSONObject(s ?: "") }.getOrNull() ?: return null
             val ten = j.optString("ten").trim().take(40)
             val app = j.optString("app")
+            if (app == APP_AUTO) {
+                val a = j.optJSONArray("nguon") ?: return null
+                // Mỗi nguồn đọc như một ô; TV360 không biết số thì tìm theo tên. Mỗi app một nguồn (M3U có thể hai mã).
+                val ds = (0 until a.length()).mapNotNull { a.optJSONObject(it) }.mapNotNull { o ->
+                    if (o.optString("app") == APP_TV360 && chuanSo(o.optString("so")) == null) {
+                        o.optString("ten").trim().take(40).takeIf { it.isNotEmpty() }?.let { Kenh("", it) }
+                    } else tuJson(o.toString())?.takeIf { it.app != APP_AUTO }
+                }.distinctBy { it.app + ":" + it.ma + it.so }.take(8)
+                return if (ten.isNotEmpty() && ds.isNotEmpty()) Kenh("", ten, "", APP_AUTO, ds) else null
+            }
             if (app == APP_VTVGO || app == APP_FPT || app == APP_M3U) {
                 val ma = j.optString("ma").trim()
                 return if ((if (app == APP_M3U) MA_M3U else MA).matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma, app) else null

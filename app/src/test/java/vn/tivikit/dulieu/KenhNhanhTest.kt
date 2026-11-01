@@ -170,4 +170,39 @@ class KenhNhanhTest {
         assertEquals(listOf("VTV1 HD" to "473", "HTV7, Thể thao" to "501"), KenhNhanh.kenhM3u(dump))
         assertEquals(emptyList<Pair<String, String>>(), KenhNhanh.kenhM3u(""))
     }
+
+    @Test fun khoaTen_gopTenKhac() {
+        assertEquals("vtv1", KenhNhanh.khoaTen("VTV1 HD"))
+        assertEquals("hanoi1", KenhNhanh.khoaTen("Truyền hình Hà Nội 1"))
+        assertEquals("hanoi1", KenhNhanh.khoaTen("HaNoiTV 1"))
+        assertEquals("quocphongvietnam", KenhNhanh.khoaTen("QPVN HD"))
+        assertEquals(KenhNhanh.khoaTen("Kênh Vĩnh Long 1"), KenhNhanh.khoaTen("THVL1"))
+    }
+
+    /** Ô Auto (1/11/2026): nguồn tìm theo tên kênh, thứ tự VTVgo → TV360 (biết số) → FPT Play → M3U. */
+    @Test fun auto_nguonVaJson() {
+        val go = listOf(KenhVtvGo.Kenh("VTV1", "1", "VTV", "", false), KenhVtvGo.Kenh("Truyền hình Hà Nội 1", "hn1", "Địa phương", "", false))
+        val fpt = listOf(KenhFpt.Kenh("vtv1-hd", "VTV1 HD", "Kênh cơ bản", "1", ""), KenhFpt.Kenh("htv7-hd", "HTV7 HD", "Kênh cơ bản", "73", "", canGoi = true))
+        val m3u = listOf("VTV1 HD" to "473", "HTV7 HD" to "12", "VTV1 FHD" to "474", "VTV1 HD (2)" to "475")
+        val ds = KenhNhanh.nguonAuto("VTV1", go, fpt, m3u, KenhNhanh.GOI_Y)
+        assertEquals(listOf(KenhNhanh.LOAI_VTVGO, KenhNhanh.LOAI_TV360, KenhNhanh.LOAI_FPT, KenhNhanh.LOAI_M3U, KenhNhanh.LOAI_M3U), ds.map { it.loai })
+        assertEquals(listOf("1", "001", "vtv1-hd", "473", "474"), ds.map { it.ma.ifEmpty { it.so } })
+        // HTV7: không có trên VTVgo; TV360 số 73 trong gợi ý.
+        assertEquals(listOf(KenhNhanh.LOAI_TV360, KenhNhanh.LOAI_FPT, KenhNhanh.LOAI_M3U), KenhNhanh.nguonAuto("HTV7", go, fpt, m3u, KenhNhanh.GOI_Y).map { it.loai })
+        // Không biết số TV360 thì không có TV360.
+        assertEquals(listOf(KenhNhanh.LOAI_VTVGO), KenhNhanh.nguonAuto("Hà Nội 1", go, fpt, m3u, emptyList()).map { it.loai })
+        assertEquals(emptyList<KenhNhanh.Kenh>(), KenhNhanh.nguonAuto("  ", go, fpt, m3u, KenhNhanh.GOI_Y))
+
+        val k = KenhNhanh.Kenh("", "VTV1", "", KenhNhanh.LOAI_AUTO, ds)
+        assertTrue(k.laAuto && !k.laTv360)
+        val s = KenhNhanh.json(k)
+        assertTrue(s.all { it.code < 0x80 })
+        val nguon = JSONObject(s).getJSONArray("nguon")
+        assertEquals("tv360", nguon.getJSONObject(1).getString("app"))
+        assertEquals(k, KenhNhanh.tuJson(JSONObject(s)))
+        // Ô Auto trùng theo tên kênh, không theo nguồn.
+        assertTrue(k.trung(KenhNhanh.Kenh("", "VTV1 HD", "", KenhNhanh.LOAI_AUTO)))
+        assertFalse(k.trung(KenhNhanh.Kenh("", "VTV1", "1")))
+        assertNull(KenhNhanh.tuJson(JSONObject("""{"app":"auto","ten":"VTV1","nguon":[{"app":"vtvgo","ma":"x y","ten":"VTV1"}]}""")))
+    }
 }

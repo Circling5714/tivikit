@@ -6,6 +6,7 @@ import android.graphics.BitmapShader
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
@@ -50,8 +51,33 @@ object AnhOKenh {
         }.getOrElse { logo }
     }
 
-    /** Huy hiệu tròn ở góc phải dưới: bóng mờ, đĩa trắng làm viền, biểu tượng [bt] cắt tròn bên trong (chỗ trong suốt thành trắng). */
-    private fun veHuyHieu(cv: Canvas, bt: Bitmap) {
+    /**
+     * Ảnh ô Kênh nhanh Auto (1/11/2026): [logo] (null = ô chữ [ten]) kèm huy hiệu Auto — chữ AUTO trên nền xanh tím, cùng
+     * kiểu tròn viền trắng với huy hiệu app — vì ô mở bằng nguồn nào là Map Voice chọn lúc bấm. JPEG; vẽ lỗi thì trả [logo].
+     */
+    fun veAuto(logo: ByteArray?, ten: String): ByteArray? {
+        return runCatching {
+            val nen = if (logo == null) null else BitmapFactory.decodeByteArray(logo, 0, logo.size) ?: return logo
+            val ra = Bitmap.createBitmap(RONG, CAO, Bitmap.Config.ARGB_8888)
+            val cv = Canvas(ra)
+            if (nen != null) cv.drawBitmap(nen, null, Rect(0, 0, RONG, CAO), Paint(Paint.FILTER_BITMAP_FLAG))
+            else { cv.drawColor(Color.WHITE); veChu(cv, ten) }
+            val (cx, cy, trong) = veDia(cv)
+            cv.drawCircle(cx, cy, trong, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = LinearGradient(cx - trong, cy - trong, cx + trong, cy + trong, 0xFF0A84FF.toInt(), 0xFF5E5CE6.toInt(), Shader.TileMode.CLAMP)
+            })
+            val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; typeface = Typeface.DEFAULT_BOLD; textAlign = Paint.Align.CENTER; textSize = 17f }
+            while (p.textSize > 10f && p.measureText(CHU_AUTO) > 2 * trong - 12) p.textSize -= 0.5f
+            val fm = p.fontMetrics
+            cv.drawText(CHU_AUTO, cx, cy - (fm.ascent + fm.descent) / 2, p)
+            ByteArrayOutputStream().also { ra.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
+        }.getOrElse { logo }
+    }
+
+    private const val CHU_AUTO = "AUTO"
+
+    /** Bóng mờ và đĩa trắng (viền) của huy hiệu ở góc phải dưới; trả tâm và bán kính phần trong viền. */
+    private fun veDia(cv: Canvas): Triple<Float, Float, Float> {
         val r = HH / 2
         val cx = RONG - LE - r
         val cy = CAO - LE - r
@@ -59,7 +85,12 @@ object AnhOKenh {
             color = Color.argb(80, 0, 0, 0); maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
         })
         cv.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
-        val trong = r - VIEN
+        return Triple(cx, cy, r - VIEN)
+    }
+
+    /** Huy hiệu tròn ở góc phải dưới: bóng mờ, đĩa trắng làm viền, biểu tượng [bt] cắt tròn bên trong (chỗ trong suốt thành trắng). */
+    private fun veHuyHieu(cv: Canvas, bt: Bitmap) {
+        val (cx, cy, trong) = veDia(cv)
         val m = Matrix().apply {
             setRectToRect(RectF(0f, 0f, bt.width.toFloat(), bt.height.toFloat()), RectF(cx - trong, cy - trong, cx + trong, cy + trong), Matrix.ScaleToFit.CENTER)
         }

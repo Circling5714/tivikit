@@ -41,8 +41,8 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
     val k = vm.kenhNhanh
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(t("Kênh nhanh", "Quick channel"), style = KieuTieuDeLon)
-        Phu(t("Mỗi ô kênh là một ô trên Home sạch và TiviKit Launcher, mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360, VTVgo, FPT Play hoặc M3U, mang logo kênh và biểu tượng app đó ở góc, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
-            "Each channel tile is a tile on the clean Home and TiviKit Launcher that opens one channel (VTV1, VTV3, HTV7…) in TV360, VTVgo, FPT Play or M3U, with the channel's logo and that app's icon in the corner, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
+        Phu(t("Mỗi ô kênh là một ô trên Home sạch và TiviKit Launcher, mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360, VTVgo, FPT Play hoặc M3U (ô Auto: nguồn nào đang phát được), mang logo kênh và biểu tượng app đó ở góc, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
+            "Each channel tile is a tile on the clean Home and TiviKit Launcher that opens one channel (VTV1, VTV3, HTV7…) in TV360, VTVgo, FPT Play or M3U (Auto tiles: whichever source plays), with the channel's logo and that app's icon in the corner, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
     }
     if (vm.daCoHomeSach && k.homeCu) CanhBaoKenh(vm,
         t("Home sạch trên tivi là bản cũ nên ô chưa hiện logo kênh. Mở Home sạch, bấm Áp dụng lên tivi một lần (app tự cập nhật, giữ giao diện).",
@@ -69,7 +69,13 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     Text(o.kenh?.ten ?: t("Ô ${o.so} (chưa đọc được kênh)", "Tile ${o.so} (channel unreadable)"), fontWeight = FontWeight.SemiBold)
                     Phu(listOfNotNull(t("ô ${o.so}", "tile ${o.so}"),
-                        o.kenh?.let { if (!it.laTv360) it.tenApp else t("TV360 số ${it.so.trimStart('0')}", "TV360 no. ${it.so.trimStart('0')}") },
+                        o.kenh?.let {
+                            when {
+                                it.laAuto -> t("Tự động: ", "Auto: ") + k.tenNguon(it)
+                                !it.laTv360 -> it.tenApp
+                                else -> t("TV360 số ${it.so.trimStart('0')}", "TV360 no. ${it.so.trimStart('0')}")
+                            }
+                        },
                         if (o.trongDock) t("trong dock", "in the dock") else null).joinToString(" · "))
                 }
                 IconButton(onClick = { k.thu(o) }, enabled = !vm.dangBan) { Icon(Icons.Rounded.PlayCircle, t("Thử trên tivi", "Test on the TV"), tint = Xanh) }
@@ -84,12 +90,13 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
 
     val sua = k.dangSua
     if (sua != null || k.ds.size < KenhNhanh.SO_O) The(if (sua != null) t("Sửa ô $sua", "Edit tile $sua") else t("Thêm ô kênh", "Add a channel tile"), Icons.Rounded.AddToQueue) {
-        ChonDoan(listOf("TV360", "VTVgo", "FPT Play", "M3U"), k.app) { k.app = it }
+        ChonDoan(listOf("TV360", "VTVgo", "FPT Play", "M3U", t("Tự động", "Auto")), k.app) { k.app = it }
         when (k.app) {
             0 -> SoanTv360(vm)
             1 -> SoanVtvGo(vm)
             2 -> SoanFpt(vm)
-            else -> SoanM3u(vm)
+            3 -> SoanM3u(vm)
+            else -> SoanAuto(vm)
         }
         if (vm.daCoHomeSach) Hang(t("Thêm ô vào dock", "Put the tile in the dock"),
             t("Ô mang tên kênh ở hàng dock; tắt thì ô chỉ nằm trong danh sách app.", "A tile named after the channel in the dock; off keeps it in the app list only."),
@@ -102,8 +109,8 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
         "All ${KenhNhanh.SO_O} tiles are used. Tap the pencil on a tile to change its channel, or remove a tile for another channel."))
     if (k.bao.isNotEmpty()) Phu(k.bao, if (k.baoLech) Cam else Xanh)
 
-    Phu(t("Ô TV360 dùng cổng nhận lệnh giọng nói của TV360 (cùng đường với \"Xem VTV1 trên TV360\" của Google Assistant), không phải giao diện công khai: bản TV360 sau có thể đổi, khi đó ô chỉ mở TV360 như thường. Ô VTVgo mở bằng link kênh của VTVgo, ô FPT Play bằng link kênh của FPT Play (fptplay.vn/xem-truyen-hinh/…), ô M3U bằng màn phát của M3U kèm mã kênh của phím tắt. Logo kênh tải từ VTVgo / FPT Play lúc lưu ô (app không đóng sẵn logo của đài; kênh không có logo thì ô ghi tên kênh), biểu tượng app ở góc ô lấy từ chính app đó trên tivi. Hẹn giờ cũng mở được từng ô (VD 18:58 mở VTV1). Khôi phục tivi gỡ hết các ô.",
-        "TV360 tiles use TV360's voice-command entry (the one Google Assistant uses for \"Watch VTV1 on TV360\"), not a public interface: a later TV360 may change it, and the tiles then just open TV360. VTVgo tiles open VTVgo's channel link, FPT Play tiles FPT Play's channel link (fptplay.vn/xem-truyen-hinh/…), M3U tiles M3U's player with the shortcut's channel id. Channel logos come from VTVgo / FPT Play when a tile is saved (no station logos are bundled with the app; a channel without one gets its name on the tile), and the app icon in the corner comes from that app on the TV. The Timer can open each tile too (e.g. 18:58 opens VTV1). Restoring the TV removes all tiles."))
+    Phu(t("Ô TV360 dùng cổng nhận lệnh giọng nói của TV360 (cùng đường với \"Xem VTV1 trên TV360\" của Google Assistant), không phải giao diện công khai: bản TV360 sau có thể đổi, khi đó ô chỉ mở TV360 như thường. Ô VTVgo mở bằng link kênh của VTVgo, ô FPT Play bằng link kênh của FPT Play (fptplay.vn/xem-truyen-hinh/…), ô M3U bằng màn phát của M3U kèm mã kênh của phím tắt; ô Auto nhờ Map Voice thử các nguồn đó. Logo kênh tải từ VTVgo / FPT Play lúc lưu ô (app không đóng sẵn logo của đài; kênh không có logo thì ô ghi tên kênh), biểu tượng app ở góc ô lấy từ chính app đó trên tivi. Hẹn giờ cũng mở được từng ô (VD 18:58 mở VTV1). Khôi phục tivi gỡ hết các ô.",
+        "TV360 tiles use TV360's voice-command entry (the one Google Assistant uses for \"Watch VTV1 on TV360\"), not a public interface: a later TV360 may change it, and the tiles then just open TV360. VTVgo tiles open VTVgo's channel link, FPT Play tiles FPT Play's channel link (fptplay.vn/xem-truyen-hinh/…), M3U tiles M3U's player with the shortcut's channel id; Auto tiles let Map Voice try those sources. Channel logos come from VTVgo / FPT Play when a tile is saved (no station logos are bundled with the app; a channel without one gets its name on the tile), and the app icon in the corner comes from that app on the TV. The Timer can open each tile too (e.g. 18:58 opens VTV1). Restoring the TV removes all tiles."))
     if (vm.moChonKenh) HopChonKenhGo(vm)
     if (k.moChonFpt) HopChonKenhFpt(vm)
 }
@@ -195,6 +202,41 @@ private fun SoanM3u(vm: PhienLamViec) {
     }
     Phu(t("M3U không cho app khác đọc danh sách kênh, chỉ mở được kênh đã có phím tắt: trong M3U trên tivi mở danh sách kênh, giữ OK trên một kênh → Create Shortcut; làm cho mỗi kênh muốn có ô, rồi bấm Tải lại. Ô mở M3U và phát ngay kênh đó. Xoá danh sách phát trong M3U rồi thêm lại thì mã kênh đổi: tạo lại phím tắt rồi sửa ô. ✓ = kênh đã có ô.",
         "M3U doesn't let other apps read its channel list, so only channels with a shortcut can be opened: in M3U on the TV, open the channel list, hold OK on a channel → Create Shortcut; do it for each channel you want, then tap Reload. The tile opens M3U and plays that channel. If you delete the playlist in M3U and add it again, the channel ids change: create the shortcuts again and edit the tiles. ✓ = already has a tile."))
+}
+
+/**
+ * Ô soạn Auto (1/11/2026): một kênh, nhiều nguồn. TiviKit tìm kênh cùng tên trên VTVgo, TV360 (số kênh đã biết), FPT Play
+ * và phím tắt M3U; bấm ô thì Map Voice mở lần lượt tới khi có tiếng, nhớ nguồn lên nhanh, mất tiếng 9 giây thì đổi nguồn.
+ */
+@Composable
+private fun SoanAuto(vm: PhienLamViec) {
+    val k = vm.kenhNhanh
+    if (!k.coMapVoice) CanhBaoKenh(vm, t("Ô Auto cần Map Voice trên tivi để tự chọn và đổi nguồn; chưa có thì ô chỉ mở nguồn đầu như ô thường.",
+        "Auto tiles need Map Voice on the TV to pick and switch sources; without it the tile just opens its first source like a normal tile."),
+        t("Mở Map Voice", "Open Map Voice")) { vm.mapVoice.mo() }
+    else if (k.mapVoiceCu) CanhBaoKenh(vm, t("Map Voice trên tivi là bản cũ, chưa tự chọn nguồn: mở mục Map Voice, bấm Cài lại / cập nhật.",
+        "Map Voice on the TV is an old version that can't pick sources yet: open Map Voice and tap Reinstall / update."),
+        t("Mở Map Voice", "Open Map Voice")) { vm.mapVoice.mo() }
+    Phu(t("Chọn nhanh:", "Pick one:"))
+    val ten = remember(k.dsM3u) { (KenhNhanh.GOI_Y.map { it.ten } + k.dsM3u.map { it.first }).distinctBy { KenhNhanh.khoaTen(it) } }
+    ten.chunked(5).forEach { hang ->
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            hang.forEach { g -> ChonChip(if (k.daCoAuto(g)) "$g ✓" else g, KenhNhanh.khoaTen(k.tenAuto) == KenhNhanh.khoaTen(g)) { k.tenAuto = g } }
+        }
+    }
+    OutlinedTextField(k.tenAuto, { k.tenAuto = it.take(30) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+        label = { Text(t("Tên kênh", "Channel name")) })
+    val nguon = k.nguonAuto()
+    if (nguon.isEmpty()) Phu(t("Chưa thấy kênh này trên VTVgo, TV360, FPT Play hay phím tắt M3U.", "This channel isn't on VTVgo, TV360, FPT Play or an M3U shortcut."), Cam)
+    else {
+        Text(t("Nguồn, thử lần đầu theo thứ tự:", "Sources, first tried in this order:"), fontWeight = FontWeight.SemiBold, color = ChuChinh)
+        nguon.forEachIndexed { i, n ->
+            Phu("${i + 1}. " + KenhNhanh.tenAppCua(n.app) + ": " + (if (n.laTv360) t("số ${n.so.trimStart('0')}", "no. ${n.so.trimStart('0')}") else n.ten) +
+                (if (!k.coNguon(n.loai)) t(" (tivi chưa có app này)", " (not on the TV)") else ""), if (k.coNguon(n.loai)) ChuChinh else ChuPhu)
+        }
+    }
+    Phu(t("Bấm ô thì Map Voice mở nguồn đầu và chờ có tiếng; không có tiếng thì đóng app đó, mở nguồn kế (trên tivi báo đang chuyển). Map Voice nhớ nguồn nào lên tiếng nhanh để lần sau mở trước, nguồn vừa lỗi để sau. Đang xem mà mất tiếng 9 giây, không ai bấm remote, thì tự đổi nguồn (tắt được ở mục Map Voice). TV360 chỉ có khi biết số kênh. ✓ = kênh đã có ô Auto.",
+        "Pressing the tile makes Map Voice open the first source and wait for sound; if none comes, it closes that app and opens the next (the TV says it's switching). Map Voice remembers which source starts fastest and tries it first next time, leaving failed ones for later. If sound stops for 9 seconds while watching and nobody presses the remote, it switches source by itself (can be turned off under Map Voice). TV360 is only used when its channel number is known. ✓ = already has an Auto tile."))
 }
 
 /**

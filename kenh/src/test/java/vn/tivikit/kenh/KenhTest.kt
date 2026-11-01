@@ -74,4 +74,21 @@ class KenhTest {
         assertNull(Kenh.tuJson("""{"app":"m3u","ma":"0","ten":"VTV1"}"""))
         assertNull(Kenh.tuJson("""{"app":"m3u","ma":"12345678901","ten":"VTV1"}"""))
     }
+
+    /** Ô Auto (1/11/2026): tên kênh và nguồn, gửi cho Map Voice mỗi nguồn ghi rõ app (cả TV360). */
+    @Test fun auto_jsonKhuHoiVaBoNguonHong() {
+        val k = Kenh("", "VTV1", "", Kenh.APP_AUTO, listOf(
+            Kenh("", "VTV1", "1"), Kenh("001", "VTV1"), Kenh("", "VTV1 HD", "vtv1-hd", Kenh.APP_FPT), Kenh("", "VTV1 HD", "473", Kenh.APP_M3U),
+        ))
+        assertTrue(k.laAuto)
+        assertEquals(k, Kenh.tuJson(k.json()))
+        val ds = org.json.JSONArray(k.jsonNguon())
+        assertEquals(listOf("vtvgo", "tv360", "fptplay", "m3u"), (0 until ds.length()).map { ds.getJSONObject(it).getString("app") })
+        assertEquals("001", ds.getJSONObject(1).getString("so"))
+        // Nguồn hỏng bỏ; TV360 không biết số thì tìm theo tên; không còn nguồn nào thì không nhận.
+        val doc = Kenh.tuJson("""{"app":"auto","ten":"HTV7 HD","nguon":[{"app":"vtvgo","ma":"x;reboot"},{"app":"tv360","ten":"HTV7 HD"},{"app":"auto","ten":"x","nguon":[]},{"app":"m3u","ma":"12","ten":"HTV7 HD"},{"app":"m3u","ma":"13"}]}""")
+        assertEquals(listOf(Kenh("", "HTV7 HD"), Kenh("", "HTV7 HD", "12", Kenh.APP_M3U)), doc?.nguon)
+        assertNull(Kenh.tuJson("""{"app":"auto","ten":"VTV1","nguon":[{"app":"vtvgo","ma":"x y"}]}"""))
+        assertNull(Kenh.tuJson("""{"app":"auto","ten":"","nguon":[{"app":"vtvgo","ma":"1"}]}"""))
+    }
 }
