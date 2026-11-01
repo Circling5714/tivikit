@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Đọc danh sách IPTV theo link của người dùng và phát luồng kênh. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <!-- Không có ô trong danh sách app: mở từ ô Kênh nhanh / ô Auto (Map Voice). Lưu lượng http: nhiều luồng IPTV chưa có https. -->
+    <application
+        android:label="@string/ten_app"
+        android:icon="@drawable/ic_iptv"
+        android:allowBackup="false"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        tools:ignore="MissingTvBanner">
+        <!-- Màn phát: gọi với tên kênh / mã kênh (PhatKenh.TEN, PhatKenh.MA); đang phát thì đổi kênh. -->
+        <activity
+            android:name=".PhatKenh"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        <!-- Link danh sách chỉ đặt được từ ADB (TiviKit, Map Voice). -->
+        <provider
+            android:name=".CauHinhProvider"
+            android:authorities="${applicationId}"
+            android:exported="true" />
+    </application>
+</manifest>

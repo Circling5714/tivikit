@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ten_app">IPTV (TiviKit)</string>
+    <string name="dang_mo">Opening %1$s…</string>
+    <string name="chua_co_link">No IPTV playlist yet: set the playlist link in TiviKit → Quick channel → IPTV.</string>
+    <string name="khong_tai_duoc">Couldn\'t load the IPTV playlist. Check the TV\'s internet and try again.</string>
+    <string name="khong_thay">The IPTV playlist no longer has %1$s. Pick the tile\'s channel again in TiviKit → Quick channel.</string>
+    <string name="loi_phat">%1$s isn\'t playing (the channel\'s source is down). Up / down to change channel, Back to leave.</string>
+</resources>

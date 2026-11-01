@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ten_app">IPTV (TiviKit)</string>
+    <string name="dang_mo">Đang mở %1$s…</string>
+    <string name="chua_co_link">Chưa có danh sách IPTV: đặt link danh sách ở TiviKit → Kênh nhanh → IPTV.</string>
+    <string name="khong_tai_duoc">Không tải được danh sách IPTV. Kiểm tra mạng của tivi rồi thử lại.</string>
+    <string name="khong_thay">Danh sách IPTV không còn kênh %1$s. Chọn lại kênh cho ô ở TiviKit → Kênh nhanh.</string>
+    <string name="loi_phat">%1$s đang không phát được (nguồn kênh lỗi). Lên / xuống để đổi kênh, Back để thoát.</string>
+</resources>
