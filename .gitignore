@@ -10,3 +10,4 @@ upstream/
 ky.properties
 .env*
 dist/
+__pycache__/
