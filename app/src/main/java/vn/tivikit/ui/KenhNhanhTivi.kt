@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import vn.tivikit.dulieu.AnhOKenh
+import vn.tivikit.dulieu.Iptv
 import vn.tivikit.dulieu.KenhFpt
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
@@ -15,9 +16,10 @@ import vn.tivikit.t
 
 /**
  * Kênh nhanh (25/10/2026, muốn một nút mở thẳng VTV1; cùng ngày thành nhiều ô; 26/10/2026 thêm ô VTVgo; 31/10/2026 ô
- * FPT Play; 1/11/2026 ô M3U, ô Auto): tối đa KenhNhanh.SO_O ô kênh, mỗi ô một app phụ trên tivi (module kenh/) mở thẳng một
- * kênh trên TV360, VTVgo, FPT Play hoặc M3U (kênh có phím tắt trong M3UAndroid); ô Auto để Map Voice chọn nguồn nào trong
- * số đó đang phát được (TuChon của Map Voice). Thêm / sửa
+ * FPT Play; 1/11/2026 ô M3U, ô Auto, rồi ô IPTV thay cho M3U): tối đa KenhNhanh.SO_O ô kênh, mỗi ô một app phụ trên tivi
+ * (module kenh/) mở thẳng một kênh trên TV360, VTVgo, FPT Play hoặc IPTV (kênh trong danh sách IPTV của người dùng, phát
+ * bằng app IPTV của TiviKit); ô Auto để Map Voice chọn nguồn nào trong số đó đang phát được (TuChon của Map Voice). Ô M3U
+ * làm trước đó vẫn chạy, sửa thì thành ô IPTV. Thêm / sửa
  * ô (cài app của ô, đặt kênh, đặt tên ô theo tên kênh và logo kênh trên Home sạch và TiviKit Launcher, thêm vào dock Home
  * sạch nếu muốn), bấm thử, gán nút remote (màn Nút remote chọn sẵn ô đó), bỏ ô. Ô kênh VTVgo kiểu cũ (ô link của Home
  * sạch, KenhVtvGo; không gán được nút remote) chuyển được thành ô ở đây. Ảnh ô mang huy hiệu app mở kênh ở góc phải dưới
@@ -34,14 +36,17 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         private set
 
     // Ô soạn: thêm ô mới ([dangSua] null) hay sửa ô [dangSua]. [app]: 0 = TV360 (số + tên kênh), 1 = VTVgo ([kenhGo]),
-    // 2 = FPT Play ([kenhFpt]), 3 = M3U ([kenhM3u]), 4 = Auto ([tenAuto], nguồn tìm theo tên: nguonAuto).
+    // 2 = FPT Play ([kenhFpt]), 3 = IPTV ([kenhIptv]), 4 = Auto ([tenAuto], nguồn tìm theo tên: nguonAuto).
     var app by mutableStateOf(0)
     /** Tên kênh của ô soạn Auto. */
     var tenAuto by mutableStateOf("VTV1")
+    /** Thứ tự nguồn riêng của ô soạn Auto (loại nguồn, nguồn đầu thử trước; KenhNhanh.theoThuTu); null = Map Voice tự xếp. */
+    var thuTuAuto by mutableStateOf<List<String>?>(null)
+        private set
     /** Danh sách kênh VTVgo, để ô Auto tìm nguồn VTVgo theo tên. */
     var dsGo by mutableStateOf<List<KenhVtvGo.Kenh>>(emptyList())
         private set
-    /** Map Voice đang cài và bật (ô Auto cần nó để tự chọn, đổi nguồn); [mapVoiceCu] = bản trước 1.2, chưa biết tự chọn. */
+    /** Map Voice đang cài và bật (ô Auto cần nó để tự chọn, đổi nguồn); [mapVoiceCu] = bản trước 1.3, chưa biết nguồn IPTV, thứ tự riêng. */
     var coMapVoice by mutableStateOf(false)
         private set
     var mapVoiceCu by mutableStateOf(false)
@@ -58,10 +63,17 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     var dsFpt by mutableStateOf<List<KenhFpt.Kenh>>(emptyList())
         private set
     var moChonFpt by mutableStateOf(false)
-    /** Kênh M3U của ô soạn: (tên, mã kênh). */
-    var kenhM3u by mutableStateOf<Pair<String, String>?>(null)
+    /** Link danh sách IPTV (ô gõ), danh sách đã tải về điện thoại, kênh IPTV của ô soạn. */
+    var linkIptv by mutableStateOf("")
+    var dsIptv by mutableStateOf<List<Iptv.Kenh>>(emptyList())
         private set
-    /** Kênh M3U có phím tắt trên tivi (ThaoTacTv.docKenhM3u): (tên, mã). */
+    var kenhIptv by mutableStateOf<Iptv.Kenh?>(null)
+        private set
+    var moChonIptv by mutableStateOf(false)
+    /** App IPTV của TiviKit đang cài trên tivi. */
+    var coIptv by mutableStateOf(false)
+        private set
+    /** Kênh M3U có phím tắt trên tivi (ThaoTacTv.docKenhM3u): (tên, mã); còn dùng làm nguồn của ô Auto. */
     var dsM3u by mutableStateOf<List<Pair<String, String>>>(emptyList())
         private set
     var trongDock by mutableStateOf(true)
@@ -96,18 +108,20 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     private val bieuTuong = mutableMapOf<String, ByteArray>()
     private var daHoiBieuTuong = false
     private val prefs by lazy { vm.ctx.getSharedPreferences("tvsach", Context.MODE_PRIVATE) }
+    /** Link của danh sách [dsIptv] đang có (link ô gõ đổi mà chưa tải lại thì khác). */
+    private var linkDs = ""
 
     fun mo() = vm.chay(t("Đang đọc Kênh nhanh trên tivi…", "Reading Quick channel on the TV…")) {
         vm.damBaoKetNoi()
         bao = ""; baoLech = false; dangSua = null
         bieuTuong.clear(); daHoiBieuTuong = false
         docLai()
-        // Ô soạn mở sẵn app tivi đang có (không có TV360 thì VTVgo, rồi FPT Play, M3U), gợi ý kênh hay xem đầu tiên chưa có ô.
+        // Ô soạn mở sẵn app tivi đang có (không có TV360 thì VTVgo, rồi FPT Play, IPTV), gợi ý kênh hay xem đầu tiên chưa có ô.
         app = when {
             coTv360 -> 0
             vm.coVtvGo -> 1
             coFpt -> 2
-            coM3u -> 3
+            dsIptv.isNotEmpty() -> 3
             else -> 0
         }
         goiYKeTiep()
@@ -128,6 +142,13 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         dsM3u = if (coM3u) vm.io { vm.tv.docKenhM3u() } else emptyList()
         if (dsFpt.isEmpty()) dsFpt = vm.io { KenhFpt.ds(vm.ctx) }
         if (dsGo.isEmpty()) dsGo = vm.io { layDsGo() }
+        coIptv = Iptv.GOI in tt.caiDat && Iptv.GOI !in tt.daTat
+        // Link danh sách: app IPTV trên tivi đang dùng, không thì link điện thoại dùng lần trước; danh sách tải một lần mỗi phiên.
+        if (linkIptv.isEmpty()) linkIptv = (if (coIptv) Iptv.linkTrong(vm.io { vm.tv.docIptv() }) else "").ifEmpty { prefs.getString(LINK_IPTV, null).orEmpty() }
+        if (dsIptv.isEmpty() && Iptv.LINK.matches(linkIptv)) {
+            dsIptv = vm.io { runCatching { Iptv.doc(Iptv.tai(linkIptv)) }.getOrDefault(emptyList()) }
+            if (dsIptv.isNotEmpty()) linkDs = linkIptv
+        }
         coMapVoice = MapVoice.GOI in tt.caiDat && MapVoice.GOI !in tt.daTat
         mapVoiceCu = coMapVoice && (vm.io { vm.tv.banTrenTv(MapVoice.GOI) }?.let { Regex("\\((\\d+)\\)").find(it)?.groupValues?.get(1)?.toIntOrNull() } ?: 0) < MapVoice.BAN_TU_CHON
         val j = if (vm.daCoHomeSach) vm.io { vm.tv.docCauHinhTv() } else null
@@ -167,13 +188,17 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
 
     /**
      * Logo kênh [k] cho ô: ảnh kênh của VTVgo (ô VTVgo theo mã kênh, ô TV360 / M3U theo tên trùng một kênh VTVgo: VTV1–9,
-     * HTV9, Hà Nội 1, ANTV, QPVN…), ô FPT Play lấy ảnh kênh của FPT Play; ô Auto lấy của nguồn VTVgo, không có thì nguồn FPT
-     * Play, rồi theo tên; tải một lần rồi cất (KenhVtvGo.anhO). null nếu không có / không tải được. App không đóng sẵn logo
-     * của đài. [dsGo] = danh sách kênh VTVgo đã lấy (nhiều ô một lượt). Gọi trên luồng IO.
+     * HTV9, Hà Nội 1, ANTV, QPVN…), ô FPT Play lấy ảnh kênh của FPT Play, ô IPTV logo kênh trong danh sách (không có thì như
+     * ô TV360); ô Auto lấy của nguồn VTVgo, không có thì nguồn FPT Play, IPTV, rồi theo tên; tải một lần rồi cất
+     * (KenhVtvGo.anhO). null nếu không có / không tải được. App không đóng sẵn logo của đài. [dsGo] = danh sách kênh VTVgo
+     * đã lấy (nhiều ô một lượt). Gọi trên luồng IO.
      */
     private fun logoKenh(k: KenhNhanh.Kenh, dsGo: List<KenhVtvGo.Kenh>?): ByteArray? {
-        if (k.laAuto) return k.nguon.filter { it.laVtvGo || it.laFpt }.firstNotNullOfOrNull { logoKenh(it, dsGo) }
+        if (k.laAuto) return k.nguon.filter { it.laVtvGo || it.laFpt || it.laIptv }.firstNotNullOfOrNull { logoKenh(it, dsGo) }
             ?: logoKenh(KenhNhanh.Kenh("", k.ten), dsGo)
+        // Ảnh cất theo mã và tên: nhiều kênh IPTV có khi chung một mã.
+        if (k.laIptv) iptvCua(k)?.logo?.takeIf { it.isNotEmpty() }
+            ?.let { KenhVtvGo.anhO(vm.ctx, k.ma + "-" + Integer.toHexString(k.ten.hashCode()), it, THU_MUC_IPTV) }?.let { return it }
         if (k.laFpt) return KenhVtvGo.anhO(vm.ctx, k.ma, KenhFpt.ds(vm.ctx).firstOrNull { it.ma == k.ma }?.anh, KenhVtvGo.THU_MUC_FPT)
         val ds = dsGo ?: layDsGo()
         return if (k.laVtvGo) KenhVtvGo.anhO(vm.ctx, k.ma, ds.firstOrNull { it.ma == k.ma }?.anh)
@@ -199,43 +224,82 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
 
     private fun coO(k: KenhNhanh.Kenh, truO: Int? = null) = ds.firstOrNull { it.so != truO && it.kenh?.trung(k) == true }
 
-    /** Ô soạn chuyển sang kênh hay xem kế tiếp chưa có ô, cho cả TV360, VTVgo, FPT Play, M3U lẫn Auto. */
+    /** Ô soạn chuyển sang kênh hay xem kế tiếp chưa có ô, cho cả TV360, VTVgo, FPT Play, IPTV lẫn Auto. */
     private fun goiYKeTiep() {
         KenhNhanh.GOI_Y.firstOrNull { coO(it) == null }?.let { chon(it) }
         KenhVtvGo.VTV.firstOrNull { (ten, ma, _) -> coO(KenhNhanh.Kenh("", ten, ma)) == null }?.let { (ten, ma, _) -> kenhGo = ten to ma }
         KenhFpt.hayXem(dsFpt).firstOrNull { coO(oFpt(it.tenO, it.ma)) == null }?.let { kenhFpt = it.tenO to it.ma }
-        kenhM3u = dsM3u.firstOrNull { (tenK, ma) -> coO(oM3u(tenK, ma)) == null }
+        dsIptv.firstOrNull { coO(oIptv(it)) == null }?.let { kenhIptv = it }
         KenhNhanh.GOI_Y.firstOrNull { coO(oAuto(it.ten)) == null }?.let { tenAuto = it.ten }
+        thuTuAuto = null
     }
 
     private fun oFpt(tenK: String, ma: String) = KenhNhanh.Kenh("", tenK, ma, KenhNhanh.LOAI_FPT)
-    private fun oM3u(tenK: String, ma: String) = KenhNhanh.Kenh("", tenK, ma, KenhNhanh.LOAI_M3U)
+    private fun oIptv(k: Iptv.Kenh) = KenhNhanh.Kenh("", KenhNhanh.tenSach(k.ten).ifBlank { k.maO }, k.maO, KenhNhanh.LOAI_IPTV)
+
+    /** Kênh trong danh sách IPTV của ô IPTV [k]: cùng mã cùng tên, không thì kênh duy nhất mang mã đó (danh sách đổi tên kênh). */
+    private fun iptvCua(k: KenhNhanh.Kenh): Iptv.Kenh? =
+        dsIptv.firstOrNull { oIptv(it).trung(k) } ?: dsIptv.filter { it.maO == k.ma }.singleOrNull()
     private fun oAuto(tenK: String) = KenhNhanh.Kenh("", tenK, "", KenhNhanh.LOAI_AUTO)
 
     /**
      * Nguồn của ô Auto kênh [tenK] (KenhNhanh.nguonAuto): kênh cùng tên trên VTVgo, TV360 (số kênh đã biết: gợi ý và ô TV360
-     * đang có), FPT Play và phím tắt M3U.
+     * đang có), FPT Play, danh sách IPTV và phím tắt M3U; theo thứ tự riêng [thuTuAuto] nếu người dùng đã đặt.
      */
     fun nguonAuto(tenK: String = tenAuto): List<KenhNhanh.Kenh> =
-        KenhNhanh.nguonAuto(tenK, dsGo, dsFpt, dsM3u, KenhNhanh.GOI_Y + ds.mapNotNull { it.kenh })
+        KenhNhanh.nguonAuto(tenK, dsGo, dsFpt, dsM3u, KenhNhanh.GOI_Y + ds.mapNotNull { it.kenh }, dsIptv)
+            .let { ds -> thuTuAuto?.let { KenhNhanh.theoThuTu(ds, it) } ?: ds }
 
-    /** App của nguồn [loai] có trên tivi (đang bật). */
+    /**
+     * Đưa nguồn loại [loai] của ô soạn Auto lên ([len]) hay xuống một bậc (11/2026, anh muốn mỗi kênh một thứ tự: VTV1 mở
+     * TV360 trước, VTV6 mở VTVgo trước): từ đây ô có thứ tự riêng, Map Voice thử đúng thứ tự đó.
+     */
+    fun doiThuTu(loai: String, len: Boolean) {
+        val ds = nguonAuto().map { it.loai }.distinct().toMutableList()
+        val i = ds.indexOf(loai)
+        val j = if (len) i - 1 else i + 1
+        if (i < 0 || j !in ds.indices) return
+        ds.add(j, ds.removeAt(i))
+        thuTuAuto = ds
+    }
+
+    /** Bỏ thứ tự riêng: Map Voice lại tự xếp (nguồn lên tiếng nhanh trước, nguồn vừa lỗi để sau). */
+    fun thuTuTuDong() { thuTuAuto = null }
+
+    /** Chọn kênh [tenK] cho ô soạn Auto (chip chọn nhanh): kênh khác thì thứ tự nguồn lại tự động. */
+    fun chonAuto(tenK: String) {
+        if (KenhNhanh.khoaTen(tenK) != KenhNhanh.khoaTen(tenAuto)) thuTuAuto = null
+        tenAuto = tenK
+    }
+
+    /** App của nguồn [loai] có trên tivi (đang bật); app IPTV được cài lúc lưu ô nên chỉ cần đã tải danh sách. */
     fun coNguon(loai: String): Boolean = when (loai) {
         KenhNhanh.LOAI_VTVGO -> vm.coVtvGo
         KenhNhanh.LOAI_FPT -> coFpt
         KenhNhanh.LOAI_M3U -> coM3u
+        KenhNhanh.LOAI_IPTV -> coIptv || dsIptv.isNotEmpty()
         else -> coTv360
     }
 
-    /** Đọc lại kênh M3U có phím tắt (người dùng vừa tạo thêm trong M3U trên tivi). */
-    fun taiLaiM3u() = vm.chay(t("Đang đọc kênh M3U trên tivi…", "Reading the M3U channels on the TV…")) {
-        vm.damBaoKetNoi()
-        dsM3u = vm.io { vm.tv.docKenhM3u() }
-        if (kenhM3u?.let { k -> dsM3u.none { it.second == k.second } } != false) kenhM3u = dsM3u.firstOrNull { (tenK, ma) -> coO(oM3u(tenK, ma)) == null }
-        baoLech = dsM3u.isEmpty()
-        bao = if (dsM3u.isEmpty()) t("Chưa thấy phím tắt kênh nào của M3U: tạo trong M3U (giữ OK trên kênh → Create Shortcut) rồi tải lại.",
-            "No M3U channel shortcuts yet: create them in M3U (hold OK on a channel → Create Shortcut), then reload.")
-            else t("Có ${dsM3u.size} kênh M3U.", "${dsM3u.size} M3U channels.")
+    /**
+     * Tải danh sách IPTV theo link ở ô gõ về điện thoại (để chọn kênh: tên, nhóm, logo) và nhớ link cho lần sau. Tivi tự tải
+     * lại danh sách theo link này (app IPTV), nên danh sách đổi nguồn kênh thì ô vẫn mở được.
+     */
+    fun taiIptv() = vm.chay(t("Đang tải danh sách IPTV…", "Loading the IPTV playlist…")) {
+        val l = linkIptv.trim()
+        if (!Iptv.LINK.matches(l)) error(t("Link danh sách IPTV bắt đầu bằng http:// hay https:// (link .m3u, link rút gọn cũng được).",
+            "The IPTV playlist link starts with http:// or https:// (an .m3u link or a short link)."))
+        val moi = vm.io { runCatching { Iptv.doc(Iptv.tai(l)) } }.getOrElse { e ->
+            error(t("Không tải được danh sách: ${e.message}", "Couldn't load the playlist: ${e.message}"))
+        }
+        if (moi.isEmpty()) error(t("Link này không phải danh sách IPTV (.m3u), hay danh sách trống.", "This link isn't an IPTV (.m3u) playlist, or the playlist is empty."))
+        linkIptv = l
+        dsIptv = moi
+        linkDs = l
+        prefs.edit().putString(LINK_IPTV, l).apply()
+        if (kenhIptv?.let { k -> k !in moi } != false) kenhIptv = moi.firstOrNull { coO(oIptv(it)) == null } ?: moi.first()
+        baoLech = false
+        bao = t("Danh sách có ${moi.size} kênh.", "The playlist has ${moi.size} channels.")
     }
 
     fun chon(k: KenhNhanh.Kenh) { so = k.so.trimStart('0'); ten = k.ten }
@@ -244,12 +308,12 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
 
     fun chonFpt(tenK: String, ma: String) { kenhFpt = tenK to ma }
 
-    fun chonM3u(tenK: String, ma: String) { kenhM3u = tenK to ma }
+    fun chonIptv(k: Iptv.Kenh) { kenhIptv = k }
 
     /** Kênh [ma] trên VTVgo đã có ô (trừ ô đang sửa): để đánh dấu ✓ ở chỗ chọn kênh. */
     fun daCoGo(ma: String): Boolean = coO(KenhNhanh.Kenh("", "", ma), dangSua) != null
     fun daCoFpt(ma: String): Boolean = coO(oFpt("", ma), dangSua) != null
-    fun daCoM3u(ma: String): Boolean = coO(oM3u("", ma), dangSua) != null
+    fun daCoIptv(k: Iptv.Kenh): Boolean = coO(oIptv(k), dangSua) != null
     fun daCoTv360(g: KenhNhanh.Kenh): Boolean = coO(g, dangSua) != null
     fun daCoAuto(tenK: String): Boolean = coO(oAuto(tenK), dangSua) != null
 
@@ -258,8 +322,10 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         dangSua = o.so
         o.kenh?.let { k ->
             when {
-                k.laAuto -> { app = 4; tenAuto = k.ten }
-                k.laM3u -> { app = 3; kenhM3u = k.ten to k.ma }
+                k.laAuto -> { app = 4; tenAuto = k.ten; thuTuAuto = if (k.coDinh) k.nguon.map { it.loai }.distinct() else null }
+                k.laIptv -> { app = 3; kenhIptv = iptvCua(k) ?: Iptv.Kenh(k.ten, k.ma, "", "") }
+                // Ô M3U làm trước bản IPTV: sửa thì thành ô IPTV, chọn sẵn kênh cùng tên trong danh sách IPTV.
+                k.laM3u -> { app = 3; kenhIptv = dsIptv.firstOrNull { KenhNhanh.khoaTen(it.ten) == KenhNhanh.khoaTen(k.ten) } }
                 k.laFpt -> { app = 2; kenhFpt = k.ten to k.ma }
                 k.laVtvGo -> { app = 1; kenhGo = k.ten to k.ma }
                 else -> { app = 0; chon(k) }
@@ -268,21 +334,23 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         trongDock = o.trongDock; bao = ""
     }
 
-    fun thoiSua() { dangSua = null; bao = "" }
+    fun thoiSua() { dangSua = null; bao = ""; thuTuAuto = null }
 
-    /** Kênh theo ô soạn; lỗi nếu số kênh sai / chưa chọn kênh VTVgo, FPT Play, M3U / kênh Auto không có nguồn nào. */
+    /** Kênh theo ô soạn; lỗi nếu số kênh sai / chưa chọn kênh VTVgo, FPT Play, IPTV / kênh Auto không có nguồn nào. */
     private fun kenhNhap(): KenhNhanh.Kenh {
         if (app == 4) {
             val tenK = KenhNhanh.tenSach(tenAuto)
             if (tenK.isEmpty()) error(t("Chọn hay gõ tên kênh cho ô Auto.", "Pick or type a channel name for the Auto tile."))
             val nguon = nguonAuto(tenK)
-            if (nguon.isEmpty()) error(t("Chưa thấy $tenK trên VTVgo, TV360, FPT Play hay phím tắt M3U: thử tên khác (VD VTV3, HTV7, Hà Nội 1).",
-                "$tenK isn't on VTVgo, TV360, FPT Play or an M3U shortcut: try another name (e.g. VTV3, HTV7, Hà Nội 1)."))
-            return KenhNhanh.Kenh("", tenK, "", KenhNhanh.LOAI_AUTO, nguon)
+            if (nguon.isEmpty()) error(t("Chưa thấy $tenK trên VTVgo, TV360, FPT Play, danh sách IPTV hay phím tắt M3U: thử tên khác (VD VTV3, HTV7, Hà Nội 1).",
+                "$tenK isn't on VTVgo, TV360, FPT Play, the IPTV playlist or an M3U shortcut: try another name (e.g. VTV3, HTV7, Hà Nội 1)."))
+            return KenhNhanh.Kenh("", tenK, "", KenhNhanh.LOAI_AUTO, nguon, coDinh = thuTuAuto != null)
         }
         if (app == 3) {
-            val (tenK, ma) = kenhM3u ?: error(t("Chọn một kênh M3U (kênh đã tạo phím tắt trong M3U).", "Pick an M3U channel (one with a shortcut in M3U)."))
-            return oM3u(KenhNhanh.tenSach(tenK).ifBlank { ma }, ma)
+            if (linkDs.isEmpty() || linkIptv.trim() != linkDs) error(t("Bấm Tải danh sách để tải danh sách IPTV theo link này trước.",
+                "Tap Load playlist to load the IPTV playlist from this link first."))
+            val k = kenhIptv ?: error(t("Chọn một kênh IPTV.", "Pick an IPTV channel."))
+            return oIptv(k)
         }
         if (app == 2) {
             val (tenK, ma) = kenhFpt ?: error(t("Chọn một kênh FPT Play.", "Pick an FPT Play channel."))
@@ -309,20 +377,21 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         dangSua = null
         docLai()
         bao = when {
-            k.laAuto -> t("Đã lưu ô $o: ${k.ten}, tự chọn nguồn (${tenNguon(k)}).", "Saved tile $o: ${k.ten}, auto source (${tenNguon(k)}).") + when {
-                !coMapVoice -> t(" Tivi chưa có Map Voice nên ô chỉ mở ${KenhNhanh.tenAppCua(k.nguon.first().app)}: bật Map Voice ở mục Map Voice để ô tự chọn và đổi nguồn.",
-                    " The TV has no Map Voice, so the tile only opens ${KenhNhanh.tenAppCua(k.nguon.first().app)}: turn Map Voice on under Map Voice for automatic sources.")
-                mapVoiceCu -> t(" Map Voice trên tivi là bản cũ, chưa tự chọn nguồn: mở mục Map Voice, bấm Cài lại / cập nhật.",
-                    " Map Voice on the TV is an old version that can't pick sources yet: open Map Voice and tap Reinstall / update.")
-                else -> ""
-            }
+            k.laAuto && k.coDinh -> t("Đã lưu ô $o: ${k.ten}, mở theo thứ tự riêng (${tenNguon(k)}).", "Saved tile $o: ${k.ten}, opens in your order (${tenNguon(k)}).")
+            k.laAuto -> t("Đã lưu ô $o: ${k.ten}, tự chọn nguồn (${tenNguon(k)}).", "Saved tile $o: ${k.ten}, auto source (${tenNguon(k)}).")
             !k.laTv360 -> t("Đã lưu ô $o: ${k.ten} (mở trên ${k.tenApp}).", "Saved tile $o: ${k.ten} (opens in ${k.tenApp}).")
             else -> t("Đã lưu ô $o: ${k.ten} (số ${k.so.trimStart('0')} trên TV360).", "Saved tile $o: ${k.ten} (number ${k.so.trimStart('0')} in TV360).")
-        } + them
+        } + (if (!k.laAuto) "" else when {
+            !coMapVoice -> t(" Tivi chưa có Map Voice nên ô chỉ mở ${KenhNhanh.tenAppCua(k.nguon.first().app)}: bật Map Voice ở mục Map Voice để ô tự chọn và đổi nguồn.",
+                " The TV has no Map Voice, so the tile only opens ${KenhNhanh.tenAppCua(k.nguon.first().app)}: turn Map Voice on under Map Voice for automatic sources.")
+            mapVoiceCu -> t(" Map Voice trên tivi là bản cũ, chưa biết nguồn IPTV và thứ tự riêng: mở mục Map Voice, bấm Cài lại / cập nhật.",
+                " Map Voice on the TV is an old version that doesn't know IPTV sources or custom orders yet: open Map Voice and tap Reinstall / update.")
+            else -> ""
+        }) + them
         goiYKeTiep()
     }
 
-    /** "VTVgo → TV360 → FPT Play": nguồn của ô Auto [k] theo thứ tự thử mặc định. */
+    /** "VTVgo → TV360 → FPT Play": nguồn của ô Auto [k] theo thứ tự thử đầu tiên (mặc định, hay thứ tự riêng). */
     fun tenNguon(k: KenhNhanh.Kenh): String = k.nguon.map { KenhNhanh.tenAppCua(it.app) }.distinct().joinToString(" → ")
 
     /**
@@ -331,6 +400,12 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
      */
     private suspend fun themO(o: Int, k: KenhNhanh.Kenh, trongDock: Boolean): String {
         val goi = KenhNhanh.goiCua(o)
+        // Ô IPTV / ô Auto có nguồn IPTV: app IPTV phải có trên tivi, đúng link danh sách, trước khi bấm ô.
+        if (k.laIptv || k.nguon.any { it.laIptv }) {
+            val apkIptv = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, Iptv.APK).use { it.readBytes() } }
+            vm.io { vm.tv.caiIptv(apkIptv, linkDs) { s -> vm.thongBao = s } }
+            coIptv = true
+        }
         val apk = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, KenhNhanh.apkCua(o)).use { it.readBytes() } }
         vm.io { vm.tv.caiKenh(o, apk, KenhNhanh.json(k)) { s -> vm.thongBao = s } }
         val coTkl = TiviKitLauncher.GOI in vm.trangThai?.caiDat.orEmpty()
@@ -439,7 +514,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
                 " ${con.size} old tiles are left because no tile is free: remove one and move again.")
     }
 
-    /** Mở ô [o] trên tivi như bấm ô, xem app của ô (TV360 / VTVgo / FPT Play / M3U; ô Auto: nguồn nào lên) có lên không. */
+    /** Mở ô [o] trên tivi như bấm ô, xem app của ô (TV360 / VTVgo / FPT Play / IPTV / M3U; ô Auto: nguồn nào lên) có lên không. */
     fun thu(o: O) = vm.chay(t("Đang mở ô ${o.kenh?.ten ?: o.so} trên tivi…", "Opening tile ${o.kenh?.ten ?: o.so} on the TV…")) {
         vm.damBaoKetNoi()
         bao = ""; baoLech = false
@@ -460,6 +535,10 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         baoLech = g != goiApp
         bao = if (!baoLech && goiApp == KenhNhanh.M3U) t("M3U đã mở. Nhìn tivi: đang phát $tenK là được; M3U báo lỗi kênh thì mở danh sách kênh trong M3U xem kênh đó còn xem được không.",
                 "M3U is open. Look at the TV: if $tenK is playing, it works; if M3U reports a channel error, check in M3U's channel list that the channel still plays.")
+            else if (!baoLech && goiApp == Iptv.GOI) t("App IPTV đã mở. Nhìn tivi: đang phát $tenK là được; tivi báo không phát được thì nguồn kênh trong danh sách đang hỏng, chờ danh sách cập nhật hay dùng ô Auto.",
+                "The IPTV app is open. Look at the TV: if $tenK is playing, it works; if the TV says it can't play, the channel's source in the playlist is down: wait for a playlist update or use an Auto tile.")
+            else if (!coApp(goiApp) && goiApp == Iptv.GOI) t("Tivi chưa có app IPTV (hoặc đang bị tắt): bấm Sửa rồi lưu lại ô để cài.",
+                "The IPTV app isn't on the TV (or is disabled): tap Edit and save the tile again to install it.")
             else if (!baoLech) t("$tenApp đã mở. Nhìn tivi: đang phát $tenK là được. $tenApp chưa đăng nhập hoặc hiện quảng cáo thì bấm qua rồi thử lại.",
                 "$tenApp is open. Look at the TV: if $tenK is playing, it works. If $tenApp asks you to sign in or shows an ad, get past it and test again.") +
                 (if (goiApp == KenhNhanh.FPTPLAY) t(" FPT Play hỏi mua gói thì kênh này cần gói của FPT Play.", " If FPT Play offers a package, this channel needs one.") else "")
@@ -499,6 +578,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         KenhNhanh.VTVGO -> vm.coVtvGo
         KenhNhanh.FPTPLAY -> coFpt
         KenhNhanh.M3U -> coM3u
+        Iptv.GOI -> coIptv
         MapVoice.GOI -> coMapVoice
         else -> coTv360
     }
@@ -548,13 +628,18 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     /** Kết nối tivi khác. */
     fun quen() {
         ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true; coFpt = false; coM3u = false
-        app = 0; kenhGo = null; kenhFpt = null; kenhM3u = null; dsM3u = emptyList(); moChonFpt = false; kenhGoCu = emptyList(); homeCu = false
+        app = 0; kenhGo = null; kenhFpt = null; dsM3u = emptyList(); moChonFpt = false; kenhGoCu = emptyList(); homeCu = false
+        linkIptv = ""; linkDs = ""; dsIptv = emptyList(); kenhIptv = null; moChonIptv = false; coIptv = false
         canVeLai = false; bieuTuong.clear(); daHoiBieuTuong = false
-        tenAuto = "VTV1"; coMapVoice = false; mapVoiceCu = false
+        tenAuto = "VTV1"; thuTuAuto = null; coMapVoice = false; mapVoiceCu = false
     }
 
     private companion object {
         /** Tivi (khoaLuu) / ô ("khoaLuu#số ô") đã có ảnh ô kèm huy hiệu (canVeLai). */
         const val DA_VE_LAI = "kenh-huy-hieu"
+        /** Link danh sách IPTV dùng lần trước (tivi chưa có app IPTV thì điền sẵn link này). */
+        const val LINK_IPTV = "iptv-link"
+        /** Thư mục cất logo kênh IPTV (KenhVtvGo.anhO), riêng với VTVgo, FPT Play. */
+        const val THU_MUC_IPTV = "kenh-iptv"
     }
 }

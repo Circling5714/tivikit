@@ -90,5 +90,29 @@ class KenhTest {
         assertEquals(listOf(Kenh("", "HTV7 HD"), Kenh("", "HTV7 HD", "12", Kenh.APP_M3U)), doc?.nguon)
         assertNull(Kenh.tuJson("""{"app":"auto","ten":"VTV1","nguon":[{"app":"vtvgo","ma":"x y"}]}"""))
         assertNull(Kenh.tuJson("""{"app":"auto","ten":"","nguon":[{"app":"vtvgo","ma":"1"}]}"""))
+        assertFalse(k.coDinh)
+        assertFalse(org.json.JSONObject(k.json()).has("coDinh"))
+    }
+
+    /** Ô Auto thứ tự riêng (1/11/2026): cờ coDinh đi theo cấu hình, thứ tự nguồn giữ nguyên (TV360 trước VTVgo). */
+    @Test fun auto_thuTuRieng() {
+        val k = Kenh("", "VTV1", "", Kenh.APP_AUTO, listOf(Kenh("001", "VTV1"), Kenh("", "VTV1", "1")), coDinh = true)
+        val doc = Kenh.tuJson(k.json())
+        assertEquals(k, doc)
+        assertTrue(doc!!.coDinh)
+        assertEquals(listOf(Kenh.APP_TV360, Kenh.APP_VTVGO), doc.nguon.map { it.app })
+    }
+
+    /** Ô IPTV (1/11/2026): mã kênh là tvg-id (hay tên đã gọn), không có ký tự lạ (đi trong lệnh shell khi đặt kênh). */
+    @Test fun iptv_jsonKhuHoi() {
+        val k = Kenh("", "VTV1 HD", "vtv1hd", Kenh.APP_IPTV)
+        assertTrue(k.laIptv)
+        assertEquals(k, Kenh.tuJson(k.json()))
+        assertEquals(k, Kenh.tuJson("""{"app":"iptv","ma":"vtv1hd","ten":"VTV1 HD"}"""))
+        assertNull(Kenh.tuJson("""{"app":"iptv","ma":"vtv1';reboot","ten":"VTV1"}"""))
+        assertNull(Kenh.tuJson("""{"app":"iptv","ma":"vtv1hd","ten":""}"""))
+        // Nguồn IPTV trong ô Auto.
+        val a = Kenh.tuJson("""{"app":"auto","ten":"VTV1","nguon":[{"app":"vtvgo","ma":"1","ten":"VTV1"},{"app":"iptv","ma":"vtv1hd","ten":"VTV1 HD"}]}""")
+        assertEquals(listOf(Kenh.APP_VTVGO, Kenh.APP_IPTV), a?.nguon?.map { it.app })
     }
 }

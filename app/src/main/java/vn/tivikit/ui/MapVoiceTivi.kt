@@ -295,6 +295,7 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
             KenhVtvGo.GOI -> "VTVgo"
             KenhNhanh.TV360 -> "TV360"
             KenhNhanh.M3U -> "M3U"
+            vn.tivikit.dulieu.Iptv.GOI -> "IPTV"
             else -> null
         }
     }

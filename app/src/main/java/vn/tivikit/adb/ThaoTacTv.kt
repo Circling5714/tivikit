@@ -7,6 +7,7 @@ import vn.tivikit.dulieu.DnsRieng
 import vn.tivikit.dulieu.GoChu
 import vn.tivikit.dulieu.GoiCu
 import vn.tivikit.dulieu.HenGio
+import vn.tivikit.dulieu.Iptv
 import vn.tivikit.dulieu.KeHoach
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
@@ -1943,6 +1944,22 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }
 
     fun datMapVoice(c: MapVoice.CauHinh): Boolean = sh(MapVoice.lenhDat(c)).contains("ok=1")
+
+    /**
+     * Cài / cập nhật app IPTV (Iptv, chỉ khi khác bản đi kèm), đặt link danh sách [link] rồi bảo nó tải danh sách luôn (lần
+     * mở kênh đầu khỏi chờ tải); tải không được thì thôi, app phụ tải lại lúc mở kênh.
+     */
+    fun caiIptv(apk: ByteArray, link: String, bao: (String) -> Unit) {
+        caiAppPhu(Iptv.GOI, apk) { bao(t("Cài app IPTV lên tivi…", "Installing the IPTV app on the TV…")) }
+        bao(t("Đặt danh sách IPTV…", "Setting the IPTV playlist…"))
+        if (!sh(Iptv.lenhDat(link)).contains("ok=1")) error(t("Tivi không nhận link danh sách IPTV.", "The TV rejected the IPTV playlist link."))
+        sh(Iptv.LENH_TAI)
+    }
+
+    fun iptvDaCai(): Boolean = coGoi(Iptv.GOI)
+
+    /** Trạng thái app IPTV (link, số kênh, lúc tải); null nếu chưa cài / không đọc được. */
+    fun docIptv(): org.json.JSONObject? = if (!iptvDaCai()) null else docQua(Iptv.GOI)
 
     /** Gửi danh sách kênh (MapVoice.dsKenh); false nếu tivi không nhận (danh sách rỗng / hỏng). */
     fun guiKenhMapVoice(json: String): Boolean = sh(MapVoice.lenhKenh(json)).contains("ok=1")

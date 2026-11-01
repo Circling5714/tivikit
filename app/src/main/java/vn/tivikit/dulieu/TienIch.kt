@@ -8,7 +8,7 @@ import vn.tivikit.t
  * lưu; nay nối tivi là so cả lượt với bản đi kèm, màn chính hiện "N tiện ích có bản mới", cập nhật một lần (hay tự làm).
  */
 object TienIch {
-    enum class Loai { KHOA, HEN_GIO, KENH, CAST, MAP_VOICE, TELE_REMOTE, GO, TKL, HOME }
+    enum class Loai { KHOA, HEN_GIO, KENH, CAST, MAP_VOICE, TELE_REMOTE, GO, TKL, HOME, IPTV }
 
     /** Một tiện ích: [goi] trên tivi, [apk] trong assets của TiviKit, [ten] hiện cho người dùng. */
     data class Muc(val loai: Loai, val goi: String, val apk: String, val ten: String)
@@ -29,6 +29,7 @@ object TienIch {
     ) + (1..KenhNhanh.SO_O).map { Muc(Loai.KENH, KenhNhanh.goiCua(it), KenhNhanh.apkCua(it), t("Kênh nhanh $it", "Quick channel $it")) } + listOf(
         Muc(Loai.CAST, CastSmartTube.GOI, "cast.apk", "Cast SmartTube"),
         Muc(Loai.MAP_VOICE, MapVoice.GOI, MapVoice.APK, "Map Voice"),
+        Muc(Loai.IPTV, Iptv.GOI, Iptv.APK, "IPTV"),
         Muc(Loai.TELE_REMOTE, TeleRemote.GOI, TeleRemote.APK, "Tele Remote"),
         Muc(Loai.GO, GoChu.GOI, "go.apk", t("Bộ gõ tiếng Việt", "Vietnamese typing")),
         Muc(Loai.TKL, TiviKitLauncher.GOI, TiviKitLauncher.APK, "TiviKit Launcher"),

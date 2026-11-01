@@ -10,8 +10,9 @@
         <package android:name="vn.vtv.vtvgotv" />
         <package android:name="net.fptplay.ottbox" />
         <package android:name="com.m3u.smartphone" />
-        <!-- Ô Auto: Map Voice tự chọn nguồn (1/11/2026). -->
+        <!-- Ô Auto: Map Voice tự chọn nguồn; ô IPTV: app IPTV của TiviKit (1/11/2026). -->
         <package android:name="vn.tivikit.mapvoice" />
+        <package android:name="vn.tivikit.iptv" />
     </queries>
 
     <!-- Không banner: Home sạch vẽ ô bằng biểu tượng kèm tên (app_labels đặt tên ô là tên kênh, VD VTV1). -->

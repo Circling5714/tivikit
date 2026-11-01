@@ -22,7 +22,7 @@ object KenhNhanh {
     /** M3UAndroid (1/11/2026): trình phát IPTV mã nguồn mở, người dùng tự thêm danh sách kênh (Gợi ý app). */
     const val M3U = "com.m3u.smartphone"
     /** Các app xem kênh của ô (biểu tượng của chúng làm huy hiệu ở góc ô, AnhOKenh). */
-    val APP_XEM = listOf(TV360, VTVGO, FPTPLAY, M3U)
+    val APP_XEM = listOf(TV360, VTVGO, FPTPLAY, M3U, Iptv.GOI)
     /** Loại ô (khoá "app" trong JSON của app phụ; ô TV360 không ghi). */
     const val LOAI_TV360 = "tv360"
     const val LOAI_VTVGO = "vtvgo"
@@ -30,6 +30,8 @@ object KenhNhanh {
     const val LOAI_M3U = "m3u"
     /** Ô Auto (1/11/2026): một kênh, nhiều nguồn; Map Voice mở nguồn phát được, mất tiếng thì đổi nguồn. */
     const val LOAI_AUTO = "auto"
+    /** Ô IPTV (1/11/2026): kênh trong danh sách IPTV của người dùng, phát bằng app IPTV của TiviKit (Iptv); [Kenh.ma] = mã kênh. */
+    const val LOAI_IPTV = "iptv"
 
     fun goiCua(o: Int): String = if (o == 1) GOI else "$GOI$o"
     /** Màn mở kênh của ô [o] (bấm ô / nút remote cũng vào đây). */
@@ -46,29 +48,35 @@ object KenhNhanh {
      */
     data class Kenh(
         val so: String, val ten: String, val ma: String = "", val loai: String = if (ma.isEmpty()) LOAI_TV360 else LOAI_VTVGO,
-        /** Ô Auto: các nguồn (mỗi nguồn một Kenh VTVgo / TV360 / FPT Play / M3U), theo thứ tự thử mặc định. */
+        /** Ô Auto: các nguồn (mỗi nguồn một Kenh VTVgo / TV360 / FPT Play / IPTV / M3U), theo thứ tự thử mặc định hay thứ tự riêng. */
         val nguon: List<Kenh> = emptyList(),
+        /** Ô Auto có thứ tự nguồn riêng người dùng đặt (1/11/2026): Map Voice thử đúng thứ tự [nguon], không xếp theo các lần trước. */
+        val coDinh: Boolean = false,
     ) {
         val laVtvGo: Boolean get() = loai == LOAI_VTVGO
         val laFpt: Boolean get() = loai == LOAI_FPT
         val laM3u: Boolean get() = loai == LOAI_M3U
         val laTv360: Boolean get() = loai == LOAI_TV360
         val laAuto: Boolean get() = loai == LOAI_AUTO
+        val laIptv: Boolean get() = loai == LOAI_IPTV
         /** App mở kênh này (ô Auto: Map Voice). */
-        val app: String get() = when (loai) { LOAI_VTVGO -> VTVGO; LOAI_FPT -> FPTPLAY; LOAI_M3U -> M3U; LOAI_AUTO -> MapVoice.GOI; else -> TV360 }
+        val app: String get() = when (loai) {
+            LOAI_VTVGO -> VTVGO; LOAI_FPT -> FPTPLAY; LOAI_M3U -> M3U; LOAI_IPTV -> Iptv.GOI; LOAI_AUTO -> MapVoice.GOI; else -> TV360
+        }
         /** Tên app mở kênh này, cho người dùng. */
         val tenApp: String get() = tenAppCua(app)
-        /** Cùng một kênh trên cùng app (để không làm hai ô một kênh); ô Auto: cùng tên kênh. */
+        /** Cùng một kênh trên cùng app (để không làm hai ô một kênh); ô Auto: cùng tên kênh; ô IPTV: cùng mã và tên (tvg-id có khi chung). */
         fun trung(k: Kenh): Boolean = loai == k.loai && when {
             laTv360 -> so == k.so
             laAuto -> khoaTen(ten) == khoaTen(k.ten)
+            laIptv -> ma == k.ma && ten == k.ten
             else -> ma == k.ma
         }
     }
 
     /** Tên app xem kênh [goi] (TV360 / VTVgo / FPT Play / M3U; Map Voice = ô Auto), cho người dùng. */
     fun tenAppCua(goi: String): String = when (goi) {
-        VTVGO -> "VTVgo"; FPTPLAY -> "FPT Play"; M3U -> "M3U"; MapVoice.GOI -> vn.tivikit.t("Tự động", "Auto"); else -> "TV360"
+        VTVGO -> "VTVgo"; FPTPLAY -> "FPT Play"; M3U -> "M3U"; Iptv.GOI -> "IPTV"; MapVoice.GOI -> vn.tivikit.t("Tự động", "Auto"); else -> "TV360"
     }
 
     /**
@@ -87,19 +95,30 @@ object KenhNhanh {
     )
 
     /**
-     * Nguồn cho ô Auto kênh [ten] (1/11/2026), theo thứ tự thử mặc định VTVgo → TV360 → FPT Play → M3U: kênh cùng tên trong
-     * danh sách VTVgo [dsGo], FPT Play [dsFpt], phím tắt M3U [dsM3u] (tên, mã); TV360 chỉ khi biết số kênh ([tv360]: gợi ý và
-     * ô TV360 đang có) — TV360 tìm theo tên có khi mở nhầm kênh mà vẫn có tiếng.
+     * Nguồn cho ô Auto kênh [ten] (1/11/2026), theo thứ tự thử mặc định VTVgo → TV360 → FPT Play → IPTV → M3U: kênh cùng tên
+     * trong danh sách VTVgo [dsGo], FPT Play [dsFpt], danh sách IPTV [dsIptv], phím tắt M3U [dsM3u] (tên, mã); TV360 chỉ khi
+     * biết số kênh ([tv360]: gợi ý và ô TV360 đang có) — TV360 tìm theo tên có khi mở nhầm kênh mà vẫn có tiếng.
      */
-    fun nguonAuto(ten: String, dsGo: List<KenhVtvGo.Kenh>, dsFpt: List<KenhFpt.Kenh>, dsM3u: List<Pair<String, String>>, tv360: List<Kenh>): List<Kenh> {
+    fun nguonAuto(
+        ten: String, dsGo: List<KenhVtvGo.Kenh>, dsFpt: List<KenhFpt.Kenh>, dsM3u: List<Pair<String, String>>, tv360: List<Kenh>,
+        dsIptv: List<Iptv.Kenh> = emptyList(),
+    ): List<Kenh> {
         val k = khoaTen(ten)
         if (k.isEmpty()) return emptyList()
         return listOfNotNull(
             dsGo.firstOrNull { khoaTen(it.ten) == k }?.let { Kenh("", tenSach(it.tenO), it.ma) },
             tv360.firstOrNull { it.laTv360 && it.so.isNotEmpty() && khoaTen(it.ten) == k }?.let { Kenh(it.so, tenSach(it.ten)) },
             dsFpt.firstOrNull { khoaTen(it.ten) == k }?.let { Kenh("", tenSach(it.tenO), it.ma, LOAI_FPT) },
+            dsIptv.firstOrNull { khoaTen(it.ten) == k }?.let { Kenh("", tenSach(it.ten), it.maO, LOAI_IPTV) },
         ) + dsM3u.filter { khoaTen(it.first) == k }.take(2).map { (t, m) -> Kenh("", tenSach(t), m, LOAI_M3U) }
     }
+
+    /**
+     * Nguồn [ds] của ô Auto xếp theo thứ tự riêng [thuTu] (loại nguồn: LOAI_TV360, LOAI_VTVGO…): loại có trong [thuTu] theo
+     * thứ tự đó, loại chưa có ở cuối; hai nguồn cùng loại (M3U) giữ thứ tự cũ.
+     */
+    fun theoThuTu(ds: List<Kenh>, thuTu: List<String>): List<Kenh> =
+        ds.sortedBy { thuTu.indexOf(it.loai).let { i -> if (i < 0) Int.MAX_VALUE else i } }
 
     /** Kênh hay xem, số theo danh sách kênh trên tv360.vn (25/10/2026). */
     val GOI_Y = listOf(
@@ -128,6 +147,7 @@ object KenhNhanh {
         when {
             k.laTv360 -> put("so", k.so)
             k.laAuto -> put("app", k.loai).put("nguon", JSONArray().apply { k.nguon.forEach { n -> put(jsonO(n).put("app", n.loai)) } })
+                .apply { if (k.coDinh) put("coDinh", true) }
             else -> put("app", k.loai).put("ma", k.ma)
         }
     }
@@ -143,11 +163,12 @@ object KenhNhanh {
         if (loai == LOAI_AUTO) {
             val a = j.optJSONArray("nguon") ?: return null
             val ds = (0 until a.length()).mapNotNull { a.optJSONObject(it) }.mapNotNull { o -> tuJson(o)?.takeIf { !it.laAuto } }
-            return if (ten.isNotEmpty() && ds.isNotEmpty()) Kenh("", ten, "", LOAI_AUTO, ds) else null
+            return if (ten.isNotEmpty() && ds.isNotEmpty()) Kenh("", ten, "", LOAI_AUTO, ds, j.optBoolean("coDinh")) else null
         }
-        if (loai == LOAI_VTVGO || loai == LOAI_FPT || loai == LOAI_M3U) {
+        if (loai == LOAI_VTVGO || loai == LOAI_FPT || loai == LOAI_M3U || loai == LOAI_IPTV) {
             val ma = j.optString("ma").trim()
-            return if ((if (loai == LOAI_M3U) MA_M3U else MA_GO).matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma, loai) else null
+            val dung = when (loai) { LOAI_M3U -> MA_M3U; LOAI_IPTV -> Iptv.MA; else -> MA_GO }
+            return if (dung.matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma, loai) else null
         }
         val so = chuanSo(j.optString("so")) ?: return null
         return Kenh(so, ten)

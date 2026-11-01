@@ -204,5 +204,22 @@ class KenhNhanhTest {
         assertTrue(k.trung(KenhNhanh.Kenh("", "VTV1 HD", "", KenhNhanh.LOAI_AUTO)))
         assertFalse(k.trung(KenhNhanh.Kenh("", "VTV1", "1")))
         assertNull(KenhNhanh.tuJson(JSONObject("""{"app":"auto","ten":"VTV1","nguon":[{"app":"vtvgo","ma":"x y","ten":"VTV1"}]}""")))
+        assertFalse(JSONObject(s).has("coDinh"))
+    }
+
+    /** Ô Auto thứ tự riêng (1/11/2026, VD VTV1 mở TV360 trước): xếp nguồn theo loại, cờ coDinh đi theo cấu hình. */
+    @Test fun auto_thuTuRieng() {
+        val ds = listOf(
+            KenhNhanh.Kenh("", "VTV1", "1"), KenhNhanh.Kenh("001", "VTV1"), KenhNhanh.Kenh("", "VTV1 HD", "473", KenhNhanh.LOAI_M3U),
+            KenhNhanh.Kenh("", "VTV1 FHD", "474", KenhNhanh.LOAI_M3U), KenhNhanh.Kenh("", "VTV1 HD", "vtv1-hd", KenhNhanh.LOAI_FPT),
+        )
+        val xep = KenhNhanh.theoThuTu(ds, listOf(KenhNhanh.LOAI_TV360, KenhNhanh.LOAI_M3U))
+        // Loại có trong thứ tự riêng trước (hai nguồn M3U giữ thứ tự), loại chưa có ở cuối như cũ.
+        assertEquals(listOf("001", "473", "474", "1", "vtv1-hd"), xep.map { it.ma.ifEmpty { it.so } })
+        val k = KenhNhanh.Kenh("", "VTV1", "", KenhNhanh.LOAI_AUTO, xep, coDinh = true)
+        val j = JSONObject(KenhNhanh.json(k))
+        assertTrue(j.getBoolean("coDinh"))
+        assertEquals("tv360", j.getJSONArray("nguon").getJSONObject(0).getString("app"))
+        assertEquals(k, KenhNhanh.tuJson(j))
     }
 }

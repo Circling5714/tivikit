@@ -22,8 +22,8 @@ android {
         applicationId = "vn.tivikit.kenh"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.5"
+        versionCode = 7
+        versionName = "1.6"
     }
     // Nhiều ô kênh (25/10/2026): Home sạch mở app và gán nút remote theo tên gói, nên mỗi ô là một app riêng — cùng mã,
     // khác tên gói. Ô 1 giữ tên gói cũ để bản một ô trước đây cài đè được (giữ kênh đã đặt).

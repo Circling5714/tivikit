@@ -29,8 +29,11 @@ object MapVoice {
     const val APP_FPT = "fptplay"
     /** Tự chọn nguồn (Map Voice 1.2, 1/11/2026): thử lần lượt VTVgo, TV360, FPT Play, M3U tới khi có tiếng. */
     const val APP_AUTO = "auto"
-    /** Map Voice 1.2 (versionCode 3) trở lên mới tự chọn nguồn (ô Kênh nhanh Auto, app kênh "auto"). */
-    const val BAN_TU_CHON = 3
+    /**
+     * Map Voice 1.3 (versionCode 4) trở lên tự chọn nguồn đủ cho ô Kênh nhanh Auto: nguồn IPTV, thứ tự riêng của ô (1.2 đã
+     * tự chọn nguồn nhưng chưa biết hai thứ đó).
+     */
+    const val BAN_TU_CHON = 4
     /** Đích câu riêng: để Trợ lý Google làm; app YouTube đã chọn. Còn lại là tên gói app. */
     const val DICH_TRO_LY = "tro-ly"
     const val DICH_YOUTUBE = "youtube"
