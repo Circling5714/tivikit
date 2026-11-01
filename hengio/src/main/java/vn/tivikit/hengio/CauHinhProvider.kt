@@ -54,7 +54,7 @@ class CauHinhProvider : ContentProvider() {
                 kq.putString("ok", "1"); kq.putString("id", m.id); kq.putLong("luc", m.luc)
             }
             "huy-mot-lan" -> if (HenGio.huyMotLan(ctx, arg?.trim().orEmpty())) kq.putString("ok", "1") else kq.putString("loi", "khong-co")
-            // Bấm từ Telegram lúc màn báo trước đang đếm ngược (Tele Remote, 1/11/2026): như bấm Hoãn 30 phút / Tắt ngay.
+            // Bấm từ Telegram lúc màn báo trước đang đếm ngược (Tele Remote, 31/10/2026): như bấm Hoãn 30 phút / Tắt ngay.
             "hoan", "tat-ngay" -> {
                 val bt = BaoTat.dangMo ?: return kq.apply { putString("loi", "khong-con") }
                 bt.tuXa(tat = method == "tat-ngay")

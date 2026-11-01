@@ -18,7 +18,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * 📢 Lời nhắn từ Telegram hiện to trên màn hình tivi (1/11/2026), kèm một tiếng bíp: "Các con tắt tivi đi ngủ nhé!". Bấm OK
+ * 📢 Lời nhắn từ Telegram hiện to trên màn hình tivi (31/10/2026), kèm một tiếng bíp: "Các con tắt tivi đi ngủ nhé!". Bấm OK
  * (hay Back) trên remote để đóng; lúc đó bot báo người gửi là tivi đã xem. Không ai bấm thì tự đóng sau [TOI_DA], không báo.
  * Lời nhắn mới tới thì thay lời nhắn đang hiện.
  */

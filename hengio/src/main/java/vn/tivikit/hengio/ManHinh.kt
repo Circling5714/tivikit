@@ -48,7 +48,7 @@ class DanhThuc : Activity() {
 
 /**
  * Báo trước khi tắt tivi: đếm ngược 60 giây, "Hoãn 30 phút" (chọn sẵn) hoặc "Tắt ngay". Bấm Back hay Home cũng là
- * hoãn — có người đang dùng tivi; không ai bấm gì thì hết giờ tivi tắt. Tivi có Tele Remote thì báo bot (1/11/2026): bot
+ * hoãn — có người đang dùng tivi; không ai bấm gì thì hết giờ tivi tắt. Tivi có Tele Remote thì báo bot (31/10/2026): bot
  * nhắn chủ tivi kèm nút hoãn / tắt luôn, bấm từ Telegram (lệnh hoan / tat-ngay của CauHinhProvider).
  */
 class BaoTat : Activity() {

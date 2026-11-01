@@ -7,7 +7,7 @@ import android.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-/** Ảnh người dùng gửi qua Telegram (1/11/2026): đọc vừa màn hình (XemTep), làm ảnh nền 16:9 cho TiviKit Launcher. */
+/** Ảnh người dùng gửi qua Telegram (31/10/2026): đọc vừa màn hình (XemTep), làm ảnh nền 16:9 cho TiviKit Launcher. */
 object AnhTr {
     /**
      * Ảnh thu nhỏ vừa đủ phủ [rong] x [cao] (ảnh gốc 12 MP đọc nguyên dễ hết RAM của box), xoay theo EXIF (ảnh gửi dạng

@@ -1,7 +1,7 @@
 package vn.tivikit.teleremote
 
 /**
- * Kiểm tra mạng của tivi từ Telegram (1/11/2026), cùng cách với Kiểm tra mạng của TiviKit (dulieu/Mang.kt): đọc đường ra
+ * Kiểm tra mạng của tivi từ Telegram (31/10/2026), cùng cách với Kiểm tra mạng của TiviKit (dulieu/Mang.kt): đọc đường ra
  * Internet (`ip route get`), Wi-Fi đang nối (dòng mWifiInfo của `dumpsys wifi`), ping tới router / Internet / YouTube, rồi
  * nhận xét. "YouTube giật" thường do Wi-Fi tới tivi (sóng yếu, băng 2,4 GHz, nhiễu) chứ không phải tivi yếu.
  */

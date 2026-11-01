@@ -133,7 +133,7 @@ object XuLyLenh {
     const val TOI_SANG = -1
 
     /**
-     * Kênh của 📺 Tất cả kênh: tên Map Voice hiểu khi nói "mở …" (thử trên TX3 với danh sách kênh TiviKit gửi, 1/11/2026);
+     * Kênh của 📺 Tất cả kênh: tên Map Voice hiểu khi nói "mở …" (thử trên TX3 với danh sách kênh TiviKit gửi, 31/10/2026);
      * Map Voice mở bằng app kênh đã chọn, app đó không có kênh thì app kia.
      */
     val KENH_TV = listOf(

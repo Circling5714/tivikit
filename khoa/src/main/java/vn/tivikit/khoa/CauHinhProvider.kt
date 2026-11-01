@@ -118,7 +118,7 @@ class CauHinhProvider : ContentProvider() {
                 kq.putString("json", o.toString())
             }
             "thoi-gian" -> kq.putString("json", BaoCao.lap(context!!).toString())
-            // Bố mẹ trả lời ô Xin bố mẹ thêm giờ qua Telegram (Tele Remote, 1/11/2026): báo lên màn khoá.
+            // Bố mẹ trả lời ô Xin bố mẹ thêm giờ qua Telegram (Tele Remote, 31/10/2026): báo lên màn khoá.
             "tra-loi-xin" -> {
                 val o = runCatching { JSONObject(arg ?: "") }.getOrNull() ?: return loi("sai")
                 KhoaDichVu.dangChay?.traLoiXin(o.optBoolean("cho"), o.optInt("phut")) ?: return loi("dich-vu")

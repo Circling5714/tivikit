@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
- * Việc bot tự để ý (1/11/2026): mỗi [CHU_KY] hỏi app Cast (qua ADB) xem có điện thoại lạ vừa xin cast không; có máy mới thì
+ * Việc bot tự để ý (31/10/2026): mỗi [CHU_KY] hỏi app Cast (qua ADB) xem có điện thoại lạ vừa xin cast không; có máy mới thì
  * nhắn các chủ tivi kèm nút cho phép / chặn. Tivi cũng đang hỏi trên màn hình: ai trả lời trước cũng được.
  */
 class TheoDoi(private val dv: TeleRemoteDichVu) {

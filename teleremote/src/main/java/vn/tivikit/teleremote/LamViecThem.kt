@@ -8,7 +8,7 @@ import org.json.JSONObject
 import vn.tivikit.teleremote.XuLyLenh.Den
 
 /*
- * Việc thêm của bot (1/11/2026): lời nhắn hiện lên tivi, menu ⚙️ Thêm, bật màn hình, âm lượng bằng câu, kiểm tra mạng,
+ * Việc thêm của bot (31/10/2026): lời nhắn hiện lên tivi, menu ⚙️ Thêm, bật màn hình, âm lượng bằng câu, kiểm tra mạng,
  * nhật ký, người dùng (duyệt người xin dùng, đổi vai trò, bỏ, thêm theo @username), tạm khoá thành viên; quay màn hình, ảnh
  * nền TiviKit Launcher, tất cả kênh (qua Map Voice), duyệt máy xin cast. Hàm mở rộng của LamViec, gọi từ LamViec.lam (quyền
  * chủ / thành viên đã xét ở đó).

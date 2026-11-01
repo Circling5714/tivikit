@@ -72,7 +72,7 @@ class KhoaDichVu : AccessibilityService() {
         private val PHIM = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓", PHU_HUYNH, XIN_THEM)
         /** Ô dưới bàn phím số: mở bảng phụ huynh (nhập mã trước). */
         private const val PHU_HUYNH = "⚙  Phụ huynh"
-        /** Ô cuối, chỉ khi cả tivi đang khoá và tivi có Tele Remote: nhắn bố mẹ qua Telegram xin thêm giờ (1/11/2026). */
+        /** Ô cuối, chỉ khi cả tivi đang khoá và tivi có Tele Remote: nhắn bố mẹ qua Telegram xin thêm giờ (31/10/2026). */
         private const val XIN_THEM = "📩  Xin thêm giờ"
         private const val O_PHU_HUYNH = 12
         private const val O_XIN = 13
@@ -797,7 +797,7 @@ class KhoaDichVu : AccessibilityService() {
     }
 
     /**
-     * Ô Xin bố mẹ thêm giờ (1/11/2026): nhờ Tele Remote nhắn các chủ tivi qua Telegram kèm nút mở tạm (bố mẹ vẫn phải gõ mã
+     * Ô Xin bố mẹ thêm giờ (31/10/2026): nhờ Tele Remote nhắn các chủ tivi qua Telegram kèm nút mở tạm (bố mẹ vẫn phải gõ mã
      * 6 số trong Telegram). Mỗi [XIN_CACH_MS] xin một lần.
      */
     private fun xinThemGio() {
