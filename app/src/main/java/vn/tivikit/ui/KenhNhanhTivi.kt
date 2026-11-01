@@ -322,7 +322,9 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         }
         val tenK = o.kenh?.ten ?: t("kênh của ô ${o.so}", "tile ${o.so}'s channel")
         baoLech = g != goiApp
-        bao = if (!baoLech) t("$tenApp đã mở. Nhìn tivi: đang phát $tenK là được. $tenApp chưa đăng nhập hoặc hiện quảng cáo thì bấm qua rồi thử lại.",
+        bao = if (!baoLech && goiApp == KenhNhanh.M3U) t("M3U đã mở. Nhìn tivi: đang phát $tenK là được; M3U báo lỗi kênh thì mở danh sách kênh trong M3U xem kênh đó còn xem được không.",
+                "M3U is open. Look at the TV: if $tenK is playing, it works; if M3U reports a channel error, check in M3U's channel list that the channel still plays.")
+            else if (!baoLech) t("$tenApp đã mở. Nhìn tivi: đang phát $tenK là được. $tenApp chưa đăng nhập hoặc hiện quảng cáo thì bấm qua rồi thử lại.",
                 "$tenApp is open. Look at the TV: if $tenK is playing, it works. If $tenApp asks you to sign in or shows an ad, get past it and test again.") +
                 (if (goiApp == KenhNhanh.FPTPLAY) t(" FPT Play hỏi mua gói thì kênh này cần gói của FPT Play.", " If FPT Play offers a package, this channel needs one.") else "")
             else if (!coApp(goiApp) && goiApp == KenhNhanh.M3U) t("Tivi chưa có M3U (hoặc đang bị tắt): cài ở Cài app → Gợi ý, hoặc bật lại ở Quản lý app.",
