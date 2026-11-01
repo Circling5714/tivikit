@@ -34,7 +34,7 @@ object GoiY {
     }
 
     enum class Nhom(private val vi: String, private val en: String) {
-        VIDEO("YouTube, xem video", "YouTube & video"),
+        VIDEO("YouTube, xem video, IPTV", "YouTube, video & IPTV"),
         VIET("Truyền hình, phim Việt Nam", "Vietnamese TV & films"),
         ANIME("Anime, phim châu Á (bản quyền)", "Anime & Asian films (licensed)"),
         QUOC_TE("Phim, nhạc quốc tế", "International films & music"),
@@ -64,7 +64,7 @@ object GoiY {
     private const val ABI_ANDROID = "arm64-v8a|armeabi-v7a|x86_64|x86|universal"
 
     val DS = listOf(
-        // ---------- YouTube, xem video ----------
+        // ---------- YouTube, xem video, IPTV ----------
         App("smarttube", "SmartTube", "YouTube cho tivi không quảng cáo, tự bỏ qua đoạn tài trợ (SponsorBlock), phát tới 8K, HDR. Không chính thức, mã nguồn mở.",
             "YouTube for TVs without ads, skips sponsor segments (SponsorBlock), up to 8K and HDR. Unofficial, open source.",
             Nguon.GitHub("yuliskov/SmartTube", Regex("""^SmartTube_stable_[\d.]+_(arm64-v8a|armeabi-v7a|x86|universal)\.apk$""")),
@@ -95,6 +95,14 @@ object GoiY {
             Nguon.GitHub("nova-video-player/aos-AVP", Regex("""^org\.courville\.nova-.+-($ABI_ANDROID)-release\.apk$""")), Nhom.VIDEO, listOf("org.courville.nova")),
         App("mpv", "mpv", "Trình phát mpv: nhẹ, chơi gần như mọi định dạng, chỉnh hình rất sâu.", "The mpv player: light, plays almost anything, deep picture settings.",
             Nguon.GitHub("mpv-android/mpv-android", Regex("""^app-default-($ABI_ANDROID)-release\.apk$""")), Nhom.VIDEO, listOf("is.xyz.mpv")),
+        // IPTV (1/11/2026): chỉ là trình phát, người dùng tự thêm danh sách kênh của mình; cả hai không kèm kênh nào. Bỏ bản
+        // "lite" của M3UAndroid và OwnTV.apk (trùng bản có số, không đọc được phiên bản từ tên).
+        App("m3uandroid", "M3UAndroid", "Xem IPTV bằng danh sách kênh của anh (link M3U): gọn, không quảng cáo, dùng được bằng remote. Mã nguồn mở.",
+            "Watch IPTV from your own playlist (an M3U link): clean, ad-free, works with the remote. Open source.",
+            Nguon.GitHub("oxyroid/M3UAndroid", Regex("""^[\d.]+_($ABI_ANDROID)\.apk$""")), Nhom.VIDEO, listOf("com.m3u.smartphone")),
+        App("owntv", "OwnTV", "Trình phát IPTV làm riêng cho tivi: danh sách M3U, tài khoản Xtream hay Stalker của anh, lịch phát sóng (EPG), hai trình phát mpv và ExoPlayer. Không kèm sẵn kênh nào. Mã nguồn mở.",
+            "An IPTV player made for TVs: your own M3U playlist, Xtream login or Stalker portal, a TV guide (EPG), mpv and ExoPlayer engines. Ships no channels. Open source.",
+            Nguon.GitHub("ahXN00/OwnTV", Regex("""^OwnTV-(x86_64-)?v[\d.]+\.apk$""")), Nhom.VIDEO, listOf("tv.own.owntv")),
 
         // ---------- Truyền hình, phim Việt Nam (CH Play) ----------
         play("tv360", "TV360", "Truyền hình Viettel: VTV, HTV, kênh địa phương, phim, thể thao (dùng với Kênh nhanh).",

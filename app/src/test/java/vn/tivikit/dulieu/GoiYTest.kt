@@ -88,6 +88,18 @@ class GoiYTest {
         assertEquals("SmartTV_twitch_3_0_379.apk", GoiY.chonTep(gh("smarttwitch"), listOf("SmartTV_twitch_3_0_379.apk"), armv7))
         assertEquals("aerial-views-1.8.5.apk", GoiY.chonTep(gh("aerialviews"), listOf("aerial-views-1.8.5.apk"), arm64))
         assertEquals("lemuroid-app-free-dynamic-release.apk", GoiY.chonTep(gh("lemuroid"), listOf("lemuroid-app-free-dynamic-release.apk"), arm64))
+
+        // IPTV (1/11/2026): bỏ bản "lite" của M3UAndroid và OwnTV.apk không ghi số phiên bản.
+        val m3u = listOf("1.15.0-lite.apk", "1.15.0_arm64-v8a.apk", "1.15.0_armeabi-v7a.apk", "1.15.0_universal.apk", "1.15.0_x86.apk", "1.15.0_x86_64.apk")
+        assertEquals("1.15.0_arm64-v8a.apk", GoiY.chonTep(gh("m3uandroid"), m3u, arm64))
+        assertEquals("1.15.0_armeabi-v7a.apk", GoiY.chonTep(gh("m3uandroid"), m3u, armv7))
+        assertEquals("1.15.0_x86.apk", GoiY.chonTep(gh("m3uandroid"), m3u, x86))
+        assertEquals("1.15.0", GoiY.phienBanTu("1.15.0_armeabi-v7a.apk", "v1.15.0"))
+        val owntv = listOf("OwnTV-v5.2.1.apk", "OwnTV-x86_64-v5.2.1.apk", "OwnTV.apk")
+        assertEquals("OwnTV-v5.2.1.apk", GoiY.chonTep(gh("owntv"), owntv, arm64))
+        assertEquals("OwnTV-v5.2.1.apk", GoiY.chonTep(gh("owntv"), owntv, armv7))
+        assertEquals("OwnTV-x86_64-v5.2.1.apk", GoiY.chonTep(gh("owntv"), owntv, listOf("x86_64")))
+        assertEquals("5.2.1", GoiY.phienBanTu("OwnTV-x86_64-v5.2.1.apk", "v5.2.1"))
     }
 
     @Test fun tenFile() {
