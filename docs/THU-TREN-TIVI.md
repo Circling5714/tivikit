@@ -88,6 +88,7 @@ Màn chính → TiviKit Launcher (mở màn Quản lý launcher, thẻ TiviKit L
 | Giao diện Kính mờ; Chữ giờ, ngày trắng sáng; ảnh riêng "vừa khung" | Hình đúng như xem trước; đổi lại giao diện khác không dính khoá của Kính mờ |
 | Thời tiết: gõ "Osaka" | Có kết quả ở Nhật, chọn được, Home sạch hiện thời tiết Osaka |
 | Remote → Giữ nút âm lượng để tăng / giảm liên tục (nên thử trên Sony) | Giữ nút âm lượng trên remote thật thì âm lượng chạy liên tục |
+| Google TV mà Home sạch đè Home của hãng (VD Skyworth): nói, hay nhắn bot Tele Remote, "giá vàng sjc hôm nay" | Trang kết quả của Trợ lý Google ở lại trên tivi; bấm Home trên remote thì về Home đã chọn |
 
 - **Hỏng thì:** tắt công tắc vừa bật, Áp dụng lại.
 
