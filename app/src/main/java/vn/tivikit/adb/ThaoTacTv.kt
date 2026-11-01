@@ -13,6 +13,7 @@ import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
 import vn.tivikit.dulieu.KhoSaoLuu
 import vn.tivikit.dulieu.Launcher
+import vn.tivikit.dulieu.LoiPm
 import vn.tivikit.dulieu.MapVoice
 import vn.tivikit.dulieu.TeleRemote
 import vn.tivikit.dulieu.TienIch
@@ -296,7 +297,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
                 if (p !in sl.daTatTruoc) sl.daTatBoiApp += p
                 luuSaoLuu(sl) // ghi sau MỖI gói: rớt mạng giữa chừng vẫn khôi phục đúng.
             } else {
-                loi += p to out.trim().lines().lastOrNull().orEmpty()
+                loi += p to LoiPm.gon(out)
                 if (ghiTruoc && out.isNotBlank() && !out.startsWith(t("lỗi: ", "error: "))) { sl.daTatBoiApp -= p; luuSaoLuu(sl) }
             }
         }
@@ -1442,7 +1443,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         ds.forEachIndexed { i, p ->
             bao(t("Bật lại ${i + 1}/${ds.size}: $p", "Re-enabling ${i + 1}/${ds.size}: $p"))
             val out = runCatching { sh("pm enable --user 0 $p") }.getOrElse { "${it.message}" }
-            if (!out.contains("enabled")) loi += "$p: ${out.trim()}"
+            if (!out.contains("enabled")) loi += "$p: ${LoiPm.gon(out)}"
         }
         val tc = sh("settings get secure enabled_accessibility_services").trim()
         if (HOME_SACH.any { tc.contains("$it/") }) {
@@ -1489,7 +1490,16 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         ds.forEachIndexed { i, p ->
             bao(t("Bật lại ${i + 1}/${ds.size}: $p", "Re-enabling ${i + 1}/${ds.size}: $p"))
             val out = runCatching { sh("pm enable --user 0 $p") }.getOrElse { t("lỗi ${it.message}", "error ${it.message}") }
-            if (out.contains("enabled")) { sl.daTatBoiApp -= p; luuSaoLuu(sl) } else loi += "$p: ${out.trim()}"
+            when {
+                out.contains("enabled") -> { sl.daTatBoiApp -= p; luuSaoLuu(sl) }
+                // Gói đã rời tivi sau khi dọn (1/11/2026, TX3 có com.tcl.browser của mẫu tivi): không còn gì để bật lại, bỏ khỏi
+                // bản sao lưu. Trước đây nó nằm lại mãi, Khôi phục lần nào cũng chỉ "xong một phần".
+                LoiPm.khongCoGoi(out) && khongConGoi(p) -> {
+                    bao(t("$p không còn trên tivi, bỏ qua.", "$p is no longer on the TV, skipped."))
+                    sl.daTatBoiApp -= p; luuSaoLuu(sl)
+                }
+                else -> loi += "$p: ${LoiPm.gon(out)}"
+            }
         }
         if (sl.launcherDaCai) {
             bao(t("Trả Home gốc…", "Restoring the stock Home…"))
@@ -2296,6 +2306,12 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }.toSet()
 
     private fun coGoi(pkg: String, co: String = "") = sh("pm list packages $co $pkg").lines().any { it.trim() == "package:$pkg" }
+
+    /** Tivi trả lời rõ là không có gói [pkg], kể cả bản hệ thống gỡ khỏi người dùng (đọc được danh sách: có gói "android"). */
+    private fun khongConGoi(pkg: String): Boolean = runCatching {
+        val ds = sh("pm list packages -u").lines().map { it.trim() }
+        "package:android" in ds && "package:$pkg" !in ds
+    }.getOrDefault(false)
 
     /** Bản [pkg] đang có trên tivi ("1.2.3 (45)"), null nếu chưa cài. */
     fun banTrenTv(pkg: String): String? {
