@@ -14,8 +14,12 @@ object TuChonNguon {
     const val TV360 = "tv360"
     const val FPT = "fptplay"
     const val M3U = "m3u"
-    /** Thứ tự thử khi chưa có lịch sử (anh chọn 1/11/2026). */
-    val MAC_DINH = listOf(VTVGO, TV360, FPT, M3U)
+    /** Kênh trong danh sách IPTV của người dùng, phát bằng app IPTV của TiviKit (1/11/2026). */
+    const val IPTV = "iptv"
+    /** Thứ tự thử khi chưa có lịch sử (anh chọn 1/11/2026; IPTV đứng chỗ M3U, M3U sau cùng). */
+    val MAC_DINH = listOf(VTVGO, TV360, FPT, IPTV, M3U)
+    const val GOI_IPTV = "vn.tivikit.iptv"
+    const val IPTV_PHAT = "vn.tivikit.iptv.PhatKenh"
     /** M3UAndroid: màn phát nhận mã kênh qua extra, như phím tắt Create Shortcut của nó (kenh/MoKenh). */
     const val GOI_M3U = "com.m3u.smartphone"
     const val M3U_PHAT = "com.m3u.smartphone.ui.business.channel.PlayerActivity"
@@ -43,6 +47,7 @@ object TuChonNguon {
         VTVGO -> XuLyCau.VTVGO
         TV360 -> XuLyCau.TV360
         FPT -> XuLyCau.FPTPLAY
+        IPTV -> GOI_IPTV
         else -> GOI_M3U
     }
 
@@ -63,14 +68,43 @@ object TuChonNguon {
     }
 
     /**
+     * Thứ tự riêng người dùng đặt cho ô (1/11/2026): giữ nguyên thứ tự [ds], không xếp theo các lần trước. [hong] = nguồn vừa
+     * mất tiếng lúc đang xem: thử các nguồn sau nó trước, rồi các nguồn trước nó, nó sau cùng.
+     */
+    fun theoThuTu(ds: List<Nguon>, hong: Nguon? = null): List<Nguon> {
+        val goc = ds.distinctBy { it.khoa }
+        val i = goc.indexOfFirst { it.khoa == hong?.khoa }
+        return if (i < 0) goc else goc.drop(i + 1) + goc.take(i) + goc[i]
+    }
+
+    /**
      * Nguồn của kênh [k] mà Map Voice biết (VTVgo, FPT Play theo mã kênh; TV360 chỉ khi biết số kênh — TV360 tìm theo tên có
      * khi mở nhầm kênh mà vẫn có tiếng, tự chọn tưởng là được) và các phím tắt M3U cùng tên ([m3u]).
      */
-    fun nguonCua(k: KenhTv, m3u: List<Nguon>): List<Nguon> = buildList {
+    fun nguonCua(k: KenhTv, m3u: List<Nguon>, iptv: Nguon? = null): List<Nguon> = buildList {
         if (k.ma.isNotEmpty()) add(Nguon(VTVGO, k.ten, ma = k.ma))
         if (k.so.isNotEmpty()) add(Nguon(TV360, k.ten360, so = k.so))
         if (k.fpt.isNotEmpty()) add(Nguon(FPT, k.tenFpt, ma = k.fpt))
+        if (iptv != null) add(iptv)
         addAll(m3u.filter { XuLyCau.khoaKenh(it.ten) in k.khoa })
+    }
+
+    /**
+     * Kênh IPTV cùng tên trong kết quả lệnh "tim" của app IPTV ("Result: Bundle[{ma=vtv3hd, ok=1, ten=VTV3 HD}]"); null nếu
+     * app trả lỗi / không có kênh đó. Danh sách không ghi tvg-id thì mã là tên đã gọn (app IPTV tìm lại theo tên).
+     */
+    fun iptvTu(out: String): Nguon? {
+        if (!out.contains("ok=1")) return null
+        // Ngoặc nhọn phải escape: regex của Android (ICU) báo lỗi cú pháp với "}" trần, regex của JVM (unit test) thì không.
+        val ma = Regex("""[\{ ]ma=([A-Za-z0-9_.@:+-]{1,80})[,\}]""").find(out)?.groupValues?.get(1).orEmpty()
+        val ten = Regex("""[\{ ]ten=(.*?)(?:, \w+=|\}\])""").find(out)?.groupValues?.get(1)?.trim().orEmpty()
+        if (ten.isEmpty()) return null
+        return Nguon(IPTV, ten, ma = ma.ifEmpty { XuLyCau.khoaKenh(ten) })
+    }
+
+    /** JSON đi trong lệnh content call qua ADB của Map Voice: chữ ngoài ASCII thành \uXXXX, nháy đơn cũng thế. */
+    fun jsonAscii(o: JSONObject): String = buildString {
+        for (c in o.toString()) if (c.code in 0x20..0x7e && c != '\'') append(c) else append(String.format("\\u%04x", c.code))
     }
 
     private val CHAY = Regex("""u/pid:(\d+)/\d+.*?state:(\w+).*?usage=(\w+)""")
@@ -135,6 +169,7 @@ object TuChonNguon {
 
     private val MA = Regex("[A-Za-z0-9_-]{1,60}")
     private val MA_M3U = Regex("[1-9][0-9]{0,8}")
+    private val MA_IPTV = Regex("[A-Za-z0-9_.@:+-]{1,80}")
 
     /** Nguồn của ô Auto TiviKit gửi qua app ô (kenh/): [{"app":"vtvgo","ten":"VTV1","ma":"1"},{"app":"tv360","so":"001"}…]; mục hỏng thì bỏ. */
     fun tuJson(s: String?): List<Nguon> {
@@ -145,6 +180,7 @@ object TuChonNguon {
             val ma = o.optString("ma").trim()
             when (app) {
                 VTVGO, FPT -> if (MA.matches(ma)) Nguon(app, ten, ma = ma) else null
+                IPTV -> if (MA_IPTV.matches(ma) && ten.isNotEmpty()) Nguon(app, ten, ma = ma) else null
                 M3U -> if (MA_M3U.matches(ma)) Nguon(app, ten, ma = ma) else null
                 TV360 -> Nguon(app, ten, so = XuLyCau.chuanSo(o.optString("so")) ?: "").takeIf { it.so.isNotEmpty() || ten.isNotEmpty() }
                 else -> null

@@ -13,7 +13,7 @@ import vn.tivikit.mapvoice.TuChonNguon.Nguon
 
 /**
  * Mở kênh tự chọn nguồn (Kênh nhanh Auto, 1/11/2026), chạy trong dịch vụ trợ năng của Map Voice: mở lần lượt các nguồn
- * (TuChonNguon.xep) tới khi app đó phát tiếng — hỏi `dumpsys audio` qua ADB của chính tivi theo uid của app (chưa nối ADB
+ * (TuChonNguon.xep; ô có thứ tự riêng thì đúng thứ tự đó, TuChonNguon.theoThuTu) tới khi app đó phát tiếng — hỏi `dumpsys audio` qua ADB của chính tivi theo uid của app (chưa nối ADB
  * thì hỏi Android có tiếng phim nào đang phát trong lúc app đó ở trước mặt). Nguồn không lên tiếng trong 20 giây (12 giây
  * nếu app đang chạy sẵn; thêm 10 giây khi app đã tạo trình phát) thì đóng app đó, sang nguồn kế; link M3U không trả lời thì
  * bỏ qua M3U. Nhớ thời gian lên tiếng và lần lỗi của từng nguồn để lần sau thử nguồn tốt trước.
@@ -29,16 +29,26 @@ class TuChon(private val dv: MapVoiceDichVu) {
 
     private enum class KetQua { PHAT, KHONG, THOI }
 
-    /** Mở kênh [ten] bằng một trong [nguon] (ô Auto: nguồn TiviKit đã tìm khi lưu ô); lời gọi mới huỷ việc cũ. */
-    fun mo(ten: String, nguon: List<Nguon>) {
+    /**
+     * Mở kênh [ten] bằng một trong [nguon] (ô Auto: nguồn TiviKit đã tìm khi lưu ô; [coDinh] = thứ tự riêng người dùng đặt,
+     * thử đúng thứ tự đó); lời gọi mới huỷ việc cũ.
+     */
+    fun mo(ten: String, nguon: List<Nguon>, coDinh: Boolean = false) {
         val ma = phien.incrementAndGet()
-        luong.execute { runCatching { chay(ma, ten, XuLyCau.khoaKenh(ten), dienLink(nguon)) } }
+        luong.execute { runCatching { chay(ma, ten, XuLyCau.khoaKenh(ten), dienLink(nguon), coDinh) } }
     }
 
-    /** Câu nói "mở VTV1" khi app kênh là "auto": nguồn Map Voice biết, kèm phím tắt M3U cùng tên trên tivi. */
+    /** Câu nói "mở VTV1" khi app kênh là "auto": nguồn Map Voice biết, kèm kênh IPTV và phím tắt M3U cùng tên trên tivi. */
     fun mo(k: KenhTv) {
         val ma = phien.incrementAndGet()
-        luong.execute { runCatching { chay(ma, k.ten, XuLyCau.khoaKenh(k.ten), TuChonNguon.nguonCua(k, phimTatM3u())) } }
+        luong.execute { runCatching { chay(ma, k.ten, XuLyCau.khoaKenh(k.ten), TuChonNguon.nguonCua(k, phimTatM3u(), iptvCua(k.ten))) } }
+    }
+
+    /** Kênh cùng tên trong danh sách IPTV (hỏi app IPTV qua ADB); null nếu tivi không có app đó / danh sách không có kênh này. */
+    private fun iptvCua(ten: String): Nguon? {
+        if (!dv.coApp(TuChonNguon.GOI_IPTV)) return null
+        val arg = TuChonNguon.jsonAscii(org.json.JSONObject().put("ten", ten))
+        return dv.adb("content call --uri content://${TuChonNguon.GOI_IPTV} --method tim --arg '$arg'", 20_000)?.let(TuChonNguon::iptvTu)
     }
 
     /** Thôi việc đang làm và thôi theo dõi (câu nói mới, dịch vụ tắt). */
@@ -57,14 +67,16 @@ class TuChon(private val dv: MapVoiceDichVu) {
     }
 
     /**
-     * Thử lần lượt các nguồn của kênh [ten]. [hongTruoc] = gói app vừa hỏng (theo dõi thấy mất tiếng): như app không lên
-     * tiếng, đóng nó sau khi đã mở nguồn kế, khỏi nháy màn Home giữa hai app (TX3, 1/11/2026).
+     * Thử lần lượt các nguồn của kênh [ten]: xếp theo các lần trước (TuChonNguon.xep), hay đúng thứ tự riêng nếu [coDinh].
+     * [hong] = nguồn vừa hỏng (theo dõi thấy mất tiếng): như app không lên tiếng, đóng app đó sau khi đã mở nguồn kế, khỏi
+     * nháy màn Home giữa hai app (TX3, 1/11/2026); thứ tự riêng thì thử các nguồn sau nó trước.
      */
-    private fun chay(ma: Int, ten: String, khoa: String, nguon: List<Nguon>, hongTruoc: String? = null) {
-        val ds = TuChonNguon.xep(nguon.filter { dv.coApp(it.goi) }, dv.kho.thongKe(khoa), System.currentTimeMillis())
+    private fun chay(ma: Int, ten: String, khoa: String, nguon: List<Nguon>, coDinh: Boolean = false, hong: Nguon? = null) {
+        val co = nguon.filter { dv.coApp(it.goi) }
+        val ds = if (coDinh) TuChonNguon.theoThuTu(co, hong) else TuChonNguon.xep(co, dv.kho.thongKe(khoa), System.currentTimeMillis())
         if (ds.isEmpty()) { dv.hien(dv.getString(R.string.auto_khong_co_app, ten), dai = true); return }
         var truoc: Nguon? = null
-        var dong = hongTruoc
+        var dong = hong?.goi
         for (n in ds) {
             if (ma != phien.get()) return
             if (n.app == TuChonNguon.M3U && n.url.isNotEmpty() && !linkSong(n.url)) { hong(khoa, n); continue }
@@ -82,7 +94,7 @@ class TuChon(private val dv: MapVoiceDichVu) {
             when (choPhat(ma, n.goi, uid, if (chaySan) HAN_CHAY_SAN else HAN, tu)) {
                 KetQua.PHAT -> {
                     dv.kho.ghiThongKe(khoa, n.khoa) { it.duoc(SystemClock.elapsedRealtime() - tu) }
-                    if (dv.kho.cauHinh.doiNguon) theoDoi(ma, ten, khoa, nguon, n, uid)
+                    if (dv.kho.cauHinh.doiNguon) theoDoi(ma, ten, khoa, nguon, coDinh, n, uid)
                     return
                 }
                 KetQua.THOI -> return
@@ -122,7 +134,7 @@ class TuChon(private val dv: MapVoiceDichVu) {
     }
 
     /** Đang xem kênh vừa mở bằng nguồn [n]: mất tiếng [IM_TOI_DA] mà không phải do người xem thì đổi nguồn. */
-    private fun theoDoi(ma: Int, ten: String, khoa: String, nguon: List<Nguon>, n: Nguon, uid: Int) {
+    private fun theoDoi(ma: Int, ten: String, khoa: String, nguon: List<Nguon>, coDinh: Boolean, n: Nguon, uid: Int) {
         val batDau = SystemClock.elapsedRealtime()
         // App trước mặt lúc bắt đầu (thường là chính nguồn; tivi báo đổi cửa sổ chậm thì có khi còn là launcher): đổi sang app khác thì thôi.
         val goc = dv.appTruoc
@@ -148,7 +160,7 @@ class TuChon(private val dv: MapVoiceDichVu) {
             if (giu != null && giu != n.goi) { nhuong = true; continue }
             dv.hien(dv.getString(R.string.auto_mat_tieng, ten, dv.tenApp(n.goi)), dai = true)
             hong(khoa, n)
-            chay(ma, ten, khoa, nguon, hongTruoc = n.goi)
+            chay(ma, ten, khoa, nguon, coDinh, hong = n)
             return
         }
     }
@@ -214,6 +226,8 @@ class TuChon(private val dv: MapVoiceDichVu) {
             TuChonNguon.VTVGO -> Intent(Intent.ACTION_VIEW, Uri.parse("vtvgo://play?mediaType=CHANNEL&contentId=${n.ma}")).setPackage(n.goi)
             // Deep link màn xem truyền hình của FPT Play bản tivi.
             TuChonNguon.FPT -> Intent(Intent.ACTION_VIEW, Uri.parse("https://fptplay.vn/xem-truyen-hinh/${n.ma}")).setPackage(n.goi)
+            // Màn phát của app IPTV của TiviKit: nó tự tìm link kênh trong danh sách mới nhất.
+            TuChonNguon.IPTV -> Intent().setClassName(TuChonNguon.GOI_IPTV, TuChonNguon.IPTV_PHAT).putExtra("ma", n.ma).putExtra("ten", n.ten)
             // Màn phát của M3U kèm mã kênh (như phím tắt Create Shortcut của M3U).
             TuChonNguon.M3U -> Intent(Intent.ACTION_VIEW).setClassName(TuChonNguon.GOI_M3U, TuChonNguon.M3U_PHAT)
                 .putExtra(TuChonNguon.M3U_MA_KENH, n.ma.toIntOrNull() ?: 0)

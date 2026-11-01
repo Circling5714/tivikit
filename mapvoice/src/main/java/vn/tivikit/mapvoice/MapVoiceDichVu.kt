@@ -90,8 +90,8 @@ class MapVoiceDichVu : AccessibilityService() {
 
     override fun onInterrupt() {}
 
-    /** Ô Kênh nhanh Auto (qua MoTuDong): mở kênh [ten] tự chọn trong [nguon]. */
-    fun moTuDong(ten: String, nguon: List<TuChonNguon.Nguon>) { tuChon?.mo(ten, nguon) }
+    /** Ô Kênh nhanh Auto (qua MoTuDong): mở kênh [ten] tự chọn trong [nguon] ([coDinh]: đúng thứ tự riêng của ô). */
+    fun moTuDong(ten: String, nguon: List<TuChonNguon.Nguon>, coDinh: Boolean = false) { tuChon?.mo(ten, nguon, coDinh) }
 
     /**
      * Làm việc cho câu [cau] (trên luồng [viec]); [epYouTube] = Trợ lý đã tự mở YouTube gốc cho câu này. Việc đã làm dạng

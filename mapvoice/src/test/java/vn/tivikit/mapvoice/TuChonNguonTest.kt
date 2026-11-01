@@ -122,6 +122,31 @@ class TuChonNguonTest {
         assertEquals(listOf(TuChonNguon.VTVGO), TuChonNguon.nguonCua(htv, emptyList()).map { it.app })
     }
 
+    @Test fun iptv_ketQuaTimVaJsonAscii() {
+        assertEquals(Nguon(TuChonNguon.IPTV, "VTV3 HD", ma = "vtv3hd"), TuChonNguon.iptvTu("Result: Bundle[{ma=vtv3hd, ok=1, ten=VTV3 HD}]"))
+        // Tên có dấu phẩy, mã rỗng (danh sách không ghi tvg-id) thì mã là tên đã gọn.
+        assertEquals(Nguon(TuChonNguon.IPTV, "Phim, Hay HD", ma = "phimhay"), TuChonNguon.iptvTu("Result: Bundle[{ma=, ok=1, ten=Phim, Hay HD}]"))
+        assertNull(TuChonNguon.iptvTu("Result: Bundle[{loi=khong co}]"))
+        // Chữ có dấu và nháy đơn thành mã thoát: lệnh thuần ASCII, không nháy đơn, đọc lại ra đúng tên.
+        val ascii = TuChonNguon.jsonAscii(org.json.JSONObject().put("ten", "Hà Nội 1 'x"))
+        assertTrue(ascii.all { it.code in 0x20..0x7e } && '\'' !in ascii)
+        assertEquals("Hà Nội 1 'x", org.json.JSONObject(ascii).getString("ten"))
+        // Thứ tự mặc định: IPTV sau FPT Play, trước M3U.
+        val iptv = Nguon(TuChonNguon.IPTV, "VTV1 HD", ma = "vtv1hd")
+        assertEquals(listOf(go, tv360, fpt, iptv, m3u), TuChonNguon.xep(listOf(m3u, iptv, fpt, tv360, go), emptyMap(), bay))
+        assertEquals("vn.tivikit.iptv", iptv.goi)
+    }
+
+    /** Ô có thứ tự riêng (1/11/2026): giữ đúng thứ tự, kể cả nguồn từng lỗi; mất tiếng thì thử các nguồn sau nó trước. */
+    @Test fun thuTuRieng_giuNguyenVaXoayKhiHong() {
+        val ds = listOf(tv360, go, fpt)
+        assertEquals(ds, TuChonNguon.theoThuTu(ds))
+        assertEquals(listOf(fpt, tv360, go), TuChonNguon.theoThuTu(ds, hong = go))
+        assertEquals(listOf(go, fpt, tv360), TuChonNguon.theoThuTu(ds, hong = tv360))
+        // Nguồn hỏng không còn trong danh sách (app vừa gỡ): giữ nguyên thứ tự.
+        assertEquals(ds, TuChonNguon.theoThuTu(ds, hong = m3u))
+    }
+
     @Test fun json_quaLaiVaBoMucHong() {
         val ds = listOf(go, tv360, fpt, m3u)
         assertEquals(ds, TuChonNguon.tuJson(TuChonNguon.json(ds)))

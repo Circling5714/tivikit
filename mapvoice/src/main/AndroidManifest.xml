@@ -23,6 +23,7 @@
         <package android:name="io.gh.reisxd.tizentube.cobalt" />
         <package android:name="net.fptplay.ottbox" />
         <package android:name="com.m3u.smartphone" />
+        <package android:name="vn.tivikit.iptv" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="www.youtube.com" />
