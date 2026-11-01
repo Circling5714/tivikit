@@ -291,6 +291,8 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | Home sạch → Áp dụng (lên bản mới), rồi Nút remote → dò một nút → "SmartTube – tìm bằng giọng nói" → Lưu → Thử nút | SmartTube mở màn tìm kiếm; đã bật "Tìm kiếm bằng giọng nói tức thì" trong SmartTube thì mic bật ngay |
 | Nối TiviKit vào một điện thoại (Gỡ lỗi không dây) | Hiện cảnh báo đỏ "không khai là tivi", nút dọn bị khoá |
 | Chế độ tivi LG (nếu có tivi LG) | Ghép đôi được, remote và gõ chữ chạy |
+| Tivi có tiện ích cũ hơn bản đi kèm (VD Kênh nhanh 1.2), đang ở Home không phát gì: nối tivi ở màn chính | Thẻ "N tiện ích có bản mới" hiện rồi tự cập nhật, thẻ báo "Đã cập nhật …"; kênh, lịch, cài đặt của tiện ích vẫn như cũ |
+| Như trên nhưng tivi đang phát video (hay đang mở app khác); rồi bấm Cập nhật hết | Không tự cập nhật, thẻ báo để sau; bấm Cập nhật hết thì cập nhật |
 
 ## Báo kết quả
 
