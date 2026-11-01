@@ -273,10 +273,10 @@ index 3632d74b..681ac5ae 100644
          if (live == null) return 0xFF444444;
          // Draw a private copy: changing the bounds of the drawable an ImageView shows would blank the tile.
 diff --git a/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java b/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
-index 233f9820..535b56fd 100644
+index 233f9820..6850a268 100644
 --- a/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
 +++ b/launcher/app/src/main/java/com/gathin/tvhome/HomeKeyService.java
-@@ -80,6 +80,11 @@ public class HomeKeyService extends AccessibilityService {
+@@ -80,6 +80,13 @@ public class HomeKeyService extends AccessibilityService {
      private Map<Integer, String> frontAppKeys = Collections.emptyMap();
      private Map<Integer, String> frontAppScancodes = Collections.emptyMap();
      private String frontPackage = "";
@@ -284,11 +284,13 @@ index 233f9820..535b56fd 100644
 +    private boolean wakeOpenApp, homeOnWake;
 +    /** CleanTV/VGS: home_target {package, class}, the launcher openHome opens instead of this one; null for this one. */
 +    private String[] homeTarget;
++    /** CleanTV/VGS (TiviKit): the stock launcher opened one of its own screens last (stockOwnScreen below). */
++    private boolean stockOwnScreen;
 +
      /** power_on_home_always: Home at every power-on, not only over Live TV. */
      private boolean powerOnAlways;
      /** power_on_home: re-arms after the screen turns on; null unless the key is on. */
-@@ -181,7 +186,12 @@ public class HomeKeyService extends AccessibilityService {
+@@ -181,7 +188,12 @@ public class HomeKeyService extends AccessibilityService {
          GuardKeep.stepOut(this);
      }
  
@@ -301,7 +303,7 @@ index 233f9820..535b56fd 100644
          // Keycodes and the panel choice can also come from a theme; theme.sh restarts this service.
          Config config = Config.load(this);
          // restore_key_services: note that this helper runs, so Home can put it back after a force stop. Here, not
-@@ -200,7 +210,13 @@ public class HomeKeyService extends AccessibilityService {
+@@ -200,7 +212,13 @@ public class HomeKeyService extends AccessibilityService {
          boolean watchFront = !frontAppKeys.isEmpty() || !frontAppScancodes.isEmpty();
          stockHome.clear();
          stockHomePackage = config.stockHomeRedirect;
@@ -316,7 +318,7 @@ index 233f9820..535b56fd 100644
              Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(config.stockHomeRedirect);
              for (ResolveInfo ri : getPackageManager().queryIntentActivities(home, PackageManager.MATCH_DISABLED_COMPONENTS)) {
                  stockHome.add(ri.activityInfo.name);
-@@ -213,6 +229,12 @@ public class HomeKeyService extends AccessibilityService {
+@@ -213,6 +231,12 @@ public class HomeKeyService extends AccessibilityService {
          powerOnLiveTv = config.powerOnHome && !config.bootToLiveTv && !config.liveTvPackage.equals(openOnStart)
                  ? config.liveTvPackage : "";
          powerOnAlways = config.powerOnHomeAlways && !config.bootToLiveTv && openOnStart.isEmpty();
@@ -329,7 +331,7 @@ index 233f9820..535b56fd 100644
          if (!powerOnLiveTv.isEmpty() || powerOnAlways) {
              armPowerOnHome();
          } else if (screenOnReceiver != null) {
-@@ -286,7 +308,9 @@ public class HomeKeyService extends AccessibilityService {
+@@ -286,7 +310,9 @@ public class HomeKeyService extends AccessibilityService {
              redirectHomeKey(event);
              return false;
          }
@@ -340,7 +342,43 @@ index 233f9820..535b56fd 100644
          if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) openHome();
          return true;
      }
-@@ -347,7 +371,18 @@ public class HomeKeyService extends AccessibilityService {
+@@ -319,7 +345,34 @@ public class HomeKeyService extends AccessibilityService {
+         }
+         // stock_home_redirect: the firmware turned the stock launcher back on and its home screen came up.
+         CharSequence cls = event.getClassName();
+-        if (!stockHome.isEmpty() && cls != null && stockHome.contains(cls.toString())) openHome();
++        if (stockHome.isEmpty() || cls == null) return;
++        if (!stockHome.contains(cls.toString())) {
++            CharSequence pkg = event.getPackageName();
++            stockOwnScreen = stockOwnScreen(stockOwnScreen, pkg != null && stockHomePackage.contentEquals(pkg), isActivity(event));
++        } else if (!stockOwnScreen) {
++            openHome();
++        }
++    }
++
++    /** CleanTV/VGS (TiviKit): stock_home_redirect leaves the stock home alone after one of the stock launcher's own
++     *  activities, until an activity of another app comes to the front. Google TV's Assistant shows its results (a typed
++     *  or spoken "giá vàng sjc hôm nay") in launcherx's home screen through the launcher's LauncherDeepLink gateway, and
++     *  the redirect covered them two seconds later (Skyworth, 01/11/2026). The Home key still redirects; dialogs, panels
++     *  and overlays don't count either way. */
++    static boolean stockOwnScreen(boolean before, boolean stockPackage, boolean activity) {
++        return activity ? stockPackage : before;
++    }
++
++    /** The window is an activity's, not a dialog, panel or overlay, nor one of an app this launcher can't see. */
++    private boolean isActivity(AccessibilityEvent event) {
++        CharSequence pkg = event.getPackageName(), cls = event.getClassName();
++        if (pkg == null || cls == null) return false;
++        try {
++            getPackageManager().getActivityInfo(new ComponentName(pkg.toString(), cls.toString()), 0);
++            return true;
++        } catch (PackageManager.NameNotFoundException notAnActivity) {
++            return false;
++        }
+     }
+ 
+     /** How long power_on_home stays armed after the screen turns on without a reboot. */
+@@ -347,7 +400,18 @@ public class HomeKeyService extends AccessibilityService {
  
      /** power_on_home_always: Home, unless a key was pressed since the screen came on (the user has the TV). */
      private void homeAtPowerOn() {
@@ -360,7 +398,7 @@ index 233f9820..535b56fd 100644
      }
  
      static boolean stillArmed(long now, long armedUntil) {
-@@ -413,6 +448,18 @@ public class HomeKeyService extends AccessibilityService {
+@@ -413,6 +477,18 @@ public class HomeKeyService extends AccessibilityService {
      }
  
      private void openHome() {
@@ -6074,6 +6112,27 @@ index 635bced9..964c6db2 100644
 +    <string name="now_playing_none">Nothing is playing</string>
 +    <string name="screensaver">Screensaver</string>
  </resources>
+diff --git a/launcher/app/src/test/java/com/gathin/tvhome/HomeKeyServiceTest.java b/launcher/app/src/test/java/com/gathin/tvhome/HomeKeyServiceTest.java
+index c1acb3e0..a1eb1b5b 100644
+--- a/launcher/app/src/test/java/com/gathin/tvhome/HomeKeyServiceTest.java
++++ b/launcher/app/src/test/java/com/gathin/tvhome/HomeKeyServiceTest.java
+@@ -57,4 +57,16 @@ public class HomeKeyServiceTest {
+         assertTrue(HomeKeyService.stillArmed(SOON, SOON + HomeKeyService.SCREEN_ON_WINDOW_MS));
+         assertFalse(HomeKeyService.stillArmed(SOON, 0));
+     }
++
++    // CleanTV/VGS (TiviKit): Google TV's Assistant opens its results in the stock home through launcherx's own gateway.
++    @Test public void theStockLaunchersOwnScreenKeepsItsHomeUntilAnotherApp() {
++        boolean own = HomeKeyService.stockOwnScreen(false, false, true); // the Assistant, another app
++        assertFalse(own);
++        own = HomeKeyService.stockOwnScreen(own, true, true); // launcherx's LauncherDeepLink
++        assertTrue(own);
++        own = HomeKeyService.stockOwnScreen(own, false, false); // a dialog or the volume bar on top
++        assertTrue(own);
++        own = HomeKeyService.stockOwnScreen(own, false, true); // another app comes to the front
++        assertFalse(own);
++    }
+ }
 diff --git a/launcher/app/src/test/java/com/gathin/tvhome/HomeTargetTest.java b/launcher/app/src/test/java/com/gathin/tvhome/HomeTargetTest.java
 new file mode 100644
 index 00000000..9e124acb
