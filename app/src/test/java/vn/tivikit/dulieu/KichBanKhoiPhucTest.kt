@@ -46,6 +46,7 @@ class KichBanKhoiPhucTest {
         assertTrue(s.contains("adb uninstall vn.tivikit.go"))
         assertTrue(s.contains("adb uninstall vn.tivikit.mapvoice"))
         assertTrue(s.contains("adb uninstall vn.tivikit.teleremote"))
+        assertTrue(s.contains("adb uninstall vn.tivikit.iptv"))
         assertTrue(s.contains("adb uninstall com.icm.cleantv.khoa"))
         assertTrue(s.contains("adb uninstall com.icm.cleantv.kenh"))
     }

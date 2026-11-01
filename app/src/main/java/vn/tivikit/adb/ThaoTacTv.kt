@@ -1460,6 +1460,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
         if (mapVoiceDaCai()) { bao(t("Gỡ Map Voice…", "Removing Map Voice…")); runCatching { goMapVoice() } }
         if (teleRemoteDaCai()) { bao(t("Gỡ Tele Remote…", "Removing Tele Remote…")); runCatching { goTeleRemote() } }
+        if (iptvDaCai()) { bao(t("Gỡ app IPTV…", "Removing the IPTV app…")); runCatching { goIptv() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { goTklHet() } }
@@ -1534,6 +1535,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (castDaCai()) { bao(t("Gỡ Cast SmartTube…", "Removing Cast to SmartTube…")); runCatching { goCast() } }
         if (mapVoiceDaCai()) { bao(t("Gỡ Map Voice…", "Removing Map Voice…")); runCatching { goMapVoice() } }
         if (teleRemoteDaCai()) { bao(t("Gỡ Tele Remote…", "Removing Tele Remote…")); runCatching { goTeleRemote() } }
+        if (iptvDaCai()) { bao(t("Gỡ app IPTV…", "Removing the IPTV app…")); runCatching { goIptv() } }
         if (boGoDaCai()) { bao(t("Gỡ bộ gõ tiếng Việt…", "Removing the Vietnamese typing helper…")); runCatching { goBoGo() } }
         // TiviKit Launcher đang là Home cũng gỡ: Home được đặt lại ở trên (có sao lưu) hay ngay bên dưới (không sao lưu).
         if (tklDaCai()) { bao(t("Gỡ TiviKit Launcher…", "Removing TiviKit Launcher…")); runCatching { goTklHet() } }
@@ -1957,6 +1959,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     }
 
     fun iptvDaCai(): Boolean = coGoi(Iptv.GOI)
+
+    /** Gỡ app IPTV (Khôi phục tivi): link danh sách và bản tải đi theo dữ liệu của app. */
+    fun goIptv() { if (iptvDaCai()) sh("pm uninstall ${Iptv.GOI}") }
 
     /** Trạng thái app IPTV (link, số kênh, lúc tải); null nếu chưa cài / không đọc được. */
     fun docIptv(): org.json.JSONObject? = if (!iptvDaCai()) null else docQua(Iptv.GOI)
