@@ -87,6 +87,15 @@ object TuChonNguon {
         m.groupValues[1].toIntOrNull() == uid && m.groupValues[2] == "started" && m.groupValues[3] in TIENG_XEM
     }
 
+    /**
+     * App có [uid] đã tạo trình phát tiếng phim (trạng thái nào cũng được: idle, paused…): đang chuẩn bị phát, chờ thêm chút
+     * (Skyworth 1/11/2026: VTVgo mở nguội có trình phát "idle" rồi mới "started" ở giây 17).
+     */
+    fun coTrinhPhat(dump: String, uid: Int): Boolean = dump.lineSequence().any { l ->
+        val m = CHAY.find(l) ?: return@any false
+        m.groupValues[1].toIntOrNull() == uid && m.groupValues[2] != "released" && m.groupValues[3] in TIENG_XEM
+    }
+
     private val GIU = Regex("""pack: (\S+)""")
 
     /**

@@ -472,7 +472,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     }
 
     /**
-     * Ô Auto vừa bấm: chờ một nguồn của ô lên trước mặt (Map Voice thử lần lượt, mỗi nguồn tới 15 giây), báo nguồn nào; nguồn
+     * Ô Auto vừa bấm: chờ một nguồn của ô lên trước mặt (Map Voice thử lần lượt, mỗi nguồn tới 20–30 giây), báo nguồn nào; nguồn
      * sau cùng mới lên là các nguồn trước không phát được.
      */
     private suspend fun thuAuto(k: KenhNhanh.Kenh) {

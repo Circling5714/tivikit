@@ -14,9 +14,9 @@ import vn.tivikit.mapvoice.TuChonNguon.Nguon
 /**
  * Mở kênh tự chọn nguồn (Kênh nhanh Auto, 1/11/2026), chạy trong dịch vụ trợ năng của Map Voice: mở lần lượt các nguồn
  * (TuChonNguon.xep) tới khi app đó phát tiếng — hỏi `dumpsys audio` qua ADB của chính tivi theo uid của app (chưa nối ADB
- * thì hỏi Android có tiếng phim nào đang phát trong lúc app đó ở trước mặt). Nguồn không lên tiếng trong 15 giây (10 giây
- * nếu app đang chạy sẵn) thì đóng app đó, sang nguồn kế; link M3U không trả lời thì bỏ qua M3U. Nhớ thời gian lên tiếng và
- * lần lỗi của từng nguồn để lần sau thử nguồn tốt trước.
+ * thì hỏi Android có tiếng phim nào đang phát trong lúc app đó ở trước mặt). Nguồn không lên tiếng trong 20 giây (12 giây
+ * nếu app đang chạy sẵn; thêm 10 giây khi app đã tạo trình phát) thì đóng app đó, sang nguồn kế; link M3U không trả lời thì
+ * bỏ qua M3U. Nhớ thời gian lên tiếng và lần lỗi của từng nguồn để lần sau thử nguồn tốt trước.
  *
  * Đang xem kênh mở theo cách này mà mất tiếng 9 giây (anh chọn 1/11/2026) thì đổi sang nguồn kế (CauHinh.doiNguon). Không
  * đổi khi: người xem vừa bấm phím (trừ âm lượng) ngay trước / trong lúc mất tiếng — tự tạm dừng, tua, mở menu; app khác giữ
@@ -106,14 +106,17 @@ class TuChon(private val dv: MapVoiceDichVu) {
     private fun choPhat(ma: Int, goi: String, uid: Int, han: Long, tu: Long): KetQua {
         // Kênh cũ của chính app này còn kêu trong một hai giây đầu: chưa hỏi vội.
         if (!ngu(ma, 2000)) return KetQua.THOI
+        // App đã tạo trình phát (đang chuẩn bị phát) thì chờ thêm, khỏi bỏ nguồn tốt chỉ vì tivi chậm.
+        var sapPhat = false
         while (true) {
             if (dv.lucBamPhim > tu + 1500) return KetQua.THOI
             val dump = dv.adb("dumpsys audio", 4000)
             if (dump != null) {
                 if (TuChonNguon.dangPhat(dump, uid)) return KetQua.PHAT
                 if (TuChonNguon.giuTieng(dump) == KHOA_TRE) return KetQua.THOI
+                sapPhat = sapPhat || TuChonNguon.coTrinhPhat(dump, uid)
             } else if (dv.appTruoc == goi && coTiengPhim()) return KetQua.PHAT
-            if (SystemClock.elapsedRealtime() - tu > han) return KetQua.KHONG
+            if (SystemClock.elapsedRealtime() - tu > han + (if (sapPhat) CHO_THEM else 0)) return KetQua.KHONG
             if (!ngu(ma, 1000)) return KetQua.THOI
         }
     }
@@ -188,9 +191,13 @@ class TuChon(private val dv: MapVoiceDichVu) {
 
     companion object {
         const val KHOA_TRE = "vn.tivikit.khoa"
-        /** Chờ lên tiếng: app mở nguội (màn chào, tải danh sách kênh) / app đang chạy sẵn. */
-        const val HAN = 15_000L
-        const val HAN_CHAY_SAN = 10_000L
+        /**
+         * Chờ lên tiếng: app mở nguội (màn chào, tải danh sách kênh) / app đang chạy sẵn; thêm [CHO_THEM] khi app đã tạo trình
+         * phát. Skyworth (MediaTek, 1/11/2026): VTVgo mở nguội lên tiếng ở giây 15–18, hạn 15 giây cũ bỏ nhầm nguồn tốt.
+         */
+        const val HAN = 20_000L
+        const val HAN_CHAY_SAN = 12_000L
+        const val CHO_THEM = 10_000L
         /** Mất tiếng bao lâu thì đổi nguồn (anh chọn 9 giây, 1/11/2026). */
         const val IM_TOI_DA = 9_000L
         const val BUOC_THEO_DOI = 1_500L

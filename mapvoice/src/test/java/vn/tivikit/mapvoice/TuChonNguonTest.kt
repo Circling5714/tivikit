@@ -71,6 +71,14 @@ class TuChonNguonTest {
         assertFalse(TuChonNguon.dangPhat(audio9.replace("USAGE_MEDIA", "USAGE_ASSISTANCE_SONIFICATION"), 10088))
     }
 
+    @Test fun coTrinhPhat_caKhiChuaPhat() {
+        assertTrue(TuChonNguon.coTrinhPhat(audio11, 10145))
+        assertTrue(TuChonNguon.coTrinhPhat(audio11, 10150))
+        // Tiếng bấm phím của hệ thống không tính; uid khác không có.
+        assertFalse(TuChonNguon.coTrinhPhat(audio11, 1000))
+        assertFalse(TuChonNguon.coTrinhPhat(audio11, 10087))
+    }
+
     @Test fun giuTieng_dauNganXep() {
         assertEquals("vn.vtv.vtvgotv", TuChonNguon.giuTieng(audio11))
         assertNull(TuChonNguon.giuTieng("Audio Focus stack entries (last is top of stack):\n\n  players:\n"))
