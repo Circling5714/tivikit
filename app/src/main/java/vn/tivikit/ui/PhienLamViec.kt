@@ -601,7 +601,7 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         val moi = if (ds.isEmpty()) emptyList() else runCatching {
             io {
                 val trenTv = tv.docTienIch(ds.map { it.goi })
-                ds.mapNotNull { m -> val d = diKem(m.apk); trenTv[m.goi]?.takeIf { TienIch.canCapNhat(it, d) }?.let { TienIch.CanCapNhat(m, it, d) } }
+                ds.mapNotNull { m -> val d = diKem(m.apk); trenTv[m.goi]?.takeIf { TienIch.canCapNhat(m, it, d) }?.let { TienIch.CanCapNhat(m, it, d) } }
             }
         }.getOrNull() ?: return
         if (thongTin !== info) return

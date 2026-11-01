@@ -39,10 +39,13 @@ object TienIch {
     const val GOI_KHOA = "vn.tivikit.khoa"
 
     /**
-     * Cần cập nhật: tivi có tiện ích này, khác SHA-256 bản đi kèm, và bản đi kèm không cũ hơn (không hạ một bản thử mới hơn
-     * đã cài tay; đọc không ra số bản đi kèm thì cũng thôi).
+     * Cần cập nhật [m]: tivi có tiện ích này và bản đi kèm có số bản (versionCode) lớn hơn. Riêng Home sạch (dựng từ
+     * CleanYourTV, TiviKit sửa mà giữ số bản của upstream) thì cùng số bản mà khác SHA-256 cũng cập nhật. App phụ của TiviKit
+     * cùng số bản thì thôi: CI dựng lại có lúc chỉ khác baseline profile (Cast 2.0.2 bản 1.19.3 → 1.20.0), cài lại là thừa.
+     * Không hạ bản trên tivi mới hơn (bản thử cài tay); đọc không ra số bản đi kèm thì cũng thôi.
      */
-    fun canCapNhat(trenTv: Ban?, diKem: Ban): Boolean = trenTv != null && diKem.so > 0 && trenTv.sha != diKem.sha && diKem.so >= trenTv.so
+    fun canCapNhat(m: Muc, trenTv: Ban?, diKem: Ban): Boolean = trenTv != null && diKem.so > 0 &&
+        (diKem.so > trenTv.so || (m.loai == Loai.HOME && diKem.so == trenTv.so && trenTv.sha != diKem.sha))
 
     /** Dòng hiện trên thẻ: "Tele Remote 1.0 → 1.0.1"; cùng số bản (bản dựng lại) thì "Home sạch 3.0 (bản dựng mới)". */
     fun moTa(c: CanCapNhat): String =

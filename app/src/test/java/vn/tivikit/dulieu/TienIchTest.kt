@@ -10,16 +10,23 @@ class TienIchTest {
     private val a = "a".repeat(64)
     private val b = "b".repeat(64)
 
-    @Test fun canCapNhat_khacShaVaKhongHaBan() {
+    private val tele = TienIch.Muc(TienIch.Loai.TELE_REMOTE, "vn.tivikit.teleremote", "teleremote.apk", "Tele Remote")
+    private val cast = TienIch.Muc(TienIch.Loai.CAST, "vn.tivikit.cast", "cast.apk", "Cast SmartTube")
+    private val home = TienIch.Muc(TienIch.Loai.HOME, "com.gathin.tvhome", "tvhome.apk", "Home sạch")
+
+    @Test fun canCapNhat_soBanLonHon_HomeSachSoCaSha() {
         // Tele Remote 1.0 (1) trên tivi, đi kèm 1.0.1 (2).
-        assertTrue(TienIch.canCapNhat(TienIch.Ban(1, "1.0", a), TienIch.Ban(2, "1.0.1", b)))
-        // Dựng lại cùng số bản (Home sạch 3.0, versionCode 9): vẫn cập nhật.
-        assertTrue(TienIch.canCapNhat(TienIch.Ban(9, "3.0", a), TienIch.Ban(9, "3.0", b)))
-        // Đúng bản đi kèm, tivi chưa có, bản thử mới hơn trên tivi, không đọc ra số bản đi kèm: thôi.
-        assertFalse(TienIch.canCapNhat(TienIch.Ban(2, "1.0.1", b), TienIch.Ban(2, "1.0.1", b)))
-        assertFalse(TienIch.canCapNhat(null, TienIch.Ban(2, "1.0.1", b)))
-        assertFalse(TienIch.canCapNhat(TienIch.Ban(3, "1.0.2", a), TienIch.Ban(2, "1.0.1", b)))
-        assertFalse(TienIch.canCapNhat(TienIch.Ban(1, "1.0", a), TienIch.Ban(0, "", b)))
+        assertTrue(TienIch.canCapNhat(tele, TienIch.Ban(1, "1.0", a), TienIch.Ban(2, "1.0.1", b)))
+        // Cast 2.0.2 (6) dựng lại trên CI chỉ khác baseline profile: cùng số bản thì thôi.
+        assertFalse(TienIch.canCapNhat(cast, TienIch.Ban(6, "2.0.2", a), TienIch.Ban(6, "2.0.2", b)))
+        // Home sạch dựng lại cùng số bản (3.0, versionCode 9 của upstream, TiviKit sửa): vẫn cập nhật; tivi mới hơn thì thôi.
+        assertTrue(TienIch.canCapNhat(home, TienIch.Ban(9, "3.0", a), TienIch.Ban(9, "3.0", b)))
+        assertFalse(TienIch.canCapNhat(home, TienIch.Ban(10, "3.1", a), TienIch.Ban(9, "3.0", b)))
+        assertFalse(TienIch.canCapNhat(home, TienIch.Ban(9, "3.0", b), TienIch.Ban(9, "3.0", b)))
+        // Tivi chưa có, bản thử mới hơn trên tivi, không đọc ra số bản đi kèm: thôi.
+        assertFalse(TienIch.canCapNhat(tele, null, TienIch.Ban(2, "1.0.1", b)))
+        assertFalse(TienIch.canCapNhat(tele, TienIch.Ban(3, "1.0.2", a), TienIch.Ban(2, "1.0.1", b)))
+        assertFalse(TienIch.canCapNhat(tele, TienIch.Ban(1, "1.0", a), TienIch.Ban(0, "", b)))
     }
 
     @Test fun docKetQua_dongCuaLenh() {
