@@ -32,17 +32,17 @@ import vn.tivikit.dulieu.XaPhuong
 import vn.tivikit.t
 
 /**
- * Màn Kênh nhanh (25/10/2026; 26/10/2026 thêm ô VTVgo; 31/10/2026 ô FPT Play): các ô kênh (VTV1, VTV3, HTV7…), mỗi ô mở
- * thẳng một kênh trên TV360, VTVgo hoặc FPT Play, gán được một nút remote. Ô soạn chọn app của ô bằng ô chia đoạn TV360 ·
- * VTVgo · FPT Play.
+ * Màn Kênh nhanh (25/10/2026; 26/10/2026 thêm ô VTVgo; 31/10/2026 ô FPT Play; 1/11/2026 ô M3U): các ô kênh (VTV1, VTV3,
+ * HTV7…), mỗi ô mở thẳng một kênh trên TV360, VTVgo, FPT Play hoặc M3U, gán được một nút remote. Ô soạn chọn app của ô
+ * bằng ô chia đoạn TV360 · VTVgo · FPT Play · M3U.
  */
 @Composable
 internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
     val k = vm.kenhNhanh
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(t("Kênh nhanh", "Quick channel"), style = KieuTieuDeLon)
-        Phu(t("Mỗi ô kênh là một ô trên Home sạch và TiviKit Launcher, mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360, VTVgo hoặc FPT Play, mang logo kênh, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
-            "Each channel tile is a tile on the clean Home and TiviKit Launcher that opens one channel (VTV1, VTV3, HTV7…) in TV360, VTVgo or FPT Play, with the channel's logo, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
+        Phu(t("Mỗi ô kênh là một ô trên Home sạch và TiviKit Launcher, mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360, VTVgo, FPT Play hoặc M3U, mang logo kênh, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
+            "Each channel tile is a tile on the clean Home and TiviKit Launcher that opens one channel (VTV1, VTV3, HTV7…) in TV360, VTVgo, FPT Play or M3U, with the channel's logo, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
     }
     if (vm.daCoHomeSach && k.homeCu) CanhBaoKenh(vm,
         t("Home sạch trên tivi là bản cũ nên ô chưa hiện logo kênh. Mở Home sạch, bấm Áp dụng lên tivi một lần (app tự cập nhật, giữ giao diện).",
@@ -78,11 +78,12 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
 
     val sua = k.dangSua
     if (sua != null || k.ds.size < KenhNhanh.SO_O) The(if (sua != null) t("Sửa ô $sua", "Edit tile $sua") else t("Thêm ô kênh", "Add a channel tile"), Icons.Rounded.AddToQueue) {
-        ChonDoan(listOf("TV360", "VTVgo", "FPT Play"), k.app) { k.app = it }
+        ChonDoan(listOf("TV360", "VTVgo", "FPT Play", "M3U"), k.app) { k.app = it }
         when (k.app) {
             0 -> SoanTv360(vm)
             1 -> SoanVtvGo(vm)
-            else -> SoanFpt(vm)
+            2 -> SoanFpt(vm)
+            else -> SoanM3u(vm)
         }
         if (vm.daCoHomeSach) Hang(t("Thêm ô vào dock", "Put the tile in the dock"),
             t("Ô mang tên kênh ở hàng dock; tắt thì ô chỉ nằm trong danh sách app.", "A tile named after the channel in the dock; off keeps it in the app list only."),
@@ -162,6 +163,32 @@ private fun SoanFpt(vm: PhienLamViec) {
     NutPhu(t("Kênh khác trên FPT Play (địa phương, quốc tế…)", "Other FPT Play channels (local, international…)"), Icons.Rounded.Search) { k.moChonFpt = true }
     Phu(t("Ô mở thẳng kênh trong app FPT Play. Xem kênh cần đăng nhập FPT Play trên tivi: chưa đăng nhập thì FPT Play hỏi đăng nhập. 💎 = kênh cần gói của FPT Play (chưa mua gói thì FPT Play hỏi mua); VTV1, ANTV, QPVN, HaNoiTV và đài địa phương xem được khi đã đăng nhập. ✓ = kênh đã có ô.",
         "The tile opens the channel straight in the FPT Play app. Watching needs an FPT Play login on the TV: if you're signed out, FPT Play asks you to sign in. 💎 = the channel needs an FPT Play package (without one, FPT Play offers to sell it); VTV1, ANTV, QPVN, HaNoiTV and local stations play once signed in. ✓ = already has a tile."))
+}
+
+/**
+ * Ô soạn, kênh M3U (1/11/2026): kênh có phím tắt trong M3UAndroid. M3U không cho app khác đọc danh sách kênh, chỉ mở được
+ * kênh theo mã của phím tắt người dùng tạo (giữ OK trên kênh → Create Shortcut).
+ */
+@Composable
+private fun SoanM3u(vm: PhienLamViec) {
+    val k = vm.kenhNhanh
+    if (!k.coM3u) CanhBaoKenh(vm, t("Tivi chưa có M3U (M3UAndroid): cài ở Cài app → Gợi ý (nhóm YouTube, xem video, IPTV), mở M3U, thêm danh sách kênh của anh, rồi mở lại màn này.",
+        "The TV doesn't have M3U (M3UAndroid): install it under Install apps → Suggestions (YouTube, video & IPTV), open it, add your playlist, then reopen this screen."),
+        t("Mở Cài app", "Open Install apps")) { vm.moCaiApk() }
+    else {
+        Phu(t("Chọn kênh:", "Pick a channel:"))
+        val dangChon = k.kenhM3u
+        if (k.dsM3u.isEmpty()) Phu(t("Chưa có kênh nào có phím tắt trong M3U.", "No M3U channel has a shortcut yet."), Cam)
+        k.dsM3u.chunked(4).forEach { hang ->
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                hang.forEach { (ten, ma) -> ChonChip(if (k.daCoM3u(ma)) "$ten ✓" else ten, dangChon?.second == ma) { k.chonM3u(ten, ma) } }
+            }
+        }
+        if (dangChon != null) Text(t("Kênh của ô: ${dangChon.first}", "Tile channel: ${dangChon.first}"), fontWeight = FontWeight.SemiBold, color = ChuChinh)
+        NutPhu(t("Tải lại kênh M3U", "Reload M3U channels"), Icons.Rounded.Refresh) { k.taiLaiM3u() }
+    }
+    Phu(t("M3U không cho app khác đọc danh sách kênh, chỉ mở được kênh đã có phím tắt: trong M3U trên tivi mở danh sách kênh, giữ OK trên một kênh → Create Shortcut; làm cho mỗi kênh muốn có ô, rồi bấm Tải lại. Ô mở M3U và phát ngay kênh đó. Xoá danh sách phát trong M3U rồi thêm lại thì mã kênh đổi: tạo lại phím tắt rồi sửa ô. ✓ = kênh đã có ô.",
+        "M3U doesn't let other apps read its channel list, so only channels with a shortcut can be opened: in M3U on the TV, open the channel list, hold OK on a channel → Create Shortcut; do it for each channel you want, then tap Reload. The tile opens M3U and plays that channel. If you delete the playlist in M3U and add it again, the channel ids change: create the shortcuts again and edit the tiles. ✓ = already has a tile."))
 }
 
 /**

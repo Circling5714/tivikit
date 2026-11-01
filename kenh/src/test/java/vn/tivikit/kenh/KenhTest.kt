@@ -60,4 +60,18 @@ class KenhTest {
         assertEquals("001", tv360.getString("so"))
         assertFalse(tv360.has("app"))
     }
+
+    /** Ô M3U (1/11/2026): mã kênh của M3UAndroid là số (phím tắt channel_473 trên Skyworth là VTV1 HD). */
+    @Test fun m3u_jsonKhuHoi() {
+        val k = Kenh("", "VTV1 HD", "473", Kenh.APP_M3U)
+        assertTrue(k.laM3u)
+        assertFalse(k.laFpt || k.laVtvGo)
+        assertEquals(k, Kenh.tuJson(k.json()))
+        assertEquals("m3u", org.json.JSONObject(k.json()).getString("app"))
+        assertEquals(k, Kenh.tuJson("""{"app":"m3u","ma":" 473 ","ten":"VTV1 HD"}"""))
+        // Mã phải là số nguyên dương (đi vào extra kiểu int của M3U).
+        assertNull(Kenh.tuJson("""{"app":"m3u","ma":"vtv1","ten":"VTV1"}"""))
+        assertNull(Kenh.tuJson("""{"app":"m3u","ma":"0","ten":"VTV1"}"""))
+        assertNull(Kenh.tuJson("""{"app":"m3u","ma":"12345678901","ten":"VTV1"}"""))
+    }
 }

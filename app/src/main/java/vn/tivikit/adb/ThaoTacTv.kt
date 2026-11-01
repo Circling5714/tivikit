@@ -1651,6 +1651,13 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     fun docKenh(o: Int): org.json.JSONObject? = if (!kenhDaCai(o)) null else docQua(KenhNhanh.goiCua(o))
 
     /**
+     * Kênh M3U có phím tắt trên tivi (KenhNhanh.kenhM3u, 1/11/2026): (tên, mã). Rỗng nếu chưa có phím tắt nào hay tivi
+     * không có M3U; chỉ đọc phần của gói M3U trong `dumpsys shortcut`.
+     */
+    fun docKenhM3u(): List<Pair<String, String>> =
+        KenhNhanh.kenhM3u(sh("dumpsys shortcut | sed -n '/Package: ${KenhNhanh.M3U}/,/Package: /p'"))
+
+    /**
      * Cài app của ô [o] (chưa có, hoặc khác bản đi kèm TiviKit thì cài đè — như capNhatLauncher) rồi đặt kênh.
      * [json] không chứa nháy đơn (KenhNhanh.tenSach).
      */

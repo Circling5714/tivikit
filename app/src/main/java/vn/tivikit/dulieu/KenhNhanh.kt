@@ -8,7 +8,8 @@ import org.json.JSONObject
  * app phụ nhỏ trên tivi (module kenh/, flavor o1 … o6) mở thẳng một kênh rồi tự đóng. Mỗi ô một app vì Home sạch mở app
  * và gán nút remote theo tên gói. Ô TV360: kênh chọn theo số kênh TV360 hiện trong danh sách kênh (shortcutKeyboard, 3
  * chữ số), tên dự phòng khi TV360 đổi số. Ô VTVgo (26/10/2026, trước là ô link của Home sạch, KenhVtvGo): mã kênh của
- * VTVgo. Ô FPT Play (31/10/2026, KenhFpt): mã kênh của FPT Play. Ô trên Home sạch mang tên kênh qua app_labels.
+ * VTVgo. Ô FPT Play (31/10/2026, KenhFpt): mã kênh của FPT Play. Ô M3U (1/11/2026): mã kênh (số) của M3UAndroid, lấy từ
+ * phím tắt người dùng tạo trong M3U (kenhM3u). Ô trên Home sạch mang tên kênh qua app_labels.
  */
 object KenhNhanh {
     /** Số ô kênh tối đa (số flavor của module kenh/). */
@@ -18,10 +19,13 @@ object KenhNhanh {
     const val TV360 = "com.viettel.tv360.tv"
     const val VTVGO = KenhVtvGo.GOI
     const val FPTPLAY = KenhFpt.GOI
+    /** M3UAndroid (1/11/2026): trình phát IPTV mã nguồn mở, người dùng tự thêm danh sách kênh (Gợi ý app). */
+    const val M3U = "com.m3u.smartphone"
     /** Loại ô (khoá "app" trong JSON của app phụ; ô TV360 không ghi). */
     const val LOAI_TV360 = "tv360"
     const val LOAI_VTVGO = "vtvgo"
     const val LOAI_FPT = "fptplay"
+    const val LOAI_M3U = "m3u"
 
     fun goiCua(o: Int): String = if (o == 1) GOI else "$GOI$o"
     /** Màn mở kênh của ô [o] (bấm ô / nút remote cũng vào đây). */
@@ -39,17 +43,18 @@ object KenhNhanh {
     data class Kenh(val so: String, val ten: String, val ma: String = "", val loai: String = if (ma.isEmpty()) LOAI_TV360 else LOAI_VTVGO) {
         val laVtvGo: Boolean get() = loai == LOAI_VTVGO
         val laFpt: Boolean get() = loai == LOAI_FPT
+        val laM3u: Boolean get() = loai == LOAI_M3U
         val laTv360: Boolean get() = loai == LOAI_TV360
         /** App mở kênh này. */
-        val app: String get() = when (loai) { LOAI_VTVGO -> VTVGO; LOAI_FPT -> FPTPLAY; else -> TV360 }
+        val app: String get() = when (loai) { LOAI_VTVGO -> VTVGO; LOAI_FPT -> FPTPLAY; LOAI_M3U -> M3U; else -> TV360 }
         /** Tên app mở kênh này, cho người dùng. */
         val tenApp: String get() = tenAppCua(app)
         /** Cùng một kênh trên cùng app (để không làm hai ô một kênh). */
         fun trung(k: Kenh): Boolean = loai == k.loai && if (laTv360) so == k.so else ma == k.ma
     }
 
-    /** Tên app xem kênh [goi] (TV360 / VTVgo / FPT Play), cho người dùng. */
-    fun tenAppCua(goi: String): String = when (goi) { VTVGO -> "VTVgo"; FPTPLAY -> "FPT Play"; else -> "TV360" }
+    /** Tên app xem kênh [goi] (TV360 / VTVgo / FPT Play / M3U), cho người dùng. */
+    fun tenAppCua(goi: String): String = when (goi) { VTVGO -> "VTVgo"; FPTPLAY -> "FPT Play"; M3U -> "M3U"; else -> "TV360" }
 
     /** Kênh hay xem, số theo danh sách kênh trên tv360.vn (25/10/2026). */
     val GOI_Y = listOf(
@@ -75,17 +80,41 @@ object KenhNhanh {
         .apply { if (k.laTv360) put("so", k.so) else put("app", k.loai).put("ma", k.ma) }.toString())
 
     private val MA_GO = Regex("[A-Za-z0-9_-]{1,60}")
+    /** Mã kênh của M3U: số nguyên dương (như app phụ, đi vào extra kiểu int của M3U). */
+    private val MA_M3U = Regex("[1-9][0-9]{0,8}")
 
     fun tuJson(j: JSONObject?): Kenh? {
         if (j == null) return null
         val ten = j.optString("ten").trim()
         val loai = j.optString("app")
-        if (loai == LOAI_VTVGO || loai == LOAI_FPT) {
+        if (loai == LOAI_VTVGO || loai == LOAI_FPT || loai == LOAI_M3U) {
             val ma = j.optString("ma").trim()
-            return if (MA_GO.matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma, loai) else null
+            return if ((if (loai == LOAI_M3U) MA_M3U else MA_GO).matches(ma) && ten.isNotEmpty()) Kenh("", ten, ma, loai) else null
         }
         val so = chuanSo(j.optString("so")) ?: return null
         return Kenh(so, ten)
+    }
+
+    private val PHIM_TAT_M3U = Regex("""ShortcutInfo \{id=channel_([1-9][0-9]{0,8}),""")
+    private val TEN_PHIM_TAT = Regex("""shortLabel=(.*), resId=""")
+
+    /**
+     * Kênh M3U (1/11/2026): M3UAndroid không cho app khác đọc danh sách kênh, chỉ mở được kênh theo mã (số) của nó. Mã lấy
+     * từ phím tắt người dùng tạo trong M3U (giữ OK trên kênh → Create Shortcut: id "channel_<mã>", tên kênh) đọc trong
+     * `dumpsys shortcut` của tivi; [dump] là phần của gói M3U. Trả (tên, mã) theo thứ tự trong bản dump, bỏ trùng mã; phím
+     * tắt "channel_recently" (kênh vừa xem) không tính.
+     */
+    fun kenhM3u(dump: String): List<Pair<String, String>> {
+        val ds = LinkedHashMap<String, String>()
+        var ma: String? = null
+        for (l in dump.lines()) {
+            val id = PHIM_TAT_M3U.find(l)
+            if (id != null) { ma = id.groupValues[1]; continue }
+            if (l.contains("ShortcutInfo {")) { ma = null; continue }
+            val ten = TEN_PHIM_TAT.find(l)?.groupValues?.get(1)?.trim()
+            if (ma != null && !ten.isNullOrEmpty()) { ds.putIfAbsent(ma, ten); ma = null }
+        }
+        return ds.map { (m, ten) -> ten to m }
     }
 
     private fun chu(a: JSONArray?): List<String> = if (a == null) emptyList()

@@ -134,4 +134,40 @@ class KenhNhanhTest {
         // Home sạch đang dùng dock mặc định: không đụng vào.
         assertNull(KenhNhanh.datDock(JSONObject(), KenhNhanh.GOI, true, 8))
     }
+
+    /** Ô M3U (1/11/2026): mã kênh là số của M3UAndroid; JSON gửi app phụ như ô VTVgo / FPT Play. */
+    @Test fun m3u_jsonVaApp() {
+        val k = KenhNhanh.Kenh("", "VTV1 HD", "473", KenhNhanh.LOAI_M3U)
+        assertTrue(k.laM3u)
+        assertEquals(KenhNhanh.M3U, k.app)
+        assertEquals("M3U", k.tenApp)
+        val j = JSONObject(KenhNhanh.json(k))
+        assertEquals(listOf("m3u", "473", "VTV1 HD"), listOf(j.getString("app"), j.getString("ma"), j.getString("ten")))
+        assertEquals(k, KenhNhanh.tuJson(j))
+        assertNull(KenhNhanh.tuJson(JSONObject("""{"app":"m3u","ma":"vtv1","ten":"VTV1"}""")))
+        // Cùng mã trên M3U là trùng; cùng mã mà khác app (ô VTVgo mã 473) thì không.
+        assertTrue(k.trung(KenhNhanh.Kenh("", "VTV1", "473", KenhNhanh.LOAI_M3U)))
+        assertFalse(k.trung(KenhNhanh.Kenh("", "VTV1 HD", "473")))
+    }
+
+    /** Phím tắt kênh của M3U trong `dumpsys shortcut` (chép từ Skyworth, 1/11/2026; thêm một phím tắt có dấu phẩy trong tên). */
+    @Test fun m3u_docPhimTat() {
+        val dump = """
+              Package: com.m3u.smartphone  UID: 10161
+                Calls: 0
+                  ShortcutInfo {id=channel_recently, flags=0x1a4 [ImManIc-rStr]
+                    shortLabel=Recently, resId=2131886112[app_shortcut_channel_recently_short_label]
+                    intents=[Intent { act=android.intent.action.VIEW flg=0x1000c000 cmp=com.m3u.smartphone/com.m3u.business.channel.PlayerActivity }/PersistableBundle[{shortcut:channel-recently=true}]]
+                  ShortcutInfo {id=channel_473, flags=0x89 [DynIc-fStr]
+                    shortLabel=VTV1 HD, resId=0[null]
+                    intents=[Intent { act=android.intent.action.VIEW cmp=com.m3u.smartphone/.ui.business.channel.PlayerActivity }/PersistableBundle[{shortcut:channel-id=473}]]
+                  ShortcutInfo {id=channel_501, flags=0x89 [DynIc-fStr]
+                    shortLabel=HTV7, Thể thao, resId=0[null]
+                  ShortcutInfo {id=channel_473, flags=0x89 [DynIc-fStr]
+                    shortLabel=VTV1 HD, resId=0[null]
+              Package: com.khac
+        """.trimIndent()
+        assertEquals(listOf("VTV1 HD" to "473", "HTV7, Thể thao" to "501"), KenhNhanh.kenhM3u(dump))
+        assertEquals(emptyList<Pair<String, String>>(), KenhNhanh.kenhM3u(""))
+    }
 }

@@ -4,4 +4,5 @@
     <string name="chua_co_tv360">Tivi chưa có TV360. Cài TV360 từ CH Play rồi bấm lại.</string>
     <string name="chua_co_vtvgo">Tivi chưa có VTVgo. Cài VTVgo từ CH Play rồi bấm lại.</string>
     <string name="chua_co_fptplay">Tivi chưa có FPT Play. Cài FPT Play từ CH Play rồi bấm lại.</string>
+    <string name="chua_co_m3u">Tivi chưa có M3U (M3UAndroid). Cài từ TiviKit → Cài app → Gợi ý rồi bấm lại.</string>
 </resources>
