@@ -5,6 +5,7 @@ package vn.tivikit.adb
  * tv-remote của HoangTran0410, MIT): như máy chủ scrcpy, không cài gì lên tivi, chỉ đặt một file vài KB vào /data/local/tmp
  * (đúng bản thì khỏi đẩy lại). TenApp: tên và ảnh của app, hỏi PackageManager của chính tivi — một lần chạy cho cả danh
  * sách, thay vì đọc từng APK (TenApk). Thử trên TX3 Mini: tên 99 gói trong ~2 giây; ảnh 12 app ~1,9 giây, ~3,8 KB mỗi app.
+ * Biểu tượng riêng (1/11/2026): huy hiệu app nguồn ở góc ô Kênh nhanh.
  */
 class TrenTv(private val adb: KetNoiAdb) {
     /** Tên một app trên tivi, kèm versionCode để biết lúc app cập nhật. */
@@ -25,6 +26,14 @@ class TrenTv(private val adb: KetNoiAdb) {
         if (ds.isEmpty()) return emptyMap()
         datLen(lay)
         return docAnh(adb.shell(lenh("TenApp anh $canh ${ds.joinToString(" ")}"), 60))
+    }
+
+    /** Biểu tượng của [goi] (không lấy banner), PNG cạnh dài nhất [canh] px: huy hiệu app nguồn ở góc ô Kênh nhanh (AnhOKenh). */
+    fun bieuTuong(lay: () -> ByteArray, goi: List<String>, canh: Int = 112): Map<String, ByteArray> {
+        val ds = goi.filter { ThaoTacTv.TEN_GOI.matches(it) }
+        if (ds.isEmpty()) return emptyMap()
+        datLen(lay)
+        return docBieuTuong(adb.shell(lenh("TenApp bieu-tuong $canh ${ds.joinToString(" ")}"), 60))
     }
 
     /** Đặt file lên tivi khi tivi chưa có đúng bản (so SHA-256; tivi không có sha256sum thì đẩy lại, file chỉ vài KB). */
@@ -56,6 +65,14 @@ class TrenTv(private val adb: KetNoiAdb) {
             val ma = c[1].toLongOrNull() ?: return@mapNotNull null
             val anh = runCatching { java.util.Base64.getDecoder().decode(c[3]) }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
             c[0] to AnhTv(ma, c[2] == "B", anh)
+        }.toMap()
+
+        /** Dòng "gói TAB versionCode TAB base64" của TenApp bieu-tuong: gói → ảnh PNG. */
+        fun docBieuTuong(out: String): Map<String, ByteArray> = out.lineSequence().mapNotNull { l ->
+            val c = l.trimEnd('\r').split('\t')
+            if (c.size != 3 || !ThaoTacTv.TEN_GOI.matches(c[0]) || c[1].toLongOrNull() == null) return@mapNotNull null
+            val anh = runCatching { java.util.Base64.getDecoder().decode(c[2]) }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            c[0] to anh
         }.toMap()
 
         /** Ngược của Chu.thoat (module trentv): \\uXXXX, \\t, \\n, \\\\. */

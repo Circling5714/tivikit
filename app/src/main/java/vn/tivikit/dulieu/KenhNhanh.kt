@@ -21,6 +21,8 @@ object KenhNhanh {
     const val FPTPLAY = KenhFpt.GOI
     /** M3UAndroid (1/11/2026): trình phát IPTV mã nguồn mở, người dùng tự thêm danh sách kênh (Gợi ý app). */
     const val M3U = "com.m3u.smartphone"
+    /** Các app xem kênh của ô (biểu tượng của chúng làm huy hiệu ở góc ô, AnhOKenh). */
+    val APP_XEM = listOf(TV360, VTVGO, FPTPLAY, M3U)
     /** Loại ô (khoá "app" trong JSON của app phụ; ô TV360 không ghi). */
     const val LOAI_TV360 = "tv360"
     const val LOAI_VTVGO = "vtvgo"

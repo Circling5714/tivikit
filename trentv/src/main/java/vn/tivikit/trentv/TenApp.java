@@ -19,6 +19,8 @@ import java.io.ByteArrayOutputStream;
  *   ten                 mỗi gói một dòng: gói TAB versionCode TAB tên
  *   anh <cạnh> <gói>…  mỗi gói một dòng: gói TAB versionCode TAB B|I TAB ảnh WebP base64 — banner (B) nếu app có, không thì
  *                       biểu tượng (I), giữ tỉ lệ, cạnh dài nhất <cạnh> px (như TenApk.veAnh)
+ *   bieu-tuong <cạnh> <gói>…  mỗi gói một dòng: gói TAB versionCode TAB ảnh PNG base64 — chỉ biểu tượng (không banner), để
+ *                       TiviKit vẽ huy hiệu app nguồn ở góc ô Kênh nhanh (1/11/2026)
  * Lỗi chung: một dòng "loi TAB lý do". Chữ đi qua Chu.thoat nên cả đầu ra là ASCII.
  */
 public final class TenApp {
@@ -30,7 +32,8 @@ public final class TenApp {
             PackageManager pm = heThong().getPackageManager();
             if (args.length >= 1 && args[0].equals("ten")) inTen(pm);
             else if (args.length >= 2 && args[0].equals("anh")) inAnh(pm, Integer.parseInt(args[1]), args);
-            else System.out.println("loi\tten | anh <canh> <goi>...");
+            else if (args.length >= 2 && args[0].equals("bieu-tuong")) inBieuTuong(pm, Integer.parseInt(args[1]), args);
+            else System.out.println("loi\tten | anh <canh> <goi>... | bieu-tuong <canh> <goi>...");
         } catch (Throwable e) {
             System.out.println("loi\t" + Chu.thoat(String.valueOf(e)));
         }
@@ -79,9 +82,28 @@ public final class TenApp {
         }
     }
 
+    private static void inBieuTuong(PackageManager pm, int canh, String[] args) {
+        for (int i = 2; i < args.length; i++) {
+            String goi = args[i];
+            try {
+                PackageInfo pi = pm.getPackageInfo(goi, 0);
+                Drawable d = pi.applicationInfo.loadIcon(pm);
+                System.out.println(goi + '\t' + ma(pi) + '\t' + Base64.encodeToString(anh(d, canh, Bitmap.CompressFormat.PNG), Base64.NO_WRAP));
+            } catch (Throwable ignored) {
+                // Gói vừa gỡ, ảnh không vẽ được: bỏ qua, ô không có huy hiệu.
+            }
+        }
+    }
+
     /** Vẽ [d] ra bitmap giữ tỉ lệ, cạnh dài nhất [canh] px, nén WebP (vài KB một ảnh, base64 qua shell được). */
     @SuppressWarnings("deprecation")
     static byte[] webp(Drawable d, int canh) {
+        return anh(d, canh, Bitmap.CompressFormat.WEBP);
+    }
+
+    /** Như [webp], nén theo [kieu] (PNG cho biểu tượng: giữ nền trong suốt). */
+    @SuppressWarnings("deprecation")
+    static byte[] anh(Drawable d, int canh, Bitmap.CompressFormat kieu) {
         int w0 = d.getIntrinsicWidth() > 0 ? d.getIntrinsicWidth() : 192;
         int h0 = d.getIntrinsicHeight() > 0 ? d.getIntrinsicHeight() : 192;
         float ti = Math.min(1f, canh / (float) Math.max(w0, h0));
@@ -91,7 +113,7 @@ public final class TenApp {
         d.setBounds(0, 0, w, h);
         d.draw(new Canvas(bm));
         ByteArrayOutputStream ra = new ByteArrayOutputStream();
-        bm.compress(Bitmap.CompressFormat.WEBP, 90, ra);
+        bm.compress(kieu, 90, ra);
         bm.recycle();
         return ra.toByteArray();
     }

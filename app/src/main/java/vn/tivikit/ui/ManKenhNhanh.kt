@@ -32,7 +32,7 @@ import vn.tivikit.dulieu.XaPhuong
 import vn.tivikit.t
 
 /**
- * Màn Kênh nhanh (25/10/2026; 26/10/2026 thêm ô VTVgo; 31/10/2026 ô FPT Play; 1/11/2026 ô M3U): các ô kênh (VTV1, VTV3,
+ * Màn Kênh nhanh (25/10/2026; 26/10/2026 thêm ô VTVgo; 31/10/2026 ô FPT Play; 1/11/2026 ô M3U, huy hiệu app ở góc ô): các ô kênh (VTV1, VTV3,
  * HTV7…), mỗi ô mở thẳng một kênh trên TV360, VTVgo, FPT Play hoặc M3U, gán được một nút remote. Ô soạn chọn app của ô
  * bằng ô chia đoạn TV360 · VTVgo · FPT Play · M3U.
  */
@@ -41,8 +41,8 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
     val k = vm.kenhNhanh
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(t("Kênh nhanh", "Quick channel"), style = KieuTieuDeLon)
-        Phu(t("Mỗi ô kênh là một ô trên Home sạch và TiviKit Launcher, mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360, VTVgo, FPT Play hoặc M3U, mang logo kênh, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
-            "Each channel tile is a tile on the clean Home and TiviKit Launcher that opens one channel (VTV1, VTV3, HTV7…) in TV360, VTVgo, FPT Play or M3U, with the channel's logo, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
+        Phu(t("Mỗi ô kênh là một ô trên Home sạch và TiviKit Launcher, mở thẳng một kênh (VTV1, VTV3, HTV7…) trên TV360, VTVgo, FPT Play hoặc M3U, mang logo kênh và biểu tượng app đó ở góc, gán được một nút remote riêng. Tối đa ${KenhNhanh.SO_O} ô; mỗi ô là một app rất nhỏ TiviKit cài lên tivi.",
+            "Each channel tile is a tile on the clean Home and TiviKit Launcher that opens one channel (VTV1, VTV3, HTV7…) in TV360, VTVgo, FPT Play or M3U, with the channel's logo and that app's icon in the corner, and can get its own remote button. Up to ${KenhNhanh.SO_O} tiles; each is a tiny app TiviKit installs on the TV."))
     }
     if (vm.daCoHomeSach && k.homeCu) CanhBaoKenh(vm,
         t("Home sạch trên tivi là bản cũ nên ô chưa hiện logo kênh. Mở Home sạch, bấm Áp dụng lên tivi một lần (app tự cập nhật, giữ giao diện).",
@@ -52,6 +52,12 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
         t("Home sạch đang có ${k.kenhGoCu.size} ô kênh VTVgo kiểu cũ (${k.kenhGoCu.joinToString { it.first }}), không gán được nút remote. Chuyển sang ô Kênh nhanh để gán nút remote và hẹn giờ.",
             "The clean Home has ${k.kenhGoCu.size} old-style VTVgo tiles (${k.kenhGoCu.joinToString { it.first }}) that can't take a remote button. Move them to Quick channel tiles for remote buttons and the timer."),
         t("Chuyển sang ô Kênh nhanh", "Move to Quick channel tiles")) { k.chuyenKenhCu() }
+    if (k.canVeLai) CanhBaoKenh(vm,
+        t("Ô kênh giờ có biểu tượng app mở kênh (TV360, VTVgo, FPT Play, M3U) ở góc phải dưới, nhìn là biết kênh của app nào. Các ô làm trước đây chưa có: vẽ lại ảnh các ô" +
+            (if (vm.daCoHomeSach) " (Home sạch trên tivi mở lại một lần)." else "."),
+            "Channel tiles now show the icon of the app that opens them (TV360, VTVgo, FPT Play, M3U) in the bottom-right corner. Tiles made earlier don't have it yet: redraw them" +
+                (if (vm.daCoHomeSach) " (the clean Home on the TV reopens once)." else ".")),
+        t("Vẽ lại ảnh các ô", "Redraw the tiles")) { k.veLaiAnh() }
 
     The(t("Ô kênh trên tivi (${k.ds.size}/${KenhNhanh.SO_O})", "Channel tiles on the TV (${k.ds.size}/${KenhNhanh.SO_O})"), Icons.Rounded.LiveTv) {
         if (k.ds.isEmpty()) Phu(t("Chưa có ô nào. Chọn kênh ở ô bên dưới rồi bấm Thêm lên tivi.", "No tiles yet. Pick a channel below and tap Add to the TV."))
@@ -96,8 +102,8 @@ internal fun ManKenhNhanh(vm: PhienLamViec) = Cuon {
         "All ${KenhNhanh.SO_O} tiles are used. Tap the pencil on a tile to change its channel, or remove a tile for another channel."))
     if (k.bao.isNotEmpty()) Phu(k.bao, if (k.baoLech) Cam else Xanh)
 
-    Phu(t("Ô TV360 dùng cổng nhận lệnh giọng nói của TV360 (cùng đường với \"Xem VTV1 trên TV360\" của Google Assistant), không phải giao diện công khai: bản TV360 sau có thể đổi, khi đó ô chỉ mở TV360 như thường. Ô VTVgo mở bằng link kênh của VTVgo, ô FPT Play bằng link kênh của FPT Play (fptplay.vn/xem-truyen-hinh/…), ô M3U bằng màn phát của M3U kèm mã kênh của phím tắt. Logo kênh tải từ VTVgo / FPT Play lúc lưu ô (app không đóng sẵn logo của đài). Hẹn giờ cũng mở được từng ô (VD 18:58 mở VTV1). Khôi phục tivi gỡ hết các ô.",
-        "TV360 tiles use TV360's voice-command entry (the one Google Assistant uses for \"Watch VTV1 on TV360\"), not a public interface: a later TV360 may change it, and the tiles then just open TV360. VTVgo tiles open VTVgo's channel link, FPT Play tiles FPT Play's channel link (fptplay.vn/xem-truyen-hinh/…), M3U tiles M3U's player with the shortcut's channel id. Channel logos come from VTVgo / FPT Play when a tile is saved (no station logos are bundled with the app). The Timer can open each tile too (e.g. 18:58 opens VTV1). Restoring the TV removes all tiles."))
+    Phu(t("Ô TV360 dùng cổng nhận lệnh giọng nói của TV360 (cùng đường với \"Xem VTV1 trên TV360\" của Google Assistant), không phải giao diện công khai: bản TV360 sau có thể đổi, khi đó ô chỉ mở TV360 như thường. Ô VTVgo mở bằng link kênh của VTVgo, ô FPT Play bằng link kênh của FPT Play (fptplay.vn/xem-truyen-hinh/…), ô M3U bằng màn phát của M3U kèm mã kênh của phím tắt. Logo kênh tải từ VTVgo / FPT Play lúc lưu ô (app không đóng sẵn logo của đài; kênh không có logo thì ô ghi tên kênh), biểu tượng app ở góc ô lấy từ chính app đó trên tivi. Hẹn giờ cũng mở được từng ô (VD 18:58 mở VTV1). Khôi phục tivi gỡ hết các ô.",
+        "TV360 tiles use TV360's voice-command entry (the one Google Assistant uses for \"Watch VTV1 on TV360\"), not a public interface: a later TV360 may change it, and the tiles then just open TV360. VTVgo tiles open VTVgo's channel link, FPT Play tiles FPT Play's channel link (fptplay.vn/xem-truyen-hinh/…), M3U tiles M3U's player with the shortcut's channel id. Channel logos come from VTVgo / FPT Play when a tile is saved (no station logos are bundled with the app; a channel without one gets its name on the tile), and the app icon in the corner comes from that app on the TV. The Timer can open each tile too (e.g. 18:58 opens VTV1). Restoring the TV removes all tiles."))
     if (vm.moChonKenh) HopChonKenhGo(vm)
     if (k.moChonFpt) HopChonKenhFpt(vm)
 }

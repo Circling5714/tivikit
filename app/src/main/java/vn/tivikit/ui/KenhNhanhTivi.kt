@@ -1,8 +1,10 @@
 package vn.tivikit.ui
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import vn.tivikit.dulieu.AnhOKenh
 import vn.tivikit.dulieu.KenhFpt
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.KenhVtvGo
@@ -16,7 +18,8 @@ import vn.tivikit.t
  * trên TV360, VTVgo, FPT Play hoặc M3U (kênh có phím tắt trong M3UAndroid). Thêm / sửa
  * ô (cài app của ô, đặt kênh, đặt tên ô theo tên kênh và logo kênh trên Home sạch và TiviKit Launcher, thêm vào dock Home
  * sạch nếu muốn), bấm thử, gán nút remote (màn Nút remote chọn sẵn ô đó), bỏ ô. Ô kênh VTVgo kiểu cũ (ô link của Home
- * sạch, KenhVtvGo; không gán được nút remote) chuyển được thành ô ở đây.
+ * sạch, KenhVtvGo; không gán được nút remote) chuyển được thành ô ở đây. Ảnh ô mang huy hiệu app mở kênh ở góc phải dưới
+ * (1/11/2026, AnhOKenh); ô làm trước đó vẽ lại một lượt (veLaiAnh).
  */
 class KenhNhanhTivi(private val vm: PhienLamViec) {
     /** Một ô kênh đã cài trên tivi: số ô, kênh đang đặt (null = không đọc được), có trong dock Home sạch không. */
@@ -73,10 +76,19 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     /** Lời báo là lỗi / không như mong đợi (tô màu cam). */
     var baoLech by mutableStateOf(false)
         private set
+    /** Tivi có ô làm trước khi ảnh ô có huy hiệu app nguồn (1/11/2026), chưa vẽ lại: màn Kênh nhanh mời vẽ lại (veLaiAnh). */
+    var canVeLai by mutableStateOf(false)
+        private set
+
+    /** Biểu tượng các app xem kênh trên tivi (gói → PNG) cho huy hiệu ở góc ô; hỏi tivi một lần mỗi lần mở màn. */
+    private val bieuTuong = mutableMapOf<String, ByteArray>()
+    private var daHoiBieuTuong = false
+    private val prefs by lazy { vm.ctx.getSharedPreferences("tvsach", Context.MODE_PRIVATE) }
 
     fun mo() = vm.chay(t("Đang đọc Kênh nhanh trên tivi…", "Reading Quick channel on the TV…")) {
         vm.damBaoKetNoi()
         bao = ""; baoLech = false; dangSua = null
+        bieuTuong.clear(); daHoiBieuTuong = false
         docLai()
         // Ô soạn mở sẵn app tivi đang có (không có TV360 thì VTVgo, rồi FPT Play, M3U), gợi ý kênh hay xem đầu tiên chưa có ô.
         app = when {
@@ -112,19 +124,50 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         kenhGoCu = j?.let { KenhVtvGo.docTu(it) }.orEmpty()
         vm.kenhChon.clear(); vm.kenhChon.addAll(kenhGoCu)
         homeCu = vm.daCoHomeSach && !vm.io { vm.tv.homeLaBanDiKem(vn.tivikit.CapNhat.moAsset(vm.ctx, vm.tv.apkHome).use { it.readBytes() }) }
+        // Lúc chưa có ô nào thì mọi ô làm sau đều có huy hiệu: khỏi mời vẽ lại.
+        val khoa = vm.thongTin?.khoaLuu
+        if (khoa != null && ds.isEmpty()) ghiDaVeLai(khoa)
+        canVeLai = khoa != null && ds.isNotEmpty() && (vm.daCoHomeSach || TiviKitLauncher.GOI in tt.caiDat) &&
+            khoa !in prefs.getStringSet(DA_VE_LAI, null).orEmpty()
+    }
+
+    /** Ghi nhớ tivi [khoa] (khoaLuu) đã có ảnh ô kèm huy hiệu. */
+    private fun ghiDaVeLai(khoa: String) {
+        val da = prefs.getStringSet(DA_VE_LAI, null).orEmpty()
+        if (khoa !in da) prefs.edit().putStringSet(DA_VE_LAI, da + khoa).apply()
     }
 
     /**
-     * Logo kênh [k] cho ô: ảnh kênh của VTVgo (ô VTVgo theo mã kênh, ô TV360 theo tên trùng một kênh VTVgo: VTV1–9, HTV9,
-     * Hà Nội 1, ANTV, QPVN…), ô FPT Play lấy ảnh kênh của FPT Play; tải một lần rồi cất (KenhVtvGo.anhO). null nếu không có /
-     * không tải được: ô hiện biểu tượng và tên như trước. App không đóng sẵn logo của đài. [dsGo] = danh sách kênh VTVgo đã
-     * lấy (nhiều ô một lượt).
+     * Ảnh ô của kênh [k]: logo kênh (logoKenh) kèm huy hiệu app mở kênh ở góc phải dưới; kênh không có logo thì ô chữ tên
+     * kênh kèm huy hiệu (AnhOKenh). null nếu không có logo lẫn biểu tượng app: ô hiện biểu tượng và tên như trước.
      */
-    private suspend fun logo(k: KenhNhanh.Kenh, dsGo: List<KenhVtvGo.Kenh>? = null): ByteArray? = vm.io {
-        if (k.laFpt) return@io KenhVtvGo.anhO(vm.ctx, k.ma, KenhFpt.ds(vm.ctx).firstOrNull { it.ma == k.ma }?.anh, KenhVtvGo.THU_MUC_FPT)
+    private suspend fun logo(k: KenhNhanh.Kenh, dsGo: List<KenhVtvGo.Kenh>? = null): ByteArray? {
+        val bt = bieuTuongCua(k.app)
+        return vm.io { AnhOKenh.ve(logoKenh(k, dsGo), k.ten, bt) }
+    }
+
+    /**
+     * Logo kênh [k] cho ô: ảnh kênh của VTVgo (ô VTVgo theo mã kênh, ô TV360 / M3U theo tên trùng một kênh VTVgo: VTV1–9,
+     * HTV9, Hà Nội 1, ANTV, QPVN…), ô FPT Play lấy ảnh kênh của FPT Play; tải một lần rồi cất (KenhVtvGo.anhO). null nếu
+     * không có / không tải được. App không đóng sẵn logo của đài. [dsGo] = danh sách kênh VTVgo đã lấy (nhiều ô một lượt).
+     * Gọi trên luồng IO.
+     */
+    private fun logoKenh(k: KenhNhanh.Kenh, dsGo: List<KenhVtvGo.Kenh>?): ByteArray? {
+        if (k.laFpt) return KenhVtvGo.anhO(vm.ctx, k.ma, KenhFpt.ds(vm.ctx).firstOrNull { it.ma == k.ma }?.anh, KenhVtvGo.THU_MUC_FPT)
         val ds = dsGo ?: layDsGo()
-        if (k.laVtvGo) KenhVtvGo.anhO(vm.ctx, k.ma, ds.firstOrNull { it.ma == k.ma }?.anh)
+        return if (k.laVtvGo) KenhVtvGo.anhO(vm.ctx, k.ma, ds.firstOrNull { it.ma == k.ma }?.anh)
         else KenhVtvGo.timTheoTen(ds, k.ten)?.let { KenhVtvGo.anhO(vm.ctx, it.ma, it.anh) }
+    }
+
+    /** Biểu tượng (PNG) của app xem kênh [goi] trên tivi: lần đầu hỏi tivi một lượt cho mọi app xem kênh (TrenTv.bieuTuong). */
+    private suspend fun bieuTuongCua(goi: String): ByteArray? {
+        if (!daHoiBieuTuong) {
+            daHoiBieuTuong = true
+            bieuTuong.putAll(runCatching {
+                vm.io { vn.tivikit.adb.TrenTv(vm.adb).bieuTuong({ vn.tivikit.CapNhat.moAsset(vm.ctx, vn.tivikit.adb.TrenTv.ASSET).use { it.readBytes() } }, KenhNhanh.APP_XEM) }
+            }.getOrDefault(emptyMap()))
+        }
+        return bieuTuong[goi]
     }
 
     /** Danh sách kênh VTVgo: đang có, đã lưu, không thì tải (gọi trên luồng IO). */
@@ -224,7 +267,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
 
     /**
      * Cài / cập nhật app của ô [o] (app phụ cũ chưa biết VTVgo thì bản đi kèm thay vào), đặt kênh [k], tên ô, logo kênh
-     * và dock trên Home sạch, tên ô và logo trên TiviKit Launcher. Trả câu nói thêm ô nằm ở đâu trên Home sạch.
+     * (kèm huy hiệu app) và dock trên Home sạch, tên ô và logo trên TiviKit Launcher. Trả câu nói thêm ô nằm ở đâu trên Home sạch.
      */
     private suspend fun themO(o: Int, k: KenhNhanh.Kenh, trongDock: Boolean): String {
         val goi = KenhNhanh.goiCua(o)
@@ -241,7 +284,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         vm.thongBao = t("Đặt ô ${k.ten} trên Home sạch…", "Setting the ${k.ten} tile on the clean Home…")
         // Gửi logo trước rồi mới trỏ app_banners tới, để Home sạch khởi động lại là thấy ngay; gửi không được thì ô không logo.
         val anh = logo?.takeIf { b -> runCatching { vm.io { vm.tv.ghiAnhOKenh(o, b) } }.isSuccess }?.let { KenhNhanh.tenAnh(o) }
-        val dock = vm.io { vm.tv.ghiOKenh(goi, k.ten, anh, trongDock, DOCK_TOI_DA) }
+        val dock = vm.io { vm.tv.ghiOKenh(goi, k.ten, anh, trongDock, DOCK_TOI_DA, anhMoi = anh != null) }
         vm.tenKenh[goi] = k.ten
         if (anh != null) vm.anhOKenh[goi] = anh else vm.anhOKenh.remove(goi)
         if (dock == true) vm.dongBoDock(goi, trongDock)
@@ -250,6 +293,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
             anh == null -> ""
             homeCu -> t(" Logo kênh hiện khi Home sạch được cập nhật: mở Home sạch, bấm Áp dụng lên tivi một lần.",
                 " The channel logo shows once the clean Home is updated: open Clean Home and press Apply to the TV once.")
+            k.app in bieuTuong -> t(" Ô có ảnh kênh, góc phải dưới là biểu tượng ${k.tenApp}.", " The tile has the channel's picture with the ${k.tenApp} icon in the bottom-right corner.")
             else -> t(" Ô có logo kênh.", " The tile has the channel logo.")
         }
         return logoChu + when {
@@ -279,6 +323,35 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         val dsGo = vm.io { layDsGo() }
         val gui = ds.associate { (o, k) -> KenhNhanh.goiCua(o) to (k.ten to logo(k, dsGo)) }
         return vm.io { vm.tv.datOKenhTkl(gui) }
+    }
+
+    /**
+     * Vẽ lại ảnh mọi ô đang có (logo kênh kèm huy hiệu app mở kênh) trên TiviKit Launcher và Home sạch, cho các ô làm trước
+     * khi có huy hiệu (1/11/2026). Home sạch khởi động lại một lần mới thấy ảnh mới. Ô không vẽ được ảnh thì giữ ảnh cũ.
+     */
+    fun veLaiAnh() = vm.chay(t("Đang vẽ lại ảnh các ô…", "Redrawing the tiles…")) {
+        vm.damBaoKetNoi()
+        bao = ""; baoLech = false
+        val dsGo = vm.io { layDsGo() }
+        val anh = ds.mapNotNull { o -> o.kenh?.let { k -> logo(k, dsGo)?.let { Triple(o, k, it) } } }
+        if (anh.none { (_, k, _) -> k.app in bieuTuong }) error(t("Không đọc được biểu tượng app xem kênh trên tivi nên chưa vẽ lại. Thử lại.",
+            "Couldn't read the channel apps' icons on the TV, so nothing was redrawn. Try again."))
+        val tkl = if (TiviKitLauncher.GOI !in vm.trangThai?.caiDat.orEmpty()) "" else {
+            vm.thongBao = t("Gửi ảnh các ô lên TiviKit Launcher…", "Sending the tiles to TiviKit Launcher…")
+            tklCu(runCatching { vm.io { vm.tv.datOKenhTkl(anh.associate { (o, k, b) -> o.goi to (k.ten to b) }) } }.getOrNull())
+        }
+        if (vm.daCoHomeSach) {
+            vm.thongBao = t("Gửi ảnh các ô lên Home sạch…", "Sending the tiles to the clean Home…")
+            val gui = anh.filter { (o, _, b) -> runCatching { vm.io { vm.tv.ghiAnhOKenh(o.so, b) } }.isSuccess }
+                .associate { (o, _, _) -> o.goi to KenhNhanh.tenAnh(o.so) }
+            vm.io { vm.tv.datAnhOKenh(gui) }
+            vm.anhOKenh.putAll(gui)
+            vm.veApp()
+        }
+        vm.thongTin?.khoaLuu?.let { ghiDaVeLai(it) }
+        canVeLai = false
+        bao = t("Đã vẽ lại ảnh ${anh.size} ô: góc phải dưới mỗi ô có biểu tượng app mở kênh.",
+            "Redrew ${anh.size} tiles: each shows the icon of the app that opens it in the bottom-right corner.") + tkl
     }
 
     /**
@@ -388,5 +461,11 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     fun quen() {
         ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true; coFpt = false; coM3u = false
         app = 0; kenhGo = null; kenhFpt = null; kenhM3u = null; dsM3u = emptyList(); moChonFpt = false; kenhGoCu = emptyList(); homeCu = false
+        canVeLai = false; bieuTuong.clear(); daHoiBieuTuong = false
+    }
+
+    private companion object {
+        /** Các tivi (khoaLuu) đã có ảnh ô kèm huy hiệu app nguồn (canVeLai). */
+        const val DA_VE_LAI = "kenh-huy-hieu"
     }
 }

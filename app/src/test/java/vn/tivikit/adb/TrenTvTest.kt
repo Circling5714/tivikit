@@ -34,6 +34,16 @@ class TrenTvTest {
         assertArrayEquals(webp, m.getValue("com.phlox.tvwebbrowser").webp)
     }
 
+    @Test fun docBieuTuong_boDongSai() {
+        val png = byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10)
+        val b64 = Base64.getEncoder().encodeToString(png)
+        val out = "com.viettel.tv360.tv\t1234\t$b64\r\nloi\tjava.lang.SecurityException\ncom.m3u.smartphone\tx\t$b64\n" +
+            "vn.vtv.vtvgotv\t5\t!!\nx;reboot\t1\t$b64\nnet.fptplay.ottbox\t7\tB\t$b64\n"
+        val m = TrenTv.docBieuTuong(out)
+        assertEquals(setOf("com.viettel.tv360.tv"), m.keys)
+        assertArrayEquals(png, m.getValue("com.viettel.tv360.tv"))
+    }
+
     @Test fun boThoat_nguocCuaChuThoat() {
         assertEquals("a\tb\nc\\d Sơn 😀", TrenTv.boThoat("a\\tb\\nc\\\\d S\\u01a1n \\ud83d\\ude00"))
         assertEquals("SmartTube", TrenTv.boThoat("SmartTube"))

@@ -1673,20 +1673,35 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      * Ô kênh [goi] trên Home sạch: tên ô [ten] (app_labels; null = bỏ cả ô), logo [anh] (app_banners, tên ảnh đã gửi bằng
      * ghiAnhOKenh; null = không logo) và có trong dock không, ghi vào config.json ĐANG CÓ (như ghiPhimRieng) rồi khởi động
      * lại Home sạch cho thấy ngay. Trả kết quả của KenhNhanh.datDock: false = dock đã đủ [toiDa] ô, null = Home sạch đang
-     * dùng dock mặc định (để nguyên).
+     * dùng dock mặc định (để nguyên). [anhMoi]: vừa gửi lại ảnh ô, config.json không đổi cũng khởi động lại (Home sạch chỉ
+     * đọc ảnh khi dựng lại ô).
      */
-    fun ghiOKenh(goi: String, ten: String?, anh: String?, trongDock: Boolean, toiDa: Int): Boolean? {
+    fun ghiOKenh(goi: String, ten: String?, anh: String?, trongDock: Boolean, toiDa: Int, anhMoi: Boolean = false): Boolean? {
         val j = cauHinhDeSua()
         val truoc = j.toString()
         KenhNhanh.datTen(j, goi, ten)
         KenhNhanh.datAnh(j, goi, anh.takeIf { ten != null })
         val dock = KenhNhanh.datDock(j, goi, trongDock, toiDa)
         // Không đổi gì thì thôi ghi (ghi config.json làm Home sạch đặt lại vài chỉnh sửa làm trên tivi) và khởi động lại.
-        if (j.toString() != truoc) {
-            ghiFileTheme("config.json", j.toString().toByteArray())
-            sh(KHOI_DONG_LAI_HOME)
-        }
+        val doi = j.toString() != truoc
+        if (doi) ghiFileTheme("config.json", j.toString().toByteArray())
+        if (doi || anhMoi) sh(KHOI_DONG_LAI_HOME)
         return dock
+    }
+
+    /**
+     * Ảnh mới cho các ô kênh trên Home sạch ([anh]: gói → tên ảnh đã gửi bằng ghiAnhOKenh), như vẽ lại ảnh các ô cho có
+     * huy hiệu app nguồn (1/11/2026): trỏ app_banners tới trong config.json ĐANG CÓ (như ghiOKenh), rồi khởi động lại Home
+     * sạch một lần — ảnh cùng tên mà khác nội dung cũng phải khởi động lại mới hiện.
+     */
+    fun datAnhOKenh(anh: Map<String, String>) {
+        if (anh.isEmpty()) return
+        val j = cauHinhDeSua()
+        // Chỉ đặt dòng khác: datAnh đưa dòng xuống cuối nên đặt lại dòng y hệt cũng thành "đổi" và ghi config.json vô ích.
+        val doi = anh.filter { (goi, ten) -> KenhNhanh.anhTrong(j)[goi] != ten }
+        doi.forEach { (goi, ten) -> KenhNhanh.datAnh(j, goi, ten) }
+        if (doi.isNotEmpty()) ghiFileTheme("config.json", j.toString().toByteArray())
+        sh(KHOI_DONG_LAI_HOME)
     }
 
     /** Gửi logo kênh của ô [o] (JPEG) cạnh config.json của Home sạch, tên KenhNhanh.tenAnh(o) + ".jpg". */
