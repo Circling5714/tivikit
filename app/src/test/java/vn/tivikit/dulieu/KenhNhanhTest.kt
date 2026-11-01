@@ -221,5 +221,12 @@ class KenhNhanhTest {
         assertTrue(j.getBoolean("coDinh"))
         assertEquals("tv360", j.getJSONArray("nguon").getJSONObject(0).getString("app"))
         assertEquals(k, KenhNhanh.tuJson(j))
+        // Gửi Map Voice (câu nói theo thứ tự của ô): chỉ ô Auto có thứ tự riêng.
+        val tuDong = KenhNhanh.Kenh("", "VTV6", "", KenhNhanh.LOAI_AUTO, listOf(KenhNhanh.Kenh("", "VTV6", "13")))
+        val a = JSONArray(KenhNhanh.jsonThuTu(listOf(KenhNhanh.Kenh("001", "VTV1"), tuDong, k)))
+        assertEquals(1, a.length())
+        assertEquals("VTV1", a.getJSONObject(0).getString("ten"))
+        assertEquals("tv360", a.getJSONObject(0).getJSONArray("nguon").getJSONObject(0).getString("app"))
+        assertEquals("[]", KenhNhanh.jsonThuTu(listOf(tuDong)))
     }
 }

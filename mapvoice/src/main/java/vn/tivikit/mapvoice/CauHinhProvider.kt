@@ -14,6 +14,8 @@ import org.json.JSONObject
  * TiviKit đặt / đọc qua ADB:
  *   content call --uri content://vn.tivikit.mapvoice --method dat --arg '{"bat":true,"cachMo":"theo-cau",…,"cauRieng":[{"chu":"giá vàng","dich":"tro-ly"}]}'
  *   content call --uri content://vn.tivikit.mapvoice --method kenh --arg '{"vtvgo":[{"ten":"VTV1","ma":"1"}],"tv360":[…],"fptplay":[{"ten":"VTV1 HD","ma":"vtv1-hd"}]}'
+ *   content call --uri content://vn.tivikit.mapvoice --method thu-tu --arg '[{"ten":"VTV1","nguon":[{"app":"tv360","so":"001"},…]}]'
+ *     (thứ tự riêng của các ô Kênh nhanh Auto, thay cả danh sách cũ)
  *   content call --uri content://vn.tivikit.mapvoice --method xem --arg '{"cau":"mở nhạc piano trên YouTube"}'  (chỉ xem hiểu thế nào)
  *   content call --uri content://vn.tivikit.mapvoice --method thu --arg '{"cau":"…"}'  (làm như vừa nói)
  * xem / thu trả viec ("loại|chi tiết") và app (gói app sẽ mở / đã mở, nếu có).
@@ -42,6 +44,12 @@ class CauHinhProvider : ContentProvider() {
                 if (so == 0) return kq.apply { putString("loi", "kenh sai") }
                 kho.kenhJson = arg!!
                 kq.putString("ok", "1"); kq.putString("so", so.toString())
+            }
+            "thu-tu" -> {
+                // Danh sách rỗng ("[]") là hợp lệ: không còn ô Auto nào có thứ tự riêng.
+                val ds = TuChonNguon.thuTuTu(arg) ?: return kq.apply { putString("loi", "thu tu sai") }
+                kho.thuTuJson = arg!!
+                kq.putString("ok", "1"); kq.putString("so", ds.size.toString())
             }
             "xem", "thu" -> {
                 val cau = runCatching { JSONObject(arg ?: "").optString("cau") }.getOrDefault("").trim()
@@ -81,6 +89,8 @@ class CauHinhProvider : ContentProvider() {
                     .put("appYouTube", dv?.appYouTube() ?: (XuLyCau.SMARTTUBE + XuLyCau.TIZENTUBE).firstOrNull { co(pm, it) } ?: "")
                     .put("cauHinh", kho.cauHinh.json())
                     .put("soKenh", kho.dsKenh.size)
+                    // Kênh có ô Kênh nhanh Auto đặt thứ tự riêng (câu nói theo thứ tự đó).
+                    .put("thuTuRieng", JSONArray(kho.thuTuRieng.keys.toList()))
                     .put("nhatKy", nk)
                 kq.putString("json", j.toString())
             }

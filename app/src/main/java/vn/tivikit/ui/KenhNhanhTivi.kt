@@ -110,6 +110,8 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     private val prefs by lazy { vm.ctx.getSharedPreferences("tvsach", Context.MODE_PRIVATE) }
     /** Link của danh sách [dsIptv] đang có (link ô gõ đổi mà chưa tải lại thì khác). */
     private var linkDs = ""
+    /** Thứ tự riêng của các ô Auto đã gửi Map Voice lần trước (KenhNhanh.jsonThuTu): chỉ gửi lại khi đổi. */
+    private var thuTuDaGui: String? = null
 
     fun mo() = vm.chay(t("Đang đọc Kênh nhanh trên tivi…", "Reading Quick channel on the TV…")) {
         vm.damBaoKetNoi()
@@ -156,6 +158,11 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
         j?.let { vm.tenKenh.clear(); vm.tenKenh.putAll(KenhNhanh.tenTrong(it)); vm.anhOKenh.clear(); vm.anhOKenh.putAll(KenhNhanh.anhTrong(it)) }
         ds = (1..KenhNhanh.SO_O).filter { KenhNhanh.goiCua(it) in tt.caiDat }.map { o ->
             O(o, KenhNhanh.tuJson(vm.io { vm.tv.docKenh(o) }), KenhNhanh.goiCua(o) in dock)
+        }
+        // Câu nói "mở VTV1" (app kênh Tự động) theo thứ tự riêng của ô Auto: Map Voice giữ bản sao, gửi lại mỗi khi các ô đổi.
+        if (coMapVoice && !mapVoiceCu) {
+            val thuTu = KenhNhanh.jsonThuTu(ds.mapNotNull { it.kenh })
+            if (thuTu != thuTuDaGui && runCatching { vm.io { vm.tv.guiThuTuMapVoice(thuTu) } }.getOrDefault(false)) thuTuDaGui = thuTu
         }
         kenhGoCu = j?.let { KenhVtvGo.docTu(it) }.orEmpty()
         vm.kenhChon.clear(); vm.kenhChon.addAll(kenhGoCu)
@@ -629,7 +636,7 @@ class KenhNhanhTivi(private val vm: PhienLamViec) {
     fun quen() {
         ds = emptyList(); dangSua = null; bao = ""; baoLech = false; coTv360 = true; coFpt = false; coM3u = false
         app = 0; kenhGo = null; kenhFpt = null; dsM3u = emptyList(); moChonFpt = false; kenhGoCu = emptyList(); homeCu = false
-        linkIptv = ""; linkDs = ""; dsIptv = emptyList(); kenhIptv = null; moChonIptv = false; coIptv = false
+        linkIptv = ""; linkDs = ""; dsIptv = emptyList(); kenhIptv = null; moChonIptv = false; coIptv = false; thuTuDaGui = null
         canVeLai = false; bieuTuong.clear(); daHoiBieuTuong = false
         tenAuto = "VTV1"; thuTuAuto = null; coMapVoice = false; mapVoiceCu = false
     }

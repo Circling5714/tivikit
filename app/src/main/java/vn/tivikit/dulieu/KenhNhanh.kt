@@ -142,6 +142,12 @@ object KenhNhanh {
      */
     fun json(k: Kenh): String = TiviKitLauncher.chiAscii(jsonO(k).toString())
 
+    /**
+     * Thứ tự riêng của các ô Auto trong [ds] gửi Map Voice (MapVoice.lenhThuTu, 11/2026: anh muốn câu nói "mở VTV1" cũng theo
+     * thứ tự của ô): [{"ten":"VTV1","app":"auto","nguon":[…],"coDinh":true},…]; chỉ ô có thứ tự riêng. Chưa ASCII (lệnh lo).
+     */
+    fun jsonThuTu(ds: List<Kenh>): String = JSONArray().apply { ds.filter { it.laAuto && it.coDinh }.forEach { put(jsonO(it)) } }.toString()
+
     /** Ô Auto: nguồn ghi rõ app (cả TV360), như Kenh.jsonNguon của app phụ. */
     private fun jsonO(k: Kenh): JSONObject = JSONObject().put("ten", k.ten).apply {
         when {

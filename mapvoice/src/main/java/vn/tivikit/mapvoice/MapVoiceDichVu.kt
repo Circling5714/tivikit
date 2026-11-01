@@ -182,8 +182,10 @@ class MapVoiceDichVu : AccessibilityService() {
     private fun moKenhTuDong(k: KenhTv): Lam {
         dongTroLy(dongYouTube = true)
         chanYouTubeDen = SystemClock.elapsedRealtime() + CHAN_YOUTUBE
-        val dau = TuChonNguon.xep(TuChonNguon.nguonCua(k, emptyList()).filter { coApp(it.goi) },
-            kho.thongKe(XuLyCau.khoaKenh(k.ten)), System.currentTimeMillis()).firstOrNull()?.goi ?: ""
+        val khoa = XuLyCau.khoaKenh(k.ten)
+        val dau = (kho.thuTuRieng[khoa]?.filter { coApp(it.goi) }
+            ?: TuChonNguon.xep(TuChonNguon.nguonCua(k, emptyList()).filter { coApp(it.goi) }, kho.thongKe(khoa), System.currentTimeMillis()))
+            .firstOrNull()?.goi ?: ""
         tuChon?.mo(k)
         return Lam("kenh|${CauHinh.APP_AUTO}|${k.ten}", dau)
     }

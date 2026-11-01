@@ -119,6 +119,17 @@ class Kho(ctx: Context) {
             return XuLyCau.dsKenh(j).also { dsKenhNho = j to it }
         }
 
+    /**
+     * Thứ tự riêng của các ô Kênh nhanh Auto (TuChonNguon.thuTuTu, TiviKit gửi): câu nói "mở VTV1" khi app kênh là "auto"
+     * thì theo đúng ô VTV1 đó, như bấm ô. Lưu nguyên chuỗi TiviKit gửi.
+     */
+    var thuTuJson: String
+        get() = p.getString("thu_tu", null) ?: "[]"
+        set(v) { p.edit().putString("thu_tu", v).apply() }
+
+    val thuTuRieng: Map<String, List<TuChonNguon.Nguon>>
+        get() = TuChonNguon.thuTuTu(thuTuJson).orEmpty()
+
     val nhatKy: List<NhatKy>
         get() = runCatching {
             val a = JSONArray(p.getString("nhat_ky", "[]"))

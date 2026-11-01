@@ -1964,6 +1964,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     /** Gửi danh sách kênh (MapVoice.dsKenh); false nếu tivi không nhận (danh sách rỗng / hỏng). */
     fun guiKenhMapVoice(json: String): Boolean = sh(MapVoice.lenhKenh(json)).contains("ok=1")
 
+    /** Gửi thứ tự riêng của các ô Kênh nhanh Auto (KenhNhanh.jsonThuTu) cho Map Voice; false nếu Map Voice không nhận. */
+    fun guiThuTuMapVoice(json: String): Boolean = sh(MapVoice.lenhThuTu(json)).contains("ok=1")
+
     /** Map Voice hiểu câu [cau] thế nào (chưa làm gì); null kèm lỗi nếu app phụ không trả lời. */
     fun xemMapVoice(cau: String): Pair<MapVoice.Viec?, String> = sh(MapVoice.lenhXem(cau)).let { MapVoice.viecTrong(it) to MapVoice.loiTrong(it) }
 

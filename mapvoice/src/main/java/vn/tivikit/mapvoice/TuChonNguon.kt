@@ -188,6 +188,22 @@ object TuChonNguon {
         }
     }
 
+    /**
+     * Thứ tự riêng của các ô Kênh nhanh Auto (TiviKit gửi mỗi khi các ô đổi, lệnh "thu-tu"): [{"ten":"VTV1","nguon":[…]},…]
+     * → khoá kênh (XuLyCau.khoaKenh) → nguồn theo đúng thứ tự của ô. Ô hỏng (thiếu tên, không còn nguồn nào) thì bỏ; null nếu
+     * không phải danh sách.
+     */
+    fun thuTuTu(s: String?): Map<String, List<Nguon>>? {
+        val a = runCatching { JSONArray(s ?: "") }.getOrNull() ?: return null
+        val ds = LinkedHashMap<String, List<Nguon>>()
+        for (o in (0 until a.length()).mapNotNull { a.optJSONObject(it) }) {
+            val khoa = XuLyCau.khoaKenh(o.optString("ten").trim().take(40))
+            val nguon = tuJson(o.optJSONArray("nguon")?.toString())
+            if (khoa.isNotEmpty() && nguon.isNotEmpty()) ds[khoa] = nguon
+        }
+        return ds
+    }
+
     fun json(ds: List<Nguon>): String = JSONArray().apply {
         ds.forEach { n ->
             put(JSONObject().put("app", n.app).put("ten", n.ten).apply { if (n.so.isNotEmpty()) put("so", n.so) else put("ma", n.ma) })

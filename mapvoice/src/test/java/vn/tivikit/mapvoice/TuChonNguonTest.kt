@@ -137,6 +137,19 @@ class TuChonNguonTest {
         assertEquals("vn.tivikit.iptv", iptv.goi)
     }
 
+    /** Thứ tự riêng TiviKit gửi (lệnh "thu-tu"): khoá theo tên kênh đã gọn, nguồn giữ đúng thứ tự của ô, ô hỏng thì bỏ. */
+    @Test fun thuTu_docDanhSachCuaTiviKit() {
+        val s = """[{"ten":"VTV1 HD","app":"auto","coDinh":true,"nguon":[{"app":"tv360","ten":"VTV1","so":"001"},{"app":"vtvgo","ten":"VTV1","ma":"1"}]},""" +
+            """{"ten":"","nguon":[{"app":"vtvgo","ma":"3"}]},{"ten":"VTV6","nguon":[{"app":"vtvgo","ma":"x y"}]}]"""
+        val ds = TuChonNguon.thuTuTu(s)!!
+        assertEquals(setOf("vtv1"), ds.keys)
+        assertEquals(listOf(TuChonNguon.TV360, TuChonNguon.VTVGO), ds["vtv1"]!!.map { it.app })
+        assertEquals("001", ds["vtv1"]!![0].so)
+        // Danh sách rỗng hợp lệ (không còn ô nào); chuỗi lạ thì không nhận.
+        assertEquals(emptyMap<String, List<Nguon>>(), TuChonNguon.thuTuTu("[]"))
+        assertNull(TuChonNguon.thuTuTu("khong phai json"))
+    }
+
     /** Ô có thứ tự riêng (1/11/2026): giữ đúng thứ tự, kể cả nguồn từng lỗi; mất tiếng thì thử các nguồn sau nó trước. */
     @Test fun thuTuRieng_giuNguyenVaXoayKhiHong() {
         val ds = listOf(tv360, go, fpt)

@@ -38,10 +38,21 @@ class TuChon(private val dv: MapVoiceDichVu) {
         luong.execute { runCatching { chay(ma, ten, XuLyCau.khoaKenh(ten), dienLink(nguon), coDinh) } }
     }
 
-    /** Câu nói "mở VTV1" khi app kênh là "auto": nguồn Map Voice biết, kèm kênh IPTV và phím tắt M3U cùng tên trên tivi. */
+    /**
+     * Câu nói "mở VTV1" khi app kênh là "auto": kênh có ô Kênh nhanh Auto đặt thứ tự riêng thì theo đúng ô đó, như bấm ô
+     * (Kho.thuTuRieng, anh muốn câu nói cũng theo thứ tự của ô); không thì nguồn Map Voice biết, kèm kênh IPTV và phím tắt
+     * M3U cùng tên trên tivi, xếp theo các lần trước.
+     */
     fun mo(k: KenhTv) {
         val ma = phien.incrementAndGet()
-        luong.execute { runCatching { chay(ma, k.ten, XuLyCau.khoaKenh(k.ten), TuChonNguon.nguonCua(k, phimTatM3u(), iptvCua(k.ten))) } }
+        val khoa = XuLyCau.khoaKenh(k.ten)
+        val rieng = dv.kho.thuTuRieng[khoa]
+        luong.execute {
+            runCatching {
+                if (rieng != null) chay(ma, k.ten, khoa, dienLink(rieng), coDinh = true)
+                else chay(ma, k.ten, khoa, TuChonNguon.nguonCua(k, phimTatM3u(), iptvCua(k.ten)))
+            }
+        }
     }
 
     /** Kênh cùng tên trong danh sách IPTV (hỏi app IPTV qua ADB); null nếu tivi không có app đó / danh sách không có kênh này. */

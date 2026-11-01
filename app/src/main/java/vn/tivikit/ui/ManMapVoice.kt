@@ -167,8 +167,8 @@ private fun TheCaiDat(vm: PhienLamViec, m: MapVoiceTivi) = The(t("Cách chuyển
                         dangChon == a) { m.cauHinh = c.copy(appKenh = a) }
                 }
             }
-            if (dangChon == MapVoice.APP_AUTO) Phu(t("Tự động: mở lần lượt VTVgo, TV360, FPT Play, IPTV (kênh cùng tên trong danh sách IPTV đặt ở Kênh nhanh), M3U (phím tắt cùng tên) tới khi có tiếng, như ô Kênh nhanh Auto; nhớ nguồn nào lên tiếng nhanh để lần sau mở trước. Nói \"… trên TV360\" thì vẫn mở đúng app đó.",
-                "Auto: tries VTVgo, TV360, FPT Play, IPTV (a channel with the same name in the IPTV playlist set under Quick channel) and M3U (a shortcut with the same name) until one plays sound, like a Quick channel Auto tile, and remembers which source starts fastest. Saying \"… on TV360\" still opens that app."))
+            if (dangChon == MapVoice.APP_AUTO) Phu(t("Tự động: mở lần lượt VTVgo, TV360, FPT Play, IPTV (kênh cùng tên trong danh sách IPTV đặt ở Kênh nhanh), M3U (phím tắt cùng tên) tới khi có tiếng, như ô Kênh nhanh Auto; nhớ nguồn nào lên tiếng nhanh để lần sau mở trước. Kênh có ô Kênh nhanh Auto đặt thứ tự riêng thì đi đúng thứ tự của ô đó. Nói \"… trên TV360\" thì vẫn mở đúng app đó.",
+                "Auto: tries VTVgo, TV360, FPT Play, IPTV (a channel with the same name in the IPTV playlist set under Quick channel) and M3U (a shortcut with the same name) until one plays sound, like a Quick channel Auto tile, and remembers which source starts fastest. A channel with a Quick channel Auto tile in its own order follows that tile's order. Saying \"… on TV360\" still opens that app."))
             else Phu(t("App này không có kênh vừa nói thì mở bằng app khác có kênh đó (VD HTV7 không có trên VTVgo). Nói \"… trên TV360\" / \"… trên VTVgo\" / \"… trên FPT Play\" để chọn app cho một lần. FPT Play cần đăng nhập trên tivi.",
                 "If this app lacks the channel, another app that has it opens it (e.g. HTV7 isn't on VTVgo). Say \"… on TV360\" / \"… on VTVgo\" / \"… on FPT Play\" to pick the app once. FPT Play needs a login on the TV."))
         }
