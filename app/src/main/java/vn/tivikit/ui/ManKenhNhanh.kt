@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -21,7 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -186,10 +189,14 @@ private fun SoanFpt(vm: PhienLamViec) {
 @Composable
 private fun SoanIptv(vm: PhienLamViec) {
     val k = vm.kenhNhanh
+    // Gõ xong (✓ trên bàn phím) hay bấm Tải danh sách thì bỏ chọn ô link: ô còn được chọn thì bàn phím tự hiện lại mỗi lần
+    // màn này hiện lại (thử trên Skyworth 1/11/2026).
+    val focus = LocalFocusManager.current
     OutlinedTextField(k.linkIptv, { k.linkIptv = it.trim().take(2000) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
         label = { Text(t("Link danh sách IPTV (.m3u, link rút gọn)", "IPTV playlist link (.m3u or short link)")) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-    NutPhu(t("Tải danh sách", "Load playlist"), Icons.Rounded.Refresh, enabled = !vm.dangBan) { k.taiIptv() }
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); k.taiIptv() }))
+    NutPhu(t("Tải danh sách", "Load playlist"), Icons.Rounded.Refresh, enabled = !vm.dangBan) { focus.clearFocus(); k.taiIptv() }
     val dangChon = k.kenhIptv
     if (k.dsIptv.isNotEmpty()) {
         Phu(t("Chọn kênh (danh sách có ${k.dsIptv.size} kênh):", "Pick a channel (the playlist has ${k.dsIptv.size}):"))

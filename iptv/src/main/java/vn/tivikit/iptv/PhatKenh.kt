@@ -30,8 +30,8 @@ import kotlin.concurrent.thread
 
 /**
  * Màn phát kênh IPTV (1/11/2026): mở với tên kênh [TEN] và mã kênh [MA] (tvg-id), tìm kênh trong danh sách theo link
- * người dùng (Kho), phát bằng Media3 với User-Agent / Referer riêng của kênh. Lỗi phát thì thử lại kiểu HLS (link không
- * có đuôi .m3u8), rồi tải lại danh sách một lần (nguồn kênh vừa đổi) trước khi báo lỗi. Lên / xuống (hay CH+ / CH−) đổi kênh
+ * người dùng (Kho), phát bằng Media3 với User-Agent / Referer riêng của kênh. Kiểu luồng theo đuôi link (kieuHls); lỗi phát
+ * thì thử kiểu còn lại (link không đuôi .m3u8), rồi tải lại danh sách một lần (nguồn kênh vừa đổi) trước khi báo lỗi. Lên / xuống (hay CH+ / CH−) đổi kênh
  * theo thứ tự danh sách, OK hiện tên kênh, Back thoát; rời màn (Home, app khác lên) thì thôi phát, hiện lại thì phát tiếp
  * kênh đó.
  */
@@ -44,8 +44,12 @@ class PhatKenh : Activity() {
     private var player: ExoPlayer? = null
     private var ds: List<KenhIptv> = emptyList()
     private var kenh: KenhIptv? = null
-    private var epHls = false
+    /** Kênh này đã chuyển sang kiểu luồng còn lại (HLS ↔ file thường) sau lần phát lỗi. */
+    private var doiKieu = false
     private var daTaiMoi = false
+    /** Kênh đang mở đã phát được (lên STATE_READY) ít nhất một lần; [thuLai] = số lần mở lại luồng sau lỗi giữa chừng. */
+    private var daPhat = false
+    private var thuLai = 0
     /** Lần mở hiện tại: đổi kênh thì việc tải nền của lần trước thôi. */
     private var lan = 0
     /** Màn vừa bị che (onStop) nên đã thôi phát: hiện lại thì phát tiếp. */
@@ -85,6 +89,8 @@ class PhatKenh : Activity() {
         val ma = i.getStringExtra(MA)?.trim().orEmpty()
         val l = ++lan
         biChe = false
+        // Lần mở mới: không mang theo trạng thái lỗi của lần trước (đổi kiểu luồng, đã tải lại danh sách).
+        kenh = null
         hien(getString(R.string.dang_mo, ten.ifEmpty { ma }), giu = true)
         if (kho.link.isEmpty()) { hien(getString(R.string.chua_co_link), giu = true); return }
         thread(name = "IPTV-tai") {
@@ -100,10 +106,10 @@ class PhatKenh : Activity() {
         }
     }
 
-    private fun phat(k: KenhIptv, laiHls: Boolean = false) {
-        if (k != kenh) { epHls = false; daTaiMoi = false }
+    private fun phat(k: KenhIptv, kieuKhac: Boolean = false) {
+        if (k != kenh) { doiKieu = false; daTaiMoi = false; daPhat = false; thuLai = 0 }
         kenh = k
-        epHls = epHls || laiHls
+        doiKieu = doiKieu || kieuKhac
         player?.release()
         val nguon = DefaultHttpDataSource.Factory()
             .setUserAgent(k.ua.ifEmpty { UA_MAC_DINH })
@@ -112,14 +118,16 @@ class PhatKenh : Activity() {
             .setReadTimeoutMs(15_000)
             .apply { if (k.referer.isNotEmpty()) setDefaultRequestProperties(mapOf("Referer" to k.referer)) }
         val muc = MediaItem.fromUri(k.link)
-        val nguonPhat = if (epHls || laHls(k.link)) HlsMediaSource.Factory(nguon).createMediaSource(muc)
+        val nguonPhat = if (kieuHls(k.link, doiKieu)) HlsMediaSource.Factory(nguon).createMediaSource(muc)
             else ProgressiveMediaSource.Factory(nguon).createMediaSource(muc)
         val p = ExoPlayer.Builder(this).build()
         p.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
         p.setVideoSurfaceView(hinh)
         p.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(trangThai: Int) {
-                if (trangThai == Player.STATE_READY) hien(k.ten)
+                if (trangThai != Player.STATE_READY) return
+                if (!daPhat) hien(k.ten)
+                daPhat = true
             }
 
             override fun onVideoSizeChanged(c: VideoSize) = vuaKhung(c)
@@ -133,12 +141,22 @@ class PhatKenh : Activity() {
         hien(getString(R.string.dang_mo, k.ten), giu = true)
     }
 
-    /** Lỗi phát: trễ khỏi cửa sổ trực tiếp thì về điểm phát mới nhất; thử kiểu HLS; tải lại danh sách một lần; rồi mới báo. */
+    /**
+     * Lỗi phát: trễ khỏi cửa sổ trực tiếp thì về điểm phát mới nhất; kênh đã phát được rồi mới lỗi (mạng, máy chủ chập
+     * chờn) thì mở lại đúng kiểu đó sau 1 giây, tối đa [THU_LAI] lần; chưa phát được lần nào mà link không đuôi .m3u8 thì thử
+     * kiểu luồng còn lại; tải lại danh sách một lần; rồi mới báo. Trước đây lỗi giữa chừng của luồng HLS cũng chuyển sang kiểu
+     * file thường, không bao giờ phát lại được (Skyworth 1/11/2026, VTV3 HD).
+     */
     private fun loi(k: KenhIptv, e: PlaybackException) {
         val p = player ?: return
         when {
             e.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> { p.seekToDefaultPosition(); p.prepare() }
-            !epHls && !laHls(k.link) -> phat(k, laiHls = true)
+            daPhat && thuLai < THU_LAI -> {
+                thuLai++
+                val l = lan
+                chinh.postDelayed({ if (l == lan && kenh == k && player === p && !isFinishing) phat(k) }, 1_000)
+            }
+            !daPhat && !doiKieu && !laHls(k.link) -> phat(k, kieuKhac = true)
             !daTaiMoi -> {
                 daTaiMoi = true
                 val l = lan
@@ -202,7 +220,7 @@ class PhatKenh : Activity() {
         super.onStart()
         // Hiện lại sau khi bị che (màn bảo vệ vừa tắt, quay lại từ app khác): phát tiếp kênh đang xem. Chờ một nhịp: được mở
         // bằng kênh khác (onNewIntent ngay sau) thì thôi.
-        if (biChe) chinh.post { if (biChe) { biChe = false; kenh?.let { phat(it) } ?: moTheo(intent) } }
+        if (biChe) chinh.post { if (biChe) { biChe = false; kenh?.let { k -> kenh = null; phat(k) } ?: moTheo(intent) } }
     }
 
     override fun onStop() {
@@ -231,5 +249,23 @@ class PhatKenh : Activity() {
         /** Link HLS theo đuôi (.m3u8, kể cả có tham số sau dấu ?). */
         fun laHls(link: String): Boolean = link.substringBefore('?').substringBefore('#').endsWith(".m3u8", ignoreCase = true) ||
             link.contains(".m3u8?", ignoreCase = true)
+
+        /** Số lần mở lại luồng của kênh đã phát được rồi mới lỗi, trước khi tải lại danh sách. */
+        private const val THU_LAI = 3
+
+        /** Đuôi của file nhạc / phim phát thẳng (không phải danh sách HLS). */
+        private val DUOI_FILE = setOf("mp3", "aac", "m4a", "ogg", "opus", "flac", "wav", "mp4", "m4v", "mkv", "webm", "mov", "flv", "ts")
+
+        /**
+         * Phát [link] kiểu HLS không: đuôi .m3u8 thì luôn HLS; đuôi file (mp3, mp4…) thì file thường, lỗi mới thử HLS
+         * ([doiKieu]); không đuôi thì HLS trước — phần lớn link IPTV không đuôi là HLS (Skyworth 1/11/2026: VTV3 HD đi
+         * kiểu file thường mất 9 giây mới báo lỗi), luồng khác thì HLS báo lỗi ngay từ dòng đầu rồi thử file thường.
+         */
+        fun kieuHls(link: String, doiKieu: Boolean = false): Boolean {
+            if (laHls(link)) return true
+            val ten = link.substringBefore('?').substringBefore('#').substringAfterLast('/')
+            val laFile = ten.substringAfterLast('.', "").lowercase() in DUOI_FILE
+            return laFile == doiKieu
+        }
     }
 }

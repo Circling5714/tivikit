@@ -92,6 +92,18 @@ class DanhSachTest {
         assertFalse(PhatKenh.laHls("http://example.test/vov1.mp3"))
     }
 
+    /** Kiểu luồng: .m3u8 luôn HLS; đuôi file thì file thường trước; không đuôi thì HLS trước, lỗi mới đổi kiểu. */
+    @Test fun kieuHls_theoDuoiVaLanThu() {
+        assertTrue(PhatKenh.kieuHls("https://example.test/a/index.m3u8"))
+        assertTrue(PhatKenh.kieuHls("https://example.test/a/index.m3u8", doiKieu = true))
+        assertTrue(PhatKenh.kieuHls("https://example.test/live/vtv3"))
+        assertFalse(PhatKenh.kieuHls("https://example.test/live/vtv3", doiKieu = true))
+        assertTrue(PhatKenh.kieuHls("http://example.test:8000/stream"))
+        assertFalse(PhatKenh.kieuHls("http://example.test/vov1.mp3?x=1"))
+        assertTrue(PhatKenh.kieuHls("http://example.test/vov1.mp3", doiKieu = true))
+        assertFalse(PhatKenh.kieuHls("http://example.test/phim.MP4"))
+    }
+
     @Test fun link_chiNhanHttp() {
         assertTrue(CauHinhProvider.LINK.matches("https://example.test/ds"))
         assertFalse(CauHinhProvider.LINK.matches("https://example.test/a b"))
