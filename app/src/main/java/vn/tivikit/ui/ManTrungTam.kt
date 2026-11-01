@@ -33,6 +33,7 @@ import vn.tivikit.BuildConfig
 import vn.tivikit.ManHinh
 import vn.tivikit.R
 import vn.tivikit.dulieu.DuLieu
+import vn.tivikit.dulieu.TienIch
 import vn.tivikit.t
 
 /** Một dòng chức năng ở màn chính; [mau] = màu ô biểu tượng; [bat] = false thì mờ, không bấm được (VD Home sạch trên Fire TV). */
@@ -78,6 +79,7 @@ internal fun ManChinh(vm: PhienLamViec) = Cuon {
     }
 
     TheTivi(vm)
+    TheTienIch(vm)
     // Người dùng lần đầu: khung cam hướng dẫn bật gỡ lỗi. Đã từng nối tivi: chỉ một dòng nhắc.
     if (vm.thongTin == null) {
         if (vm.tiviGanDay.isEmpty() && vm.dsSaoLuu.isEmpty()) TheNhacNpt(vm)
@@ -304,6 +306,10 @@ private fun TheTivi(vm: PhienLamViec) {
             }
             Hang(t("Tự nối lại", "Auto-reconnect"), t("Rớt kết nối thì tự nối lại; mở app là tự nối tivi này", "Reconnects when the link drops, and when you open the app"),
                 vm.giuKetNoi.bat) { vm.giuKetNoi.doiBat(it) }
+            Hang(t("Tự cập nhật tiện ích", "Update helpers automatically"),
+                t("Nối tivi là cập nhật các tiện ích TiviKit trên tivi lên bản đi kèm app, lúc tivi rảnh (không phát gì, đang ở Home / màn chờ)",
+                    "On connecting, TiviKit's helpers on the TV are updated to the versions bundled with the app while the TV is idle (nothing playing, on Home / the screensaver)"),
+                vm.tuCapNhatTienIch) { vm.datTuCapNhatTienIch(it) }
             if (hoiKhoiDong) HoiKhoiDongLai(vm, dong = { hoiKhoiDong = false })
             if (hoiTatAdb) AlertDialog(
                 onDismissRequest = { hoiTatAdb = false },
@@ -330,6 +336,28 @@ private fun TheTivi(vm: PhienLamViec) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Thẻ tiện ích có bản mới (1/11/2026): đã nối tivi mà có tiện ích khác bản đi kèm TiviKit (hay vừa cập nhật xong): từng dòng
+ * "Tele Remote 1.0 → 1.0.1", nút Cập nhật hết.
+ */
+@Composable
+private fun TheTienIch(vm: PhienLamViec) {
+    val ds = vm.tienIchMoi
+    if (vm.thongTin == null || (ds.isEmpty() && vm.baoTienIch.isEmpty())) return
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Nhan.copy(alpha = 0.12f)).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Rounded.Update, null, tint = Nhan); Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (ds.isNotEmpty()) {
+                Text(t("${ds.size} tiện ích có bản mới", if (ds.size == 1) "1 helper app has an update" else "${ds.size} helper apps have updates"), fontWeight = FontWeight.SemiBold)
+                Phu(ds.joinToString("\n") { TienIch.moTa(it) })
+            } else Text(t("Tiện ích", "Helper apps"), fontWeight = FontWeight.SemiBold)
+            if (vm.baoTienIch.isNotEmpty()) Phu(vm.baoTienIch, ChuChinh)
+        }
+        if (ds.isNotEmpty()) TextButton(onClick = { vm.capNhatTienIch() }, enabled = !vm.dangBan) { Text(t("Cập nhật hết", "Update all")) }
     }
 }
 

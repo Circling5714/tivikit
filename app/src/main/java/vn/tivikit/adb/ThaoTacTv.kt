@@ -14,6 +14,8 @@ import vn.tivikit.dulieu.KhoSaoLuu
 import vn.tivikit.dulieu.Launcher
 import vn.tivikit.dulieu.MapVoice
 import vn.tivikit.dulieu.TeleRemote
+import vn.tivikit.dulieu.TienIch
+import vn.tivikit.dulieu.DangPhat
 import vn.tivikit.dulieu.PhanApk
 import vn.tivikit.dulieu.PhimRieng
 import vn.tivikit.dulieu.ThongTinTv
@@ -1583,7 +1585,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         require(!json.contains('\'')) { "json" }
         // Chưa có, hoặc khác bản đi kèm (VD bản dựng trước khi mã nguồn đổi tên lớp) thì cài đè: giữ giờ khoá và mã.
         caiAppPhu(PKG_KHOA, apk) { bao(t("Cài app Khoá trẻ em lên tivi…", "Installing the Kids lock app on the TV…")) }
-        sh("pm grant $PKG_KHOA android.permission.WRITE_SECURE_SETTINGS 2>/dev/null; cmd appops set $PKG_KHOA AUTO_START allow 2>/dev/null; $capThongKe")
+        sh(quyenKhoa)
         bao(t("Ghi giờ khoá và mã…", "Saving the schedule and code…"))
         val kq = sh("content call --uri $khoaUri --method dat --arg '$json'")
         kiemPhien(kq)
@@ -1598,6 +1600,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
 
     /** Báo cáo xem app gì cần quyền xem thống kê sử dụng của tivi (chỉ ADB cấp được). */
     private val capThongKe = "cmd appops set $PKG_KHOA GET_USAGE_STATS allow 2>/dev/null; true"
+
+    /** Quyền ADB app khoá cần sau mỗi lần cài: tự canh gác (giờ tự động, cài đặt bảo mật), tự chạy, xem thống kê. */
+    private val quyenKhoa: String get() = "pm grant $PKG_KHOA android.permission.WRITE_SECURE_SETTINGS 2>/dev/null; cmd appops set $PKG_KHOA AUTO_START allow 2>/dev/null; $capThongKe"
 
     /**
      * Báo cáo 7 ngày gần nhất của app khoá (25/10/2026): thời gian xem mỗi ngày và app đã mở (xem dulieu/ThoiGianXem);
@@ -1772,12 +1777,15 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     fun caiAppHenGio(apk: ByteArray, bao: (String) -> Unit) {
         caiAppPhu(HenGio.GOI, apk) { bao(t("Cài app Hẹn giờ lên tivi…", "Installing the Timer app on the TV…")) }
         bao(t("Bật dịch vụ Hẹn giờ…", "Turning the Timer service on…"))
-        sh("cmd appops set ${HenGio.GOI} SCHEDULE_EXACT_ALARM allow 2>/dev/null; cmd appops set ${HenGio.GOI} TURN_SCREEN_ON allow 2>/dev/null; true")
+        sh(quyenHenGio)
         // Cài đè từ bản có tên lớp cũ: bỏ tên dịch vụ cũ (không còn lớp đó) trước khi bật tên mới.
         boTroNang("${HenGio.GOI}/${GoiCu.LOP_HEN_GIO_CU}")
         val dv = HenGio.DICH_VU
         sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$dv*) ;; null|'') settings put secure enabled_accessibility_services $dv ;; *) settings put secure enabled_accessibility_services \"\$s:$dv\" ;; esac; settings put secure accessibility_enabled 1")
     }
+
+    /** Hai quyền app Hẹn giờ cần (báo thức đúng giờ, bật màn hình); máy không có lệnh nào thì bỏ qua lệnh đó. */
+    private val quyenHenGio: String get() = "cmd appops set ${HenGio.GOI} SCHEDULE_EXACT_ALARM allow 2>/dev/null; cmd appops set ${HenGio.GOI} TURN_SCREEN_ON allow 2>/dev/null; true"
 
     /**
      * Hẹn một lần (31/10/2026, app phụ 1.2): [json] là HenGio.jsonTatSau / jsonMotLanLuc, không có nháy đơn. Trả giờ chạy
@@ -1837,13 +1845,19 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      */
     fun caiCast(apk: ByteArray, ten: String?, bao: (String) -> Unit) {
         caiAppPhu(CastSmartTube.GOI, apk) { bao(t("Cài app Cast SmartTube lên tivi…", "Installing Cast to SmartTube on the TV…")) }
-        sh("cmd appops set ${CastSmartTube.GOI} TURN_SCREEN_ON allow 2>/dev/null; cmd appops set ${CastSmartTube.GOI} GET_USAGE_STATS allow 2>/dev/null; " +
-            "cmd notification allow_listener ${CastSmartTube.NGHE} 2>/dev/null; true")
+        sh(quyenCast)
         if (ten != null) sh(CastSmartTube.lenhDatTen(ten))
         bao(t("Bật dịch vụ Cast…", "Turning the Cast service on…"))
         val dv = CastSmartTube.DICH_VU
         sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$dv*) ;; null|'') settings put secure enabled_accessibility_services $dv ;; *) settings put secure enabled_accessibility_services \"\$s:$dv\" ;; esac; settings put secure accessibility_enabled 1")
     }
+
+    /** Quyền app Cast cần: bật màn hình, thống kê dùng app, nghe phiên media (tivi ít RAM không cho thì thôi). */
+    private val quyenCast: String get() = "cmd appops set ${CastSmartTube.GOI} TURN_SCREEN_ON allow 2>/dev/null; cmd appops set ${CastSmartTube.GOI} GET_USAGE_STATS allow 2>/dev/null; " +
+        "cmd notification allow_listener ${CastSmartTube.NGHE} 2>/dev/null; true"
+
+    /** Cho app phụ [goi] bật / sáng màn hình khi mở app (Android 14+; máy cũ không có lệnh thì thôi): Map Voice, Tele Remote. */
+    private fun quyenSangMan(goi: String) = "cmd appops set $goi TURN_SCREEN_ON allow 2>/dev/null; true"
 
     /** Đổi tên hiện trong nút Cast ("" = tên mặc định); điện thoại thấy tên mới ở lần tìm sau. */
     fun datTenCast(ten: String) { sh(CastSmartTube.lenhDatTen(ten)) }
@@ -1895,7 +1909,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      */
     fun caiMapVoice(apk: ByteArray, cauHinh: MapVoice.CauHinh, kenh: String, bao: (String) -> Unit) {
         caiAppPhu(MapVoice.GOI, apk) { bao(t("Cài app Map Voice lên tivi…", "Installing Map Voice on the TV…")) }
-        sh("cmd appops set ${MapVoice.GOI} TURN_SCREEN_ON allow 2>/dev/null; true")
+        sh(quyenSangMan(MapVoice.GOI))
         bao(t("Gửi cài đặt…", "Sending the settings…"))
         if (!datMapVoice(cauHinh)) error(t("Tivi không nhận cài đặt của Map Voice.", "The TV rejected the Map Voice settings."))
         if (kenh.isNotEmpty()) guiKenhMapVoice(kenh)
@@ -1940,7 +1954,7 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     fun caiTeleRemote(apk: ByteArray, apkGo: ByteArray, cauHinh: TeleRemote.CauHinh, bao: (String) -> Unit) {
         caiAppPhu(TeleRemote.GOI, apk) { bao(t("Cài app Tele Remote lên tivi…", "Installing Tele Remote on the TV…")) }
         caiAppPhu(GoChu.GOI, apkGo) { bao(t("Cài bộ gõ tiếng Việt lên tivi…", "Installing the Vietnamese typing helper on the TV…")) }
-        sh("cmd appops set ${TeleRemote.GOI} TURN_SCREEN_ON allow 2>/dev/null; true")
+        sh(quyenSangMan(TeleRemote.GOI))
         bao(t("Gửi cài đặt…", "Sending the settings…"))
         if (!datTeleRemote(cauHinh)) error(t("Tivi không nhận cài đặt của Tele Remote.", "The TV rejected the Tele Remote settings."))
         bao(t("Bật dịch vụ Tele Remote…", "Turning the Tele Remote service on…"))
@@ -2082,6 +2096,16 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
      * mà cài đè làm tivi về Home của hãng (Google TV: Home sạch mở nó đè lên Home của hãng; Skyworth 27/10/2026) thì mở lại.
      */
     fun caiTkl(apk: ByteArray, cauHinh: String, bao: (String) -> Unit) {
+        val moLai = caiAppTkl(apk, bao)
+        sh(TiviKitLauncher.lenhDat(cauHinh))
+        if (moLai) moLaiTkl()
+    }
+
+    /**
+     * Phần app của caiTkl (cũng dùng khi cập nhật tiện ích): cài nếu khác bản đi kèm, cấp quyền, bật dịch vụ Nút nguồn, tối
+     * ưu sau khi cài. true = vừa cài đè lúc launcher đang hiện (gọi moLaiTkl sau khi xong).
+     */
+    private fun caiAppTkl(apk: ByteArray, bao: (String) -> Unit): Boolean {
         var vuaCai = false
         var dangHien = false
         caiAppPhu(TiviKitLauncher.GOI, apk) {
@@ -2096,8 +2120,12 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
             bao(t("Tối ưu cho tivi yếu…", "Optimising for slow TVs…"))
             runCatching { sh(TiviKitLauncher.LENH_TOI_UU) }
         }
-        sh(TiviKitLauncher.lenhDat(cauHinh))
-        if (vuaCai && dangHien && goiDangHien() != TiviKitLauncher.GOI) moThu(TiviKitLauncher.HOME)?.let { moThu(TiviKitLauncher.MAN) }
+        return vuaCai && dangHien
+    }
+
+    /** Cài đè lúc TiviKit Launcher đang hiện làm tivi về Home của hãng: mở lại nó. */
+    private fun moLaiTkl() {
+        if (goiDangHien() != TiviKitLauncher.GOI) moThu(TiviKitLauncher.HOME)?.let { moThu(TiviKitLauncher.MAN) }
     }
 
     /**
@@ -2121,6 +2149,54 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     private fun datLaiHome(giu: String) {
         if (giu.contains('/') && !giu.startsWith("android/") && TEN_GOI.matches(giu.substringBefore('/')) && !giu.contains('\''))
             sh("cmd package set-home-activity --user 0 '$giu'")
+    }
+
+    // ---------- Tiện ích có bản mới (1/11/2026) ----------
+
+    /** Bản của các tiện ích [goi] đang có trên tivi (SHA-256 của APK, versionCode, versionName), một lệnh cho cả lượt. */
+    fun docTienIch(goi: List<String>): Map<String, TienIch.Ban> = TienIch.docKetQua(sh(TienIch.lenhDoc(goi)))
+
+    /** Khoá trẻ em đang che tivi: cài đè lúc này làm màn khoá tắt trong chốc lát (dịch vụ chạy lại), nên để sau. */
+    fun khoaDangKhoa(): Boolean = coGoi(PKG_KHOA) && docQua(PKG_KHOA)?.optBoolean("dangKhoa") == true
+
+    /**
+     * Tivi rảnh để tự cập nhật tiện ích: màn hình tắt, hay không phát gì (dumpsys media_session) mà đang ở launcher hoặc
+     * màn chờ. Đang mở app (cả HDMI, IPTV không báo phiên phát) thì không: cài đè có lúc làm màn hình nhảy về Home.
+     */
+    fun tiviRanh(): Boolean {
+        if (!sh("dumpsys power | grep -m 1 mWakefulness=").contains("Awake")) return true
+        if (DangPhat.tuDump(sh("dumpsys media_session")).any { it.hoatDong && (it.tt == DangPhat.PHAT || it.tt == DangPhat.CHO) }) return false
+        if (sh("dumpsys window | grep -m 1 mCurrentFocus").contains("dream", ignoreCase = true)) return true
+        val goi = goiDangHien()
+        return goi.isNotEmpty() && (goi in HOME_SACH || goi == TiviKitLauncher.GOI || goi in HOME_GOC_BIET || coManHome(goi))
+    }
+
+    /**
+     * Cập nhật tiện ích [m] lên bản đi kèm [apk] (cài đè, giữ cài đặt của nó). Không bật / tắt dịch vụ nào người dùng đã
+     * chọn, chỉ cấp lại các quyền ADB nó vốn cần như màn của nó vẫn làm; launcher đang hiện thì mở lại sau khi cài.
+     */
+    fun capNhatTienIch(m: TienIch.Muc, apk: ByteArray) {
+        when (m.loai) {
+            TienIch.Loai.TKL -> if (caiAppTkl(apk) {}) moLaiTkl()
+            TienIch.Loai.HOME -> {
+                val dangHien = goiDangHien().let { it == m.goi || it == TiviKitLauncher.GOI || it in HOME_GOC_BIET }
+                val out = caiApkHome(apk)
+                if (!out.contains("Success")) error(t("Cài không được: ${out.trim().lines().lastOrNull()}", "Install failed: ${out.trim().lines().lastOrNull()}"))
+                runCatching { sh(lenhGiuSong(listOf(m.goi))) }
+                // Google TV: mở lại Home đã chọn đè Home của hãng (lenhSauHome); tivi khác: về Home như bấm nút Home.
+                if (dangHien) sh(lenhSauHome().ifEmpty { "am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null 2>&1; true" })
+            }
+            else -> {
+                caiAppPhu(m.goi, apk) {}
+                when (m.loai) {
+                    TienIch.Loai.KHOA -> sh(quyenKhoa)
+                    TienIch.Loai.HEN_GIO -> sh(quyenHenGio)
+                    TienIch.Loai.CAST -> sh(quyenCast)
+                    TienIch.Loai.MAP_VOICE, TienIch.Loai.TELE_REMOTE -> sh(quyenSangMan(m.goi))
+                    else -> {}
+                }
+            }
+        }
     }
 
     // ---------- App phụ bản cũ (trước khi đổi tên gói sang vn.tivikit, 25/10/2026) ----------

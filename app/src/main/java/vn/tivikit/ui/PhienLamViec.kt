@@ -40,6 +40,7 @@ import vn.tivikit.dulieu.THANH_PHO
 import vn.tivikit.dulieu.MauTv
 import vn.tivikit.dulieu.MucGoi
 import vn.tivikit.dulieu.ThongTinTv
+import vn.tivikit.dulieu.TienIch
 import vn.tivikit.dulieu.TrangThaiGoi
 import vn.tivikit.dulieu.tenDep
 import java.net.Inet4Address
@@ -501,6 +502,8 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         // Vào màn Kết nối (Đổi tivi, Khôi phục một bản sao lưu) rồi quay lại mà vẫn nối tivi cũ: ô IP trở lại tivi đang nối,
         // không thì sao lưu / khởi động lại / thẻ tivi dùng IP của tivi kia (28/10/2026).
         if (thongTin != null) adb.diemCuoi?.let { (h, p) -> ip = h; cong = p.toString() }
+        // Màn của một tiện ích có thể vừa cập nhật nó (Cài lại / cập nhật, Lưu): đọc lại thẻ tiện ích có bản mới.
+        if (thongTin != null && tienIchMoi.isNotEmpty()) viewModelScope.launch { runCatching { trangThai = io { tv.docTrangThai() }; xetTienIch(tuLam = false) } }
     }
 
     private fun xuLyBanMoi(b: vn.tivikit.CapNhat.BanMoi) {
@@ -551,6 +554,85 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
                 baoKiemTra = t("Không kiểm tra được (mạng hoặc GitHub): ${e.message}", "Couldn't check (network or GitHub): ${e.message}")
             } finally { dangKiemTraBan = false }
         }
+    }
+
+    // ---------- Tiện ích có bản mới (1/11/2026) ----------
+    // Mỗi tiện ích (Khoá trẻ em, Hẹn giờ, Tele Remote…) trước chỉ lên bản mới khi mở đúng màn của nó rồi lưu. Nay nối tivi là
+    // so cả lượt với bản đi kèm TiviKit: thẻ ở màn chính, nút Cập nhật hết, công tắc tự cập nhật ở thẻ tivi.
+
+    /** Tiện ích trên tivi đang nối khác bản đi kèm (TienIch.canCapNhat). */
+    var tienIchMoi by mutableStateOf<List<TienIch.CanCapNhat>>(emptyList())
+        private set
+    /** Dòng báo dưới thẻ: vừa cập nhật, để sau vì tivi đang bận / Khoá trẻ em đang khoá, cái nào lỗi. */
+    var baoTienIch by mutableStateOf("")
+        private set
+    /** Công tắc ở thẻ tivi: nối tivi là tự cập nhật lúc tivi rảnh (bật sẵn). */
+    var tuCapNhatTienIch by mutableStateOf(prefs.getBoolean("tu_cap_nhat_tien_ich", true))
+        private set
+    /** Tivi đã tự cập nhật trong lần mở app này (khoaLuu): mỗi tivi một lần, lỗi thì không thử mãi. */
+    private val daTuCapNhat = mutableSetOf<String>()
+    /** Bản đi kèm của từng file APK trong assets (không đổi khi app đang chạy). */
+    private val banDiKem = mutableMapOf<String, TienIch.Ban>()
+
+    fun datTuCapNhatTienIch(bat: Boolean) {
+        prefs.edit().putBoolean("tu_cap_nhat_tien_ich", bat).apply()
+        tuCapNhatTienIch = bat
+    }
+
+    /** Bản đi kèm của [apk] trong assets: versionCode / versionName đọc bằng PackageManager của điện thoại, SHA-256 của file. */
+    private fun diKem(apk: String): TienIch.Ban = banDiKem.getOrPut(apk) {
+        val du = vn.tivikit.CapNhat.moAsset(ctx, apk).use { it.readBytes() }
+        val tep = java.io.File(ctx.cacheDir, "tien-ich-$apk").apply { writeBytes(du) }
+        val pi = runCatching { ctx.packageManager.getPackageArchiveInfo(tep.path, 0) }.getOrNull()
+        tep.delete()
+        @Suppress("DEPRECATION")
+        val so = pi?.let { if (android.os.Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong() } ?: 0L
+        TienIch.Ban(so, pi?.versionName.orEmpty(), java.security.MessageDigest.getInstance("SHA-256").digest(du).joinToString("") { "%02x".format(it) })
+    }
+
+    /**
+     * Đọc tiện ích trên tivi đang nối, so với bản đi kèm. [tuLam]: vừa nối xong ở màn chính (không bấm chức năng nào), công
+     * tắc bật, tivi rảnh thì cập nhật luôn, mỗi tivi một lần mỗi lần mở app; tivi đang bận thì để lần nối sau.
+     */
+    private suspend fun xetTienIch(tuLam: Boolean) {
+        val info = thongTin ?: return
+        val tt = trangThai ?: return
+        val ds = TienIch.ds(goiHome, tv.apkHome).filter { it.goi in tt.caiDat && it.goi !in tt.daTat }
+        val moi = if (ds.isEmpty()) emptyList() else runCatching {
+            io {
+                val trenTv = tv.docTienIch(ds.map { it.goi })
+                ds.mapNotNull { m -> val d = diKem(m.apk); trenTv[m.goi]?.takeIf { TienIch.canCapNhat(it, d) }?.let { TienIch.CanCapNhat(m, it, d) } }
+            }
+        }.getOrNull() ?: return
+        if (thongTin !== info) return
+        tienIchMoi = moi
+        if (moi.isEmpty() || !tuLam || !tuCapNhatTienIch || info.khoaLuu in daTuCapNhat) return
+        if (!runCatching { io { tv.tiviRanh() } }.getOrDefault(false)) {
+            baoTienIch = t("Tivi đang phát hay đang mở app nên chưa tự cập nhật: bấm Cập nhật hết khi xem xong, hoặc để lần nối sau.",
+                "The TV is playing or in an app, so nothing was updated automatically: tap Update all when you're done, or it happens next time.")
+            return
+        }
+        daTuCapNhat += info.khoaLuu
+        capNhatTienIch()
+    }
+
+    /** Nút Cập nhật hết (và tự cập nhật): lần lượt từng tiện ích, launcher sau cùng; Khoá trẻ em đang khoá tivi thì để sau. */
+    fun capNhatTienIch() = chay(t("Đang cập nhật tiện ích…", "Updating helpers…")) {
+        damBaoKetNoi()
+        val xong = mutableListOf<String>(); val sau = mutableListOf<String>(); val hong = mutableListOf<String>()
+        for (c in tienIchMoi) {
+            if (c.muc.loai == TienIch.Loai.KHOA && io { tv.khoaDangKhoa() }) { sau += c.muc.ten; continue }
+            thongBao = t("Đang cập nhật ${c.muc.ten}…", "Updating ${c.muc.ten}…")
+            runCatching { io { tv.capNhatTienIch(c.muc, vn.tivikit.CapNhat.moAsset(ctx, c.muc.apk).use { it.readBytes() }) } }
+                .onSuccess { xong += c.muc.ten }.onFailure { hong += "${c.muc.ten} (${it.message})" }
+        }
+        trangThai = io { tv.docTrangThai() }
+        xetTienIch(tuLam = false)
+        baoTienIch = listOfNotNull(
+            xong.takeIf { it.isNotEmpty() }?.let { t("Đã cập nhật ", "Updated ") + it.joinToString(", ") + "." },
+            sau.takeIf { it.isNotEmpty() }?.let { t("Khoá trẻ em đang khoá tivi: cập nhật lúc tivi mở khoá.", "The Kids lock is locking the TV: it updates once the TV is unlocked.") },
+            hong.takeIf { it.isNotEmpty() }?.let { t("Chưa cập nhật được ", "Couldn't update ") + it.joinToString(", ") + "." },
+        ).joinToString("\n")
     }
 
     fun taiLaiSaoLuu() { dsSaoLuu = kho.tatCa() }
@@ -838,6 +920,10 @@ class PhienLamViec(app: Application) : AndroidViewModel(app) {
         man = when { dangKhoiPhuc -> Man.KHOI_PHUC; dangDon -> Man.THONG_TIN; else -> Man.CHINH }
         // Chức năng bấm lúc chưa nối (thường cũng chạy qua chay): đợi việc kết nối này nhả dangBan rồi mới mở.
         if (viec != null) viewModelScope.launch { androidx.compose.runtime.snapshotFlow { dangBan }.first { !it }; viec() }
+        // Tiện ích có bản mới (1/11/2026): cũng đợi nhả dangBan; chỉ tự cập nhật khi vừa nối ở màn chính, không bấm chức năng nào.
+        val tuLam = viec == null && !dangKhoiPhuc && !dangDon
+        tienIchMoi = emptyList(); baoTienIch = ""
+        viewModelScope.launch { androidx.compose.runtime.snapshotFlow { dangBan }.first { !it }; xetTienIch(tuLam) }
     }
 
     var dangKhoiPhuc by mutableStateOf(false)
