@@ -23,8 +23,9 @@ data class CauRieng(val chu: String, val dich: String)
 /**
  * Cấu hình TiviKit gửi qua ADB (content call … --method dat). [appYouTube] = gói app mở YouTube (SmartTube, TizenTube,
  * YouTube gốc; "" = SmartTube đầu tiên có trên tivi). [nhacVideo] = câu tìm nhạc, video không nói "YouTube" cũng chuyển.
- * [kenh] = bắt câu mở kênh, mở bằng [appKenh] ("vtvgo" / "tv360" / "fptplay"; app đó không có kênh thì dùng app khác).
- * [cauRieng] = câu riêng, xét trước hết theo thứ tự.
+ * [kenh] = bắt câu mở kênh, mở bằng [appKenh] ("vtvgo" / "tv360" / "fptplay"; app đó không có kênh thì dùng app khác;
+ * "auto" = tự chọn nguồn, TuChon). [cauRieng] = câu riêng, xét trước hết theo thứ tự. [doiNguon] = kênh mở tự chọn nguồn
+ * (ô Auto, câu nói khi app kênh là "auto") đang xem mà mất tiếng 9 giây thì tự đổi nguồn (1/11/2026).
  */
 data class CauHinh(
     val bat: Boolean = true,
@@ -34,15 +35,19 @@ data class CauHinh(
     val kenh: Boolean = true,
     val appKenh: String = APP_VTVGO,
     val cauRieng: List<CauRieng> = emptyList(),
+    val doiNguon: Boolean = true,
 ) {
     fun json(): JSONObject = JSONObject().put("bat", bat).put("appYouTube", appYouTube).put("cachMo", cachMo.ma)
         .put("nhacVideo", nhacVideo).put("kenh", kenh).put("appKenh", appKenh)
         .put("cauRieng", JSONArray().apply { cauRieng.forEach { put(JSONObject().put("chu", it.chu).put("dich", it.dich)) } })
+        .put("doiNguon", doiNguon)
 
     companion object {
         const val APP_VTVGO = "vtvgo"
         const val APP_TV360 = "tv360"
         const val APP_FPT = "fptplay"
+        /** Tự chọn nguồn: mở lần lượt VTVgo, TV360, FPT Play, M3U tới khi có tiếng (TuChon). */
+        const val APP_AUTO = "auto"
         /** Số câu riêng tối đa, độ dài chữ tối đa của một câu riêng. */
         const val CAU_RIENG_TOI_DA = 30
         const val CHU_TOI_DA = 60
@@ -57,8 +62,9 @@ data class CauHinh(
                 cachMo = CachMo.tuMa(j.optString("cachMo")),
                 nhacVideo = j.optBoolean("nhacVideo", true),
                 kenh = j.optBoolean("kenh", true),
-                appKenh = j.optString("appKenh").takeIf { it == APP_TV360 || it == APP_FPT } ?: APP_VTVGO,
+                appKenh = j.optString("appKenh").takeIf { it == APP_TV360 || it == APP_FPT || it == APP_AUTO } ?: APP_VTVGO,
                 cauRieng = cauRieng(j.optJSONArray("cauRieng")),
+                doiNguon = j.optBoolean("doiNguon", true),
             )
         }
 
@@ -119,6 +125,23 @@ class Kho(ctx: Context) {
             (0 until a.length()).mapNotNull { a.optJSONObject(it) }
                 .map { NhatKy(it.optLong("luc"), it.optString("cau"), it.optString("viec"), it.optString("app")) }
         }.getOrDefault(emptyList())
+
+    /** Kết quả mở từng nguồn của từng kênh (khoá kênh XuLyCau.khoaKenh → Nguon.khoa → ThongKe), để TuChonNguon.xep. */
+    @Synchronized
+    fun thongKe(khoaKenh: String): Map<String, TuChonNguon.ThongKe> =
+        TuChonNguon.thongKeTu(runCatching { JSONObject(p.getString("thong_ke", "{}")!!).optJSONObject(khoaKenh)?.toString() }.getOrNull())
+
+    @Synchronized
+    fun ghiThongKe(khoaKenh: String, khoaNguon: String, doi: (TuChonNguon.ThongKe) -> TuChonNguon.ThongKe) {
+        val j = runCatching { JSONObject(p.getString("thong_ke", "{}")!!) }.getOrDefault(JSONObject())
+        val tk = TuChonNguon.thongKeTu(j.optJSONObject(khoaKenh)?.toString()).toMutableMap()
+        tk[khoaNguon] = doi(tk[khoaNguon] ?: TuChonNguon.ThongKe())
+        j.remove(khoaKenh)
+        j.put(khoaKenh, JSONObject(TuChonNguon.thongKeJson(tk)))
+        // Giữ tối đa 60 kênh: kênh vừa mở chuyển xuống cuối, bỏ kênh lâu không mở nhất.
+        while (j.length() > 60) j.remove(j.keys().next())
+        p.edit().putString("thong_ke", j.toString()).apply()
+    }
 
     /** Ghi một dòng nhật ký, giữ [GIU] dòng mới nhất (câu nói là chuyện riêng: không giữ lâu). */
     @Synchronized

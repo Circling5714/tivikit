@@ -10,7 +10,7 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <!-- Android 11+: thấy SmartTube (các bản), TizenTube, app mở được link YouTube, Trợ lý Google, YouTube gốc, VTVgo, TV360,
-         FPT Play, và app trong danh sách app của tivi (câu riêng mở app). -->
+         FPT Play, M3U (kênh tự chọn nguồn), và app trong danh sách app của tivi (câu riêng mở app). -->
     <queries>
         <package android:name="org.smarttube.stable" />
         <package android:name="org.smarttube.beta" />
@@ -22,6 +22,7 @@
         <package android:name="vn.vtv.vtvgotv" />
         <package android:name="io.gh.reisxd.tizentube.cobalt" />
         <package android:name="net.fptplay.ottbox" />
+        <package android:name="com.m3u.smartphone" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="www.youtube.com" />
@@ -54,6 +55,14 @@
             </intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/map_voice_tro_nang" />
         </service>
+        <!-- Ô Kênh nhanh Auto gọi vào để tự chọn nguồn (1/11/2026); không hiện gì, chỉ mở kênh. -->
+        <activity
+            android:name=".MoTuDong"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
         <!-- Cấu hình chỉ đặt được từ ADB (TiviKit). -->
         <provider
             android:name=".CauHinhProvider"

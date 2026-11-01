@@ -75,6 +75,8 @@ class CauHinhProvider : ContentProvider() {
                     .put("phienBan", runCatching { pm.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "")
                     .put("dichVuChay", dv != null)
                     .put("adb", dv?.trangThaiNghe?.ma ?: Nghe.TrangThai.TAT.ma)
+                    // Bao lâu từ lần bấm phím remote gần nhất (ms; -1 = chưa thấy): biết dịch vụ có nhận phím không (TuChon).
+                    .put("phimCach", dv?.lucBamPhim?.takeIf { it > 0 }?.let { android.os.SystemClock.elapsedRealtime() - it } ?: -1L)
                     .put("troLy", co(pm, XuLyCau.TRO_LY))
                     .put("appYouTube", dv?.appYouTube() ?: (XuLyCau.SMARTTUBE + XuLyCau.TIZENTUBE).firstOrNull { co(pm, it) } ?: "")
                     .put("cauHinh", kho.cauHinh.json())
@@ -91,6 +93,7 @@ class CauHinhProvider : ContentProvider() {
     private fun moTa(v: XuLyCau.Viec): String = when (v) {
         is XuLyCau.YouTube -> if (v.tim.isEmpty()) "yt-app|" else (if (v.phatLuon) "yt-phat|" else "yt-tim|") + v.tim
         is XuLyCau.MoKenh -> "kenh|${v.app}|${v.ten}"
+        is XuLyCau.KenhTuDong -> "kenh|${CauHinh.APP_AUTO}|${v.k.ten}"
         is XuLyCau.MoApp -> "mo-app|${v.goi}"
         is XuLyCau.TroLy -> "tro-ly|${v.chu}"
         XuLyCau.BoQua -> "bo-qua|"
@@ -100,11 +103,9 @@ class CauHinhProvider : ContentProvider() {
     private fun appSe(v: XuLyCau.Viec, ch: CauHinh, dv: MapVoiceDichVu?, coApp: (String) -> Boolean): String? = when (v) {
         is XuLyCau.YouTube -> v.app.takeIf { it.isNotEmpty() && coApp(it) }
             ?: dv?.appYouTube(ch) ?: ch.appYouTube.takeIf { it.isNotEmpty() && coApp(it) } ?: (XuLyCau.SMARTTUBE + XuLyCau.TIZENTUBE).firstOrNull(coApp)
-        is XuLyCau.MoKenh -> when (v.app) {
-            CauHinh.APP_VTVGO -> XuLyCau.VTVGO
-            CauHinh.APP_FPT -> XuLyCau.FPTPLAY
-            else -> XuLyCau.TV360
-        }
+        is XuLyCau.MoKenh -> TuChonNguon.goiCua(v.app)
+        // Nguồn thử trước (chưa xét lịch sử): VTVgo, TV360, FPT Play theo thứ tự mặc định.
+        is XuLyCau.KenhTuDong -> TuChonNguon.nguonCua(v.k, emptyList()).firstOrNull { coApp(it.goi) }?.goi
         is XuLyCau.MoApp -> v.goi
         is XuLyCau.TroLy, XuLyCau.BoQua -> null
     }

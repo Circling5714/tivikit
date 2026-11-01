@@ -159,15 +159,24 @@ private fun TheCaiDat(vm: PhienLamViec, m: MapVoiceTivi) = The(t("Cách chuyển
         if (coKenh.isEmpty()) Phu(t("Tivi chưa có VTVgo, TV360 hay FPT Play bản tivi: câu mở kênh để Trợ lý làm.", "The TV has no VTVgo, TV360 or FPT Play for TV: channel requests are left to the Assistant."))
         else {
             Text(t("App mở kênh", "Channel app"), fontWeight = FontWeight.SemiBold)
-            val dangChon = c.appKenh.takeIf { it in coKenh } ?: coKenh.first()
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                coKenh.forEach { a ->
-                    ChonChip(when (a) { MapVoice.APP_TV360 -> "TV360"; MapVoice.APP_FPT -> "FPT Play"; else -> "VTVgo" }, dangChon == a) { m.cauHinh = c.copy(appKenh = a) }
+            val chon = coKenh + MapVoice.APP_AUTO
+            val dangChon = c.appKenh.takeIf { it in chon } ?: coKenh.first()
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                chon.forEach { a ->
+                    ChonChip(when (a) { MapVoice.APP_TV360 -> "TV360"; MapVoice.APP_FPT -> "FPT Play"; MapVoice.APP_AUTO -> t("Tự động", "Auto"); else -> "VTVgo" },
+                        dangChon == a) { m.cauHinh = c.copy(appKenh = a) }
                 }
             }
-            Phu(t("App này không có kênh vừa nói thì mở bằng app khác có kênh đó (VD HTV7 không có trên VTVgo). Nói \"… trên TV360\" / \"… trên VTVgo\" / \"… trên FPT Play\" để chọn app cho một lần. FPT Play cần đăng nhập trên tivi.",
+            if (dangChon == MapVoice.APP_AUTO) Phu(t("Tự động: mở lần lượt VTVgo, TV360, FPT Play, M3U (phím tắt cùng tên) tới khi có tiếng, như ô Kênh nhanh Auto; nhớ nguồn nào lên tiếng nhanh để lần sau mở trước. Nói \"… trên TV360\" thì vẫn mở đúng app đó.",
+                "Auto: tries VTVgo, TV360, FPT Play and M3U (a shortcut with the same name) until one plays sound, like a Quick channel Auto tile, and remembers which source starts fastest. Saying \"… on TV360\" still opens that app."))
+            else Phu(t("App này không có kênh vừa nói thì mở bằng app khác có kênh đó (VD HTV7 không có trên VTVgo). Nói \"… trên TV360\" / \"… trên VTVgo\" / \"… trên FPT Play\" để chọn app cho một lần. FPT Play cần đăng nhập trên tivi.",
                 "If this app lacks the channel, another app that has it opens it (e.g. HTV7 isn't on VTVgo). Say \"… on TV360\" / \"… on VTVgo\" / \"… on FPT Play\" to pick the app once. FPT Play needs a login on the TV."))
         }
+    }
+    Hang(t("Kênh tự chọn nguồn: đổi nguồn khi mất tiếng", "Auto-source channels: switch when sound stops"),
+        t("Kênh mở bằng ô Kênh nhanh Auto hay app Tự động mà đang xem mất tiếng 9 giây (không ai bấm remote) thì mở nguồn kế.",
+            "A channel opened by a Quick channel Auto tile or the Auto app that goes silent for 9 seconds (with no remote key pressed) moves to the next source."), c.doiNguon) {
+        m.cauHinh = c.copy(doiNguon = it)
     }
 }
 

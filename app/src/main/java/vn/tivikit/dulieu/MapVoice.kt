@@ -27,6 +27,10 @@ object MapVoice {
     const val APP_VTVGO = "vtvgo"
     const val APP_TV360 = "tv360"
     const val APP_FPT = "fptplay"
+    /** Tự chọn nguồn (Map Voice 1.2, 1/11/2026): thử lần lượt VTVgo, TV360, FPT Play, M3U tới khi có tiếng. */
+    const val APP_AUTO = "auto"
+    /** Map Voice 1.2 (versionCode 3) trở lên mới tự chọn nguồn (ô Kênh nhanh Auto, app kênh "auto"). */
+    const val BAN_TU_CHON = 3
     /** Đích câu riêng: để Trợ lý Google làm; app YouTube đã chọn. Còn lại là tên gói app. */
     const val DICH_TRO_LY = "tro-ly"
     const val DICH_YOUTUBE = "youtube"
@@ -46,7 +50,10 @@ object MapVoice {
     /** Câu riêng: câu có chữ [chu] thì làm theo [dich] (DICH_TRO_LY, DICH_YOUTUBE hay tên gói app), như CauRieng của app phụ. */
     data class CauRieng(val chu: String, val dich: String)
 
-    /** Cấu hình gửi cho app phụ, như CauHinh của module mapvoice/. */
+    /**
+     * Cấu hình gửi cho app phụ, như CauHinh của module mapvoice/. [doiNguon] (Map Voice 1.2): kênh tự chọn nguồn đang xem mà
+     * mất tiếng 9 giây thì đổi nguồn.
+     */
     data class CauHinh(
         val bat: Boolean = true,
         val appYouTube: String = "",
@@ -55,17 +62,20 @@ object MapVoice {
         val kenh: Boolean = true,
         val appKenh: String = APP_VTVGO,
         val cauRieng: List<CauRieng> = emptyList(),
+        val doiNguon: Boolean = true,
     ) {
         fun json(): JSONObject = JSONObject().put("bat", bat).put("appYouTube", appYouTube).put("cachMo", cachMo.ma)
             .put("nhacVideo", nhacVideo).put("kenh", kenh).put("appKenh", appKenh)
             .put("cauRieng", JSONArray().apply { cauRieng.forEach { put(JSONObject().put("chu", it.chu).put("dich", it.dich)) } })
+            .put("doiNguon", doiNguon)
     }
 
     fun cauHinh(j: JSONObject?): CauHinh? = j?.let {
         CauHinh(
             bat = it.optBoolean("bat", true), appYouTube = it.optString("appYouTube"), cachMo = CachMo.tuMa(it.optString("cachMo")),
             nhacVideo = it.optBoolean("nhacVideo", true), kenh = it.optBoolean("kenh", true),
-            appKenh = it.optString("appKenh").takeIf { a -> a == APP_TV360 || a == APP_FPT } ?: APP_VTVGO,
+            appKenh = it.optString("appKenh").takeIf { a -> a == APP_TV360 || a == APP_FPT || a == APP_AUTO } ?: APP_VTVGO,
+            doiNguon = it.optBoolean("doiNguon", true),
             cauRieng = it.optJSONArray("cauRieng")?.let { a ->
                 (0 until a.length()).mapNotNull { i -> a.optJSONObject(i) }
                     .map { o -> CauRieng(o.optString("chu"), o.optString("dich")) }.filter { r -> r.chu.isNotBlank() && r.dich.isNotBlank() }

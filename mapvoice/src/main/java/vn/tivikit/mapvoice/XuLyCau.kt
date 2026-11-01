@@ -24,6 +24,8 @@ object XuLyCau {
      * tìm theo tên).
      */
     data class MoKenh(val ten: String, val app: String, val ma: String = "", val so: String = "") : Viec
+    /** Mở kênh [k] tự chọn nguồn (app kênh "auto"): thử lần lượt các app có kênh này tới khi có tiếng (TuChon). */
+    data class KenhTuDong(val k: KenhTv) : Viec
     /** Câu riêng: mở app [goi] (không tìm gì trong app). */
     data class MoApp(val goi: String) : Viec
     /** Câu riêng: để Trợ lý Google làm (có chữ [chu]); Trợ lý tự mở YouTube gốc thì cũng không chuyển. */
@@ -169,8 +171,11 @@ object XuLyCau {
         return YouTube(tim, phat && tim.isNotEmpty())
     }
 
-    /** Câu mở kênh: "mở / xem / chuyển sang (kênh) VTV3 (trên TV360)"; null nếu không phải kênh Map Voice biết. */
-    private fun kenh(c0: Cau, ch: CauHinh, ds: List<KenhTv>, coApp: (String) -> Boolean): MoKenh? {
+    /**
+     * Câu mở kênh: "mở / xem / chuyển sang (kênh) VTV3 (trên TV360)"; null nếu không phải kênh Map Voice biết. App kênh
+     * "auto" mà câu không nói app thì tự chọn nguồn.
+     */
+    private fun kenh(c0: Cau, ch: CauHinh, ds: List<KenhTv>, coApp: (String) -> Boolean): Viec? {
         var c = c0
         for (i in 1..2) c = c.bo(DONG_TU_KENH) ?: break
         c = c.bo(CHU_KENH) ?: c
@@ -185,6 +190,7 @@ object XuLyCau {
         val khoa = khoaKenh(c.goc)
         if (khoa.isEmpty()) return null
         val k = ds.firstOrNull { khoa in it.khoa } ?: return null
+        if (muon == null && ch.appKenh == CauHinh.APP_AUTO) return KenhTuDong(k)
         return chonApp(k, muon, ch, coApp)
     }
 

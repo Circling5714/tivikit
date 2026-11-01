@@ -265,7 +265,9 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
                 "yt-phat" -> t("Mở $yt, phát video đầu tiên khi tìm \"${v.chiTiet}\"", "Open $yt and play the first result for \"${v.chiTiet}\"")
                 "yt-tim" -> t("Mở $yt, tìm \"${v.chiTiet}\"", "Open $yt and search for \"${v.chiTiet}\"")
                 "yt-app" -> t("Mở $yt", "Open $yt")
-                "kenh" -> t("Mở kênh ${v.chiTiet} bằng ", "Open channel ${v.chiTiet} in ") + when (v.app) {
+                "kenh" -> if (v.app == MapVoice.APP_AUTO) t("Mở kênh ${v.chiTiet}, tự chọn nguồn (thử trước: ", "Open channel ${v.chiTiet}, picking the source (first try: ") +
+                    (v.goi.takeIf { it.isNotEmpty() }?.let(ten) ?: "VTVgo") + ")"
+                else t("Mở kênh ${v.chiTiet} bằng ", "Open channel ${v.chiTiet} in ") + when (v.app) {
                     MapVoice.APP_TV360 -> "TV360"
                     MapVoice.APP_FPT -> "FPT Play"
                     else -> "VTVgo"
@@ -292,6 +294,7 @@ class MapVoiceTivi(private val vm: PhienLamViec) {
             KenhFpt.GOI -> "FPT Play"
             KenhVtvGo.GOI -> "VTVgo"
             KenhNhanh.TV360 -> "TV360"
+            KenhNhanh.M3U -> "M3U"
             else -> null
         }
     }

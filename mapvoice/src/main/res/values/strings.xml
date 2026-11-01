@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ten_app">Map Voice (TiviKit)</string>
-    <string name="mo_ta">Nói vào nút mic của remote như thường: câu tìm nhạc, video mở bằng app YouTube đã chọn (SmartTube, TizenTube…), câu mở kênh mở bằng VTVgo / TV360 / FPT Play, câu riêng mở bằng app đã đặt. Đọc câu Trợ lý Google vừa nghe qua ADB của chính tivi, chỉ biết app nào vừa hiện, không đọc nội dung màn hình, không bắt phím remote.</string>
+    <string name="mo_ta">Nói vào nút mic của remote như thường: câu tìm nhạc, video mở bằng app YouTube đã chọn (SmartTube, TizenTube…), câu mở kênh mở bằng VTVgo / TV360 / FPT Play hay tự chọn nguồn đang phát được, câu riêng mở bằng app đã đặt. Đọc câu Trợ lý Google vừa nghe qua ADB của chính tivi, chỉ biết app nào vừa hiện, không đọc nội dung màn hình. Xem lúc có người bấm remote (không chặn, không ghi phím nào) để kênh tự chọn nguồn không tự đổi nguồn khi người xem tự tạm dừng.</string>
     <string name="dang_hoi">Map Voice: tivi đang hỏi \"Cho phép gỡ lỗi?\". Chọn Luôn cho phép rồi OK để Map Voice nghe được câu nói.</string>
     <string name="mo_youtube">Map Voice: \"%1$s\" → %2$s</string>
     <string name="mo_app">Map Voice: mở %1$s</string>
     <string name="mo_kenh">Map Voice: %1$s → %2$s</string>
     <string name="khong_mo_duoc">Map Voice: không mở được %1$s</string>
+    <string name="auto_chuyen">Map Voice: %1$s chưa phát được %2$s, chuyển sang %3$s…</string>
+    <string name="auto_mat_tieng">Map Voice: %1$s mất tiếng trên %2$s, đổi nguồn…</string>
+    <string name="auto_khong_nguon">Map Voice: không nguồn nào phát được %1$s</string>
+    <string name="auto_khong_co_app">Map Voice: tivi chưa có app nào xem được %1$s</string>
 </resources>

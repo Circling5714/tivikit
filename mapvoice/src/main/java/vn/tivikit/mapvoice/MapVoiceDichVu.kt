@@ -9,23 +9,35 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
- * Dịch vụ trợ năng của Map Voice: chỉ nghe đổi cửa sổ (tên app vừa hiện), không đọc nội dung màn hình, không lọc phím. Giữ
- * vòng nghe ([Nghe]) chạy suốt từ lúc tivi bật, để Android cho mở SmartTube / VTVgo / TV360 / FPT Play khi app đang chạy
- * nền, và biết Trợ lý Google có vừa mở YouTube gốc không. Người dùng thấy và tắt được trong Cài đặt → Trợ năng.
+ * Dịch vụ trợ năng của Map Voice: nghe đổi cửa sổ (tên app vừa hiện), không đọc nội dung màn hình. Giữ vòng nghe ([Nghe])
+ * chạy suốt từ lúc tivi bật, để Android cho mở SmartTube / VTVgo / TV360 / FPT Play khi app đang chạy nền, và biết Trợ lý
+ * Google có vừa mở YouTube gốc không. Người dùng thấy và tắt được trong Cài đặt → Trợ năng. Từ 1/11/2026 (kênh tự chọn
+ * nguồn, [TuChon]) còn ghi lúc có người bấm remote — chỉ lúc bấm và có phải phím chuyển kênh không, không chặn, không giữ
+ * phím nào — để không tự đổi nguồn khi người xem tự tạm dừng.
  *
  * Một câu cần chuyển: đóng Trợ lý (và YouTube gốc, trừ khi chính nó là app được chọn) qua ADB để nó không làm tiếp, rồi mở
  * app đã chọn. Câu không cần chuyển mà vài giây sau Trợ lý tự mở YouTube gốc (VD nói tên bài hát) thì cũng chuyển sang app
  * YouTube đã chọn với chính câu đó (trừ câu riêng để Trợ lý làm).
  */
 class MapVoiceDichVu : AccessibilityService() {
-    private lateinit var kho: Kho
+    internal lateinit var kho: Kho
     private var nghe: Nghe? = null
+    private var tuChon: TuChon? = null
+    /** App vừa hiện trước mặt (cửa sổ đổi gần nhất, bỏ cửa sổ của hệ thống và của Map Voice). */
+    @Volatile var appTruoc: String? = null
+        private set
+    /** Lúc bấm phím remote gần nhất (trừ âm lượng) / phím chuyển kênh, Back, Home (SystemClock.elapsedRealtime). */
+    @Volatile var lucBamPhim = 0L
+        private set
+    @Volatile var lucPhimDoiKenh = 0L
+        private set
     private val viec = Executors.newSingleThreadExecutor()
     private val chinh = Handler(Looper.getMainLooper())
     /** Câu vừa bỏ qua cho Trợ lý: Trợ lý mở YouTube gốc trong [CHO_YOUTUBE] thì chuyển câu này sang app YouTube đã chọn. */
@@ -43,6 +55,7 @@ class MapVoiceDichVu : AccessibilityService() {
         super.onServiceConnected()
         kho = Kho(this)
         dangChay = this
+        if (tuChon == null) tuChon = TuChon(this)
         if (nghe == null) nghe = Nghe(filesDir, { cau -> viec.execute { xuLy(cau, epYouTube = false, laThu = false) } }) {
             hien(getString(R.string.dang_hoi), dai = true)
             chinh.postDelayed({ hien(getString(R.string.dang_hoi), dai = true) }, 4000)
@@ -50,7 +63,10 @@ class MapVoiceDichVu : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(e: AccessibilityEvent?) {
-        if (e?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || e.packageName?.toString() != XuLyCau.YOUTUBE_GOC) return
+        if (e?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val goi = e.packageName?.toString() ?: return
+        if (goi != CUA_SO_HE_THONG && goi != packageName) appTruoc = goi
+        if (goi != XuLyCau.YOUTUBE_GOC) return
         val bay = SystemClock.elapsedRealtime()
         if (bay < chanYouTubeDen) {
             viec.execute { nghe?.lenh("am force-stop ${XuLyCau.YOUTUBE_GOC}") }
@@ -62,7 +78,20 @@ class MapVoiceDichVu : AccessibilityService() {
         viec.execute { xuLy(cau, epYouTube = true, laThu = false) }
     }
 
+    /** Chỉ ghi lúc bấm (TuChon xem để không đổi nguồn khi người xem tự tạm dừng); không chặn phím nào. */
+    override fun onKeyEvent(e: KeyEvent): Boolean {
+        if (e.action == KeyEvent.ACTION_DOWN && e.keyCode !in PHIM_AM_LUONG) {
+            val bay = SystemClock.elapsedRealtime()
+            lucBamPhim = bay
+            if (e.keyCode in PHIM_DOI_KENH || e.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) lucPhimDoiKenh = bay
+        }
+        return false
+    }
+
     override fun onInterrupt() {}
+
+    /** Ô Kênh nhanh Auto (qua MoTuDong): mở kênh [ten] tự chọn trong [nguon]. */
+    fun moTuDong(ten: String, nguon: List<TuChonNguon.Nguon>) { tuChon?.mo(ten, nguon) }
 
     /**
      * Làm việc cho câu [cau] (trên luồng [viec]); [epYouTube] = Trợ lý đã tự mở YouTube gốc cho câu này. Việc đã làm dạng
@@ -73,10 +102,13 @@ class MapVoiceDichVu : AccessibilityService() {
         val ch = kho.cauHinh
         val quyet = XuLyCau.quyet(cau, ch, kho.dsKenh, ::coApp)
         val v = if (quyet == XuLyCau.BoQua && epYouTube && ch.bat) XuLyCau.youTube(cau, ch) else quyet
+        // Câu mới thay việc tự chọn nguồn đang làm / đang theo dõi.
+        if (v != XuLyCau.BoQua) tuChon?.huy()
         val ket = runCatching {
             when (v) {
                 is XuLyCau.YouTube -> moYouTube(v, ch)
                 is XuLyCau.MoKenh -> moKenh(v)
+                is XuLyCau.KenhTuDong -> moKenhTuDong(v.k)
                 is XuLyCau.MoApp -> moAppRieng(v.goi)
                 is XuLyCau.TroLy -> Lam("tro-ly|${v.chu}")
                 XuLyCau.BoQua -> {
@@ -125,30 +157,35 @@ class MapVoiceDichVu : AccessibilityService() {
     }
 
     /** [goi] đang chạy trên tivi (hỏi qua ADB của tivi); chưa nối ADB / không hỏi được thì coi như chưa chạy. */
-    private fun dangChay(goi: String): Boolean = nghe?.lenh("pidof $goi", 2000)?.trim()?.let { Regex("\\d+( \\d+)*").matches(it) } == true
+    internal fun dangChay(goi: String): Boolean = nghe?.lenh("pidof $goi", 2000)?.trim()?.let { Regex("\\d+( \\d+)*").matches(it) } == true
+
+    /** Chạy một lệnh shell ngắn qua ADB của chính tivi; null nếu chưa nối. */
+    internal fun adb(lenh: String, choToiDa: Long = 5000): String? = nghe?.lenh(lenh, choToiDa)
+
+    internal fun uidCua(goi: String): Int? = runCatching { packageManager.getApplicationInfo(goi, 0).uid }.getOrNull()
 
     private fun moKenh(v: XuLyCau.MoKenh): Lam {
-        val goi = when (v.app) {
-            CauHinh.APP_VTVGO -> XuLyCau.VTVGO
-            CauHinh.APP_FPT -> XuLyCau.FPTPLAY
-            else -> XuLyCau.TV360
-        }
+        // VTVgo / FPT Play theo mã kênh, TV360 theo số rồi tên kênh: lệnh như ô Kênh nhanh (kenh/MoKenh), TuChon.lenhMo.
+        val n = TuChonNguon.Nguon(v.app, v.ten, ma = v.ma, so = v.so)
+        val goi = n.goi
         dongTroLy(dongYouTube = true)
         chanYouTubeDen = SystemClock.elapsedRealtime() + CHAN_YOUTUBE
         hien(getString(R.string.mo_kenh, v.ten, tenApp(goi)))
-        val i = when (v.app) {
-            CauHinh.APP_VTVGO -> Intent(Intent.ACTION_VIEW, Uri.parse("vtvgo://play?mediaType=CHANNEL&contentId=${v.ma}")).setPackage(goi)
-            // Deep link màn xem truyền hình của FPT Play bản tivi, như ô Kênh nhanh FPT Play (kenh/MoKenh).
-            CauHinh.APP_FPT -> Intent(Intent.ACTION_VIEW, Uri.parse("https://fptplay.vn/xem-truyen-hinh/${v.ma}")).setPackage(goi)
-            // Cổng nhận lệnh trợ lý giọng nói của TV360 bản tivi, như ô Kênh nhanh (kenh/MoKenh): tìm theo số kênh rồi tên kênh.
-            else -> Intent("$goi.VIEW", Uri.parse("content://$goi/SWITCH_CHANNEL")).setClassName(goi, "$goi.assistant.PostmanAssistant")
-                .apply { if (v.so.isNotEmpty()) putExtra("number_channel", v.so) }.putExtra("name_channel", v.ten)
-        }
-        if (!mo(i) && !mo(moApp(goi))) {
+        if (!mo(TuChon.lenhMo(n)) && !mo(moApp(goi))) {
             hien(getString(R.string.khong_mo_duoc, tenApp(goi)))
             return Lam("loi|khong-mo-duoc", goi)
         }
         return Lam("kenh|${v.app}|${v.ten}", goi)
+    }
+
+    /** Câu mở kênh khi app kênh là "auto": TuChon thử các nguồn trên luồng riêng; báo app sẽ thử trước. */
+    private fun moKenhTuDong(k: KenhTv): Lam {
+        dongTroLy(dongYouTube = true)
+        chanYouTubeDen = SystemClock.elapsedRealtime() + CHAN_YOUTUBE
+        val dau = TuChonNguon.xep(TuChonNguon.nguonCua(k, emptyList()).filter { coApp(it.goi) },
+            kho.thongKe(XuLyCau.khoaKenh(k.ten)), System.currentTimeMillis()).firstOrNull()?.goi ?: ""
+        tuChon?.mo(k)
+        return Lam("kenh|${CauHinh.APP_AUTO}|${k.ten}", dau)
     }
 
     /** Câu riêng mở app [goi] (không tìm gì trong app). */
@@ -177,7 +214,7 @@ class MapVoiceDichVu : AccessibilityService() {
      * thì app mở phía sau màn bảo vệ.
      */
     @Suppress("DEPRECATION")
-    private fun mo(i: Intent?): Boolean = i != null && try {
+    internal fun mo(i: Intent?): Boolean = i != null && try {
         runCatching {
             getSystemService(PowerManager::class.java).newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
                 PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE, "tivikit:mapvoice").acquire(3_000)
@@ -196,10 +233,10 @@ class MapVoiceDichVu : AccessibilityService() {
         false
     }
 
-    private fun tenApp(goi: String): String =
+    internal fun tenApp(goi: String): String =
         runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(goi, 0)).toString() }.getOrDefault(goi)
 
-    private fun hien(chu: String, dai: Boolean = false) {
+    internal fun hien(chu: String, dai: Boolean = false) {
         chinh.post { Toast.makeText(applicationContext, chu, if (dai) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show() }
     }
 
@@ -216,6 +253,8 @@ class MapVoiceDichVu : AccessibilityService() {
     }
 
     private fun tat() {
+        tuChon?.dong()
+        tuChon = null
         nghe?.dung()
         nghe = null
         if (dangChay === this) dangChay = null
@@ -223,6 +262,15 @@ class MapVoiceDichVu : AccessibilityService() {
 
     companion object {
         @Volatile var dangChay: MapVoiceDichVu? = null
+        /** Cửa sổ của hệ thống (bảng âm lượng…) không tính là app trước mặt. */
+        private const val CUA_SO_HE_THONG = "com.android.systemui"
+        private val PHIM_AM_LUONG = setOf(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE, KeyEvent.KEYCODE_MUTE)
+        /** Phím rời kênh đang xem: thôi theo dõi kênh tự chọn nguồn (số kênh 0–9 xét riêng). */
+        private val PHIM_DOI_KENH = setOf(
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_GUIDE,
+            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_TV, KeyEvent.KEYCODE_TV_INPUT, KeyEvent.KEYCODE_MEDIA_STOP, KeyEvent.KEYCODE_ESCAPE,
+        )
         private const val CHO_YOUTUBE = 10_000L
         private const val CHAN_YOUTUBE = 8_000L
         /** Gửi lại link trang tìm kiếm cho app Cobalt vừa mở nguội (TX3: gửi lại sau 5 giây thì tìm đúng chữ). */

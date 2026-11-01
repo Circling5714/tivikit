@@ -40,6 +40,10 @@ class MapVoiceTest {
         assertTrue(l.all { it.code < 0x80 })
         assertEquals(2, l.count { it == '\'' })
         assertEquals(c2, MapVoice.cauHinh(JSONObject(arg(l))))
+        // Map Voice 1.2: app kênh tự chọn nguồn, tắt tự đổi nguồn khi mất tiếng (mặc định bật).
+        val c3 = MapVoice.CauHinh(appKenh = MapVoice.APP_AUTO, doiNguon = false)
+        assertEquals(c3, MapVoice.cauHinh(JSONObject(arg(MapVoice.lenhDat(c3)))))
+        assertTrue(MapVoice.cauHinh(JSONObject("""{"appKenh":"auto"}"""))!!.doiNguon)
     }
 
     @Test

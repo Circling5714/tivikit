@@ -1937,6 +1937,8 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         if (kenh.isNotEmpty()) guiKenhMapVoice(kenh)
         bao(t("Bật dịch vụ Map Voice…", "Turning the Map Voice service on…"))
         val dv = MapVoice.DICH_VU
+        // Đang bật (cài đè bản mới) thì bật lại cho Android đọc khả năng mới của dịch vụ (lenhBatLaiTroNang).
+        sh(lenhBatLaiTroNang(dv))
         sh("s=\$(settings get secure enabled_accessibility_services); case \"\$s\" in *$dv*) ;; null|'') settings put secure enabled_accessibility_services $dv ;; *) settings put secure enabled_accessibility_services \"\$s:$dv\" ;; esac; settings put secure accessibility_enabled 1")
     }
 
@@ -2216,7 +2218,9 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
                     TienIch.Loai.KHOA -> sh(quyenKhoa)
                     TienIch.Loai.HEN_GIO -> sh(quyenHenGio)
                     TienIch.Loai.CAST -> sh(quyenCast)
-                    TienIch.Loai.MAP_VOICE, TienIch.Loai.TELE_REMOTE -> sh(quyenSangMan(m.goi))
+                    // Map Voice 1.2 xem phím remote: bật lại dịch vụ (nếu đang bật) để Android đọc khả năng mới.
+                    TienIch.Loai.MAP_VOICE -> { sh(quyenSangMan(m.goi)); sh(lenhBatLaiTroNang(MapVoice.DICH_VU)) }
+                    TienIch.Loai.TELE_REMOTE -> sh(quyenSangMan(m.goi))
                     else -> {}
                 }
             }
@@ -2347,6 +2351,18 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     class CanMaException : Exception("can-ma")
 
     companion object {
+        /**
+         * Bật lại riêng dịch vụ trợ năng [dv] ("gói/lớp đầy đủ") nếu đang bật: bỏ nó khỏi danh sách rồi thêm lại sau 1 giây,
+         * dịch vụ khác giữ nguyên. Cài đè app mà dịch vụ đổi khả năng (Map Voice 1.2 xem phím remote) thì Android vẫn giữ
+         * thông tin dịch vụ cũ tới khi nó được bật lại (TX3, 1/11/2026: capabilities=0 sau khi cài đè, bật lại thì 8).
+         */
+        fun lenhBatLaiTroNang(dv: String): String {
+            require(Regex("[A-Za-z0-9_.]+/[A-Za-z0-9_.]+").matches(dv)) { "dv" }
+            return "a=\$(settings get secure enabled_accessibility_services); case \"\$a\" in *$dv*) " +
+                "b=\$(echo \"\$a\" | sed -e 's#$dv##' -e 's#::*#:#g' -e 's#^:##' -e 's#:\$##'); " +
+                "settings put secure enabled_accessibility_services \"\$b\"; sleep 1; settings put secure enabled_accessibility_services \"\$a\" ;; esac; true"
+        }
+
         /**
          * App tạo ra mạng Wi-Fi ĐANG kết nối (cname trong khối cấu hình của SSID đó ở `dumpsys wifi`). null = không đang
          * dùng Wi-Fi hoặc không đọc được SSID; "" = thấy SSID nhưng không thấy khối cấu hình của nó.
