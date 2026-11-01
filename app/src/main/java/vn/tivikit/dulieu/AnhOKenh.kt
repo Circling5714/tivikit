@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
@@ -52,8 +53,9 @@ object AnhOKenh {
     }
 
     /**
-     * Ảnh ô Kênh nhanh Auto (1/11/2026): [logo] (null = ô chữ [ten]) kèm huy hiệu Auto — chữ AUTO trên nền xanh tím, cùng
-     * kiểu tròn viền trắng với huy hiệu app — vì ô mở bằng nguồn nào là Map Voice chọn lúc bấm. JPEG; vẽ lỗi thì trả [logo].
+     * Ảnh ô Kênh nhanh Auto (1/11/2026): [logo] (null = ô chữ [ten]) kèm huy hiệu Auto — hai mũi tên vòng trắng trên nền
+     * xanh tím (mẫu B anh chọn), cùng kiểu tròn viền trắng với huy hiệu app — vì ô mở bằng nguồn nào là Map Voice chọn lúc
+     * bấm. JPEG; vẽ lỗi thì trả [logo].
      */
     fun veAuto(logo: ByteArray?, ten: String): ByteArray? {
         return runCatching {
@@ -66,15 +68,38 @@ object AnhOKenh {
             cv.drawCircle(cx, cy, trong, Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 shader = LinearGradient(cx - trong, cy - trong, cx + trong, cy + trong, 0xFF0A84FF.toInt(), 0xFF5E5CE6.toInt(), Shader.TileMode.CLAMP)
             })
-            val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; typeface = Typeface.DEFAULT_BOLD; textAlign = Paint.Align.CENTER; textSize = 17f }
-            while (p.textSize > 10f && p.measureText(CHU_AUTO) > 2 * trong - 12) p.textSize -= 0.5f
-            val fm = p.fontMetrics
-            cv.drawText(CHU_AUTO, cx, cy - (fm.ascent + fm.descent) / 2, p)
+            veMuiTenVong(cv, cx, cy)
             ByteArrayOutputStream().also { ra.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
         }.getOrElse { logo }
     }
 
-    private const val CHU_AUTO = "AUTO"
+    /**
+     * Hai cung tròn đuổi nhau quanh tâm ([cx], [cy]), mỗi cung một đầu mũi tên, ngược chiều kim đồng hồ: cung trên đi từ góc
+     * phải trên qua đỉnh tới góc trái trên, cung dưới từ góc trái dưới qua đáy tới góc phải dưới (như mẫu vẽ bằng Java).
+     */
+    private fun veMuiTenVong(cv: Canvas, cx: Float, cy: Float) {
+        val q = 15f
+        val vong = RectF(cx - q, cy - q, cx + q, cy + q)
+        val net = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = 4.2f; strokeCap = Paint.Cap.ROUND }
+        // Góc của Canvas tính theo chiều kim đồng hồ từ 3 giờ: cung trên -160° → -30°, cung dưới 20° → 150°.
+        cv.drawArc(vong, -160f, 130f, false, net)
+        cv.drawArc(vong, 20f, 130f, false, net)
+        val dau = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.FILL }
+        // Đầu mũi tên ở cuối mỗi cung (160° và 340° tính ngược chiều kim đồng hồ), nhọn theo hướng đi của cung.
+        for (goc in doubleArrayOf(160.0, 340.0)) {
+            val r = Math.toRadians(goc)
+            val x = cx + q * Math.cos(r).toFloat()
+            val y = cy - q * Math.sin(r).toFloat()
+            val tx = -Math.sin(r).toFloat(); val ty = -Math.cos(r).toFloat()
+            val nx = Math.cos(r).toFloat(); val ny = -Math.sin(r).toFloat()
+            cv.drawPath(Path().apply {
+                moveTo(x + tx * 7f, y + ty * 7f)
+                lineTo(x + nx * 6f, y + ny * 6f)
+                lineTo(x - nx * 6f, y - ny * 6f)
+                close()
+            }, dau)
+        }
+    }
 
     /** Bóng mờ và đĩa trắng (viền) của huy hiệu ở góc phải dưới; trả tâm và bán kính phần trong viền. */
     private fun veDia(cv: Canvas): Triple<Float, Float, Float> {
