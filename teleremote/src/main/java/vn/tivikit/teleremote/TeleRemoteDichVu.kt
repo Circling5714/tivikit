@@ -266,11 +266,12 @@ class TeleRemoteDichVu : AccessibilityService() {
 
     /**
      * Chụp màn hình tivi (screencap qua ADB), thu nhỏ về rộng tối đa 1280 điểm, nén JPEG; null nếu chưa nối ADB / không
-     * chụp được. App có nội dung bảo vệ (phim bản quyền) thì ảnh đen.
+     * chụp được. Bỏ chữ in trước ảnh ([AnhTr.dauPng], Skyworth MediaTek). App có nội dung bảo vệ (phim bản quyền) thì ảnh đen.
      */
     fun chup(): ByteArray? {
-        val png = adb?.lenhByte("screencap -p", 20_000)?.takeIf { it.size > 100 } ?: return null
-        val anh = BitmapFactory.decodeByteArray(png, 0, png.size) ?: return null
+        val png = adb?.lenhByte("screencap -p", 20_000) ?: return null
+        val dau = AnhTr.dauPng(png).takeIf { it >= 0 && png.size - it > 100 } ?: return null
+        val anh = BitmapFactory.decodeByteArray(png, dau, png.size - dau) ?: return null
         val nho = if (anh.width > 1280) Bitmap.createScaledBitmap(anh, 1280, anh.height * 1280 / anh.width, true) else anh
         return ByteArrayOutputStream().also { nho.compress(Bitmap.CompressFormat.JPEG, 85, it) }.toByteArray()
     }

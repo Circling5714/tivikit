@@ -13,4 +13,15 @@ class AnhTrTest {
         // Đúng 16:9 thì giữ nguyên.
         assertEquals(listOf(0, 0, 1920, 1080), AnhTr.khungCat(1920, 1080, 1920, 1080))
     }
+
+    @Test
+    fun boChuTruocAnhPng() {
+        val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13) + "IHDR".toByteArray()
+        assertEquals(0, AnhTr.dauPng(png))
+        // Skyworth (MediaTek): screencap -p qua exec: của adbd in hai dòng này trước ảnh.
+        val rac = "Init wrapper sys mutex successful. Pid:3879\nopen mma dev failed\n".toByteArray()
+        assertEquals(64, AnhTr.dauPng(rac + png))
+        assertEquals(-1, AnhTr.dauPng(rac))
+        assertEquals(-1, AnhTr.dauPng(png.copyOf(7)))
+    }
 }

@@ -7,7 +7,10 @@ import android.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-/** Ảnh người dùng gửi qua Telegram (31/10/2026): đọc vừa màn hình (XemTep), làm ảnh nền 16:9 cho TiviKit Launcher. */
+/**
+ * Ảnh qua Telegram (31/10/2026): ảnh người dùng gửi (đọc vừa màn hình cho XemTep, làm ảnh nền 16:9 cho TiviKit Launcher), ảnh
+ * chụp màn hình tivi.
+ */
 object AnhTr {
     /**
      * Ảnh thu nhỏ vừa đủ phủ [rong] x [cao] (ảnh gốc 12 MP đọc nguyên dễ hết RAM của box), xoay theo EXIF (ảnh gửi dạng
@@ -49,4 +52,16 @@ object AnhTr {
             val c = (w.toLong() * cao / rong).toInt()
             listOf(0, (h - c) / 2, w, c)
         }
+
+    private val KY_PNG = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+
+    /**
+     * Chỗ bắt đầu ảnh PNG trong [b] (chữ ký 8 byte), -1 nếu không có. Skyworth (MediaTek, 1/11/2026): `screencap -p` chạy qua
+     * exec: của adbd in hai dòng của thư viện MediaTek ("Init wrapper sys mutex successful…", "open mma dev failed") trước ảnh,
+     * giải mã từ byte đầu thì hỏng.
+     */
+    fun dauPng(b: ByteArray): Int {
+        for (i in 0..b.size - KY_PNG.size) if (KY_PNG.indices.all { b[i + it] == KY_PNG[it] }) return i
+        return -1
+    }
 }
