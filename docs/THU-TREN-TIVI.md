@@ -193,6 +193,8 @@ tivi (FPT Play phải đăng nhập).
 | Nói "mở HTV7" khi chọn VTVgo | VTVgo không có HTV7 nên mở bằng TV360 |
 | Màn Map Voice → Câu vừa nghe | Có đúng các câu vừa nói và việc đã làm |
 | Thử một câu → gõ "mo VTV3" → Xem Map Voice hiểu thế nào, rồi Chạy trên tivi | Hiện "Mở kênh VTV3 bằng …"; Chạy thì tivi mở kênh đó |
+| App mở kênh: Tự động → Lưu; nói "mở VTV3" | Map Voice mở lần lượt VTVgo, TV360, FPT Play, IPTV… tới khi có tiếng (tivi báo đang chuyển nguồn) |
+| Có ô Kênh nhanh Auto VTV3 đặt thứ tự riêng (VD FPT Play trước), mở màn Kênh nhanh một lần; nói "mở VTV3" | Map Voice mở đúng thứ tự của ô (FPT Play trước); bỏ ô rồi nói lại thì về thứ tự tự học |
 | Khởi động lại tivi, nói lại một câu | Map Voice tự chạy và nghe lại, không hỏi cho phép lần nữa |
 | Cách chuyển → Mở YouTube bằng → TizenTube → Lưu; đóng hẳn TizenTube rồi nói "tìm hoạt hình" | TizenTube mở trang kết quả "hoạt hình" (chữ tìm có thể hiện sau vài giây) |
 | Nói "mở nhạc piano" khi chọn TizenTube | TizenTube phát video đầu tiên |
@@ -288,7 +290,10 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | Sao lưu & chuyển máy → Lưu ra file → Nhập trên điện thoại khác | Tivi đã dọn, bộ cài đặt hiện đủ trên máy mới |
 | Kênh nhanh với 2 ô trở lên (TV360 và VTVgo lẫn nhau) | Mỗi ô mở đúng kênh trong đúng app của nó |
 | Kênh nhanh → FPT Play → VTV3 → Thêm lên tivi (FPT Play đã đăng nhập), bấm ô trên Home rồi gán một nút remote cho ô | Ô mang logo VTV3; bấm ô hay nút thì FPT Play phát VTV3; Thử nút báo được |
-| M3U (Gợi ý app) có danh sách kênh: trong M3U giữ OK trên một kênh → Create Shortcut; Kênh nhanh → M3U → Tải lại kênh M3U, chọn kênh → Thêm lên tivi; bấm ô trên Home | Ô mang tên kênh; bấm ô (hay ▶ ở màn Kênh nhanh) thì M3U mở và phát ngay kênh đó |
+| Kênh nhanh → IPTV → dán link danh sách IPTV (.m3u, link rút gọn cũng được) → Tải danh sách → chọn kênh (hay Kênh khác trong danh sách → tìm tên) → Thêm lên tivi; bấm ô trên Home | Ô mang logo kênh và biểu tượng IPTV; bấm ô (hay ▶ ở màn Kênh nhanh) thì app IPTV phát kênh đó; lên / xuống đổi kênh trong danh sách, OK hiện tên kênh |
+| Ô IPTV: bật màn bảo vệ rồi mở ô (như Hẹn giờ mở ô), sau đó đánh thức tivi | Tivi thức là phát ngay, không đứng ở màn đen |
+| Kênh nhanh → Tự động → VTV1 → Thêm lên tivi (tivi có Map Voice 1.3); bấm ô | Ô mang huy hiệu hai mũi tên vòng; Map Voice mở nguồn đầu, không có tiếng thì báo và sang nguồn kế |
+| Sửa ô Auto → bấm ↑ ↓ đưa một nguồn lên đầu (VD TV360) → Lưu; bấm ô | Dòng ô ghi "(thứ tự riêng)"; nguồn đó mở trước dù Map Voice từng thấy nguồn khác nhanh hơn; mất tiếng giữa chừng thì sang nguồn kế theo thứ tự đó |
 | Home sạch → Áp dụng (lên bản mới), rồi Nút remote → dò một nút → "SmartTube – tìm bằng giọng nói" → Lưu → Thử nút | SmartTube mở màn tìm kiếm; đã bật "Tìm kiếm bằng giọng nói tức thì" trong SmartTube thì mic bật ngay |
 | Nối TiviKit vào một điện thoại (Gỡ lỗi không dây) | Hiện cảnh báo đỏ "không khai là tivi", nút dọn bị khoá |
 | Chế độ tivi LG (nếu có tivi LG) | Ghép đôi được, remote và gõ chữ chạy |
