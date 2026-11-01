@@ -2160,15 +2160,17 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
     fun khoaDangKhoa(): Boolean = coGoi(PKG_KHOA) && docQua(PKG_KHOA)?.optBoolean("dangKhoa") == true
 
     /**
-     * Tivi rảnh để tự cập nhật tiện ích: màn hình tắt, hay không phát gì (dumpsys media_session) mà đang ở launcher hoặc
-     * màn chờ. Đang mở app (cả HDMI, IPTV không báo phiên phát) thì không: cài đè có lúc làm màn hình nhảy về Home.
+     * Tivi rảnh để tự cập nhật tiện ích: màn hình tắt, hay không phát gì (dumpsys media_session) mà đang ở launcher, màn
+     * chờ hay chính TiviKit (app chạy ngay trên tivi). Đang mở app khác (cả HDMI, IPTV không báo phiên phát) thì không: cài
+     * đè có lúc làm màn hình nhảy về Home.
      */
     fun tiviRanh(): Boolean {
         if (!sh("dumpsys power | grep -m 1 mWakefulness=").contains("Awake")) return true
         if (DangPhat.tuDump(sh("dumpsys media_session")).any { it.hoatDong && (it.tt == DangPhat.PHAT || it.tt == DangPhat.CHO) }) return false
         if (sh("dumpsys window | grep -m 1 mCurrentFocus").contains("dream", ignoreCase = true)) return true
         val goi = goiDangHien()
-        return goi.isNotEmpty() && (goi in HOME_SACH || goi == TiviKitLauncher.GOI || goi in HOME_GOC_BIET || coManHome(goi))
+        return goi.isNotEmpty() && (goi == vn.tivikit.BuildConfig.APPLICATION_ID || goi in HOME_SACH || goi == TiviKitLauncher.GOI ||
+            goi in HOME_GOC_BIET || coManHome(goi))
     }
 
     /**
