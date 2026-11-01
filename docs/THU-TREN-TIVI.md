@@ -251,6 +251,7 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | ⏰ Hẹn giờ → Tắt sau 15 phút → ✕ huỷ | Hẹn hiện trong bảng rồi mất; TiviKit → Hẹn giờ thấy giống vậy |
 | 🔒 Khoá trẻ em → Khoá ngay, rồi 🔓 30 phút, gõ mã 6 số của bố mẹ | Tivi khoá; mã đúng thì mở tới giờ bot báo và tin chứa mã bị xoá; mã sai báo còn mấy lần |
 | 🧹 Làm mới → Đóng app nền; bật Chụp màn hình ở TiviKit rồi bấm 📸 Màn hình | RAM trống tăng; bot gửi ảnh màn hình tivi |
+| Tivi MediaTek (VD Skyworth): bấm 📸 Màn hình | Bot gửi ảnh màn hình (Tele Remote 1.0 báo "Chưa chụp được màn hình tivi" vì tivi in chữ trước ảnh; sửa ở 1.0.1) |
 | Bật Báo tin ở TiviKit, tắt tivi bằng remote, vài phút sau bật lại | Bot nhắn các chủ "vừa tắt", rồi "vừa bật" |
 | 📢 Nhắn tivi → gõ "ăn cơm thôi", rồi bấm OK trên remote | Lời nhắn hiện to trên tivi kèm tiếng bíp; OK thì đóng và bot báo "đã xem" |
 | ⚙️ Thêm → 🌐 Kiểm tra mạng | Bot báo Wi-Fi (băng, sóng, tốc độ) hay dây LAN, độ trễ tới router / Internet / YouTube, nhận xét |
