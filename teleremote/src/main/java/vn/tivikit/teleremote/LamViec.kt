@@ -67,8 +67,7 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
         // của TiviKit (chat 0) không tính: người thật chưa thấy bàn phím đó.
         if (d.chat != 0L && nd.id != 0L && !dv.kho.coBanPhim(nd.id)) {
             dv.kho.ghiBanPhim(nd.id)
-            val moi = listOfNotNull(XuLyLenh.nhan(en).batTivi, XuLyLenh.nhan(en).daNhiem.takeIf { nd.vaiTro == VaiTro.CHU }).joinToString(", ")
-            if (viec != XuLyLenh.Menu) ra.gui(d.chat, t("⌨️ Bàn phím của bot có nút mới: $moi.", "⌨️ The bot's keyboard has new buttons: $moi."), banPhim(nd))
+            if (viec != XuLyLenh.Menu && viec != XuLyLenh.Them) ra.gui(d.chat, chuBanPhimMoi(nd), banPhim(nd))
         }
         when (viec) {
             XuLyLenh.Menu -> ra.gui(d.chat, chao(nd), banPhim(nd))
@@ -148,8 +147,17 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
         }
     }
 
-    internal fun banPhim(nd: NguoiDung) = XuLyLenh.banPhimChinh(nd.vaiTro, en,
-        XuLyLenh.Co(henGio = dv.coApp(HEN_GIO), khoa = dv.coApp(KHOA), manHinh = ch.chupManHinh))
+    internal fun banPhim(nd: NguoiDung) = XuLyLenh.banPhimChinh(nd.vaiTro, en, XuLyLenh.Co(henGio = dv.coApp(HEN_GIO),
+        khoa = dv.coApp(KHOA), manHinh = ch.chupManHinh, khoaTv = dv.kho.khoaThanhVienDen > System.currentTimeMillis()))
+
+    /** Câu gửi kèm bàn phím chính khi bàn phím vừa đổi (Tele Remote cập nhật) hay khi bấm ⚙️ Thêm của bàn phím cũ. */
+    internal fun chuBanPhimMoi(nd: NguoiDung): String = if (nd.vaiTro == VaiTro.CHU)
+        t("⌨️ Bàn phím của bot vừa đổi: có 🔆 Bật tivi, 🗂 Tắt đa nhiệm; nút ⚙️ Thêm đã bỏ, các việc của nó (🧹 Làm mới, 🌐 Kiểm tra mạng, " +
+            "👥 Người dùng, 📜 Việc vừa làm, ⏸ Khoá thành viên) nằm ở cuối bàn phím.",
+            "⌨️ The bot's keyboard has changed: 🔆 Turn on TV and 🗂 Close all apps are new; ⚙️ More is gone and its jobs (🧹 Refresh TV, " +
+            "🌐 Network check, 👥 People, 📜 Activity, ⏸ Pause members) are at the bottom of the keyboard.")
+    else t("⌨️ Bàn phím của bot vừa đổi: có 🔆 Bật tivi; nút ⚙️ Thêm đã bỏ, 🌐 Kiểm tra mạng nằm ở cuối bàn phím.",
+        "⌨️ The bot's keyboard has changed: 🔆 Turn on TV is new; ⚙️ More is gone and 🌐 Network check is at the bottom of the keyboard.")
 
     private fun chao(nd: NguoiDung): String {
         val ten = nd.tenHien.ifEmpty { nd.ten }
@@ -652,11 +660,9 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
         fun lenhMenu(en: Boolean): List<Pair<String, String>> = if (en) listOf(
             "start" to "Open the menu", "remote" to "Remote control", "go" to "Type text on the TV", "nhan" to "Show a message on the TV",
             "kenh" to "Quick channel", "apps" to "Apps on the TV", "tivi" to "TV status", "bat" to "Turn on the TV", "mang" to "Network check",
-            "them" to "More",
         ) else listOf(
             "start" to "Mở menu", "remote" to "Bảng điều khiển", "go" to "Gõ chữ lên tivi", "nhan" to "Nhắn lên màn hình tivi",
             "kenh" to "Kênh nhanh", "apps" to "Ứng dụng trên tivi", "tivi" to "Tình trạng tivi", "bat" to "Bật tivi", "mang" to "Kiểm tra mạng",
-            "them" to "Thêm",
         )
     }
 }

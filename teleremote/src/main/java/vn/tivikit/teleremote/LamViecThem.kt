@@ -8,7 +8,8 @@ import org.json.JSONObject
 import vn.tivikit.teleremote.XuLyLenh.Den
 
 /*
- * Việc thêm của bot (31/10/2026): lời nhắn hiện lên tivi, menu ⚙️ Thêm, bật màn hình, âm lượng bằng câu, kiểm tra mạng,
+ * Việc thêm của bot (31/10/2026): lời nhắn hiện lên tivi, ⚙️ Thêm (từ 1.2 chỉ gửi lại bàn phím), bật tivi, tắt đa nhiệm
+ * (2/11/2026), âm lượng bằng câu, kiểm tra mạng,
  * nhật ký, người dùng (duyệt người xin dùng, đổi vai trò, bỏ, thêm theo @username), tạm khoá thành viên; quay màn hình, ảnh
  * nền TiviKit Launcher, tất cả kênh (qua Map Voice), duyệt máy xin cast. Hàm mở rộng của LamViec, gọi từ LamViec.lam (quyền
  * chủ / thành viên đã xét ở đó).
@@ -36,13 +37,10 @@ internal fun LamViec.hienLoiNhan(d: Den, nd: NguoiDung, chu: String) {
 
 // ---------- ⚙️ Thêm, bật màn hình, âm lượng, mạng ----------
 
-internal fun LamViec.them(d: Den, nd: NguoiDung, traLoi: Boolean = true) {
-    val bay = System.currentTimeMillis()
-    val khoaTv = dv.kho.khoaThanhVienDen
-    val chu = nd.vaiTro == VaiTro.CHU
-    val dong = mutableListOf("⚙️ ${t("Thêm", "More")} · ${dv.tenTivi()}")
-    if (chu && khoaTv > bay) dong += t("⏸ Thành viên đang bị khoá tới ${ChuBot.gio(khoaTv, bay, mui)}.", "⏸ Members are paused until ${ChuBot.gio(khoaTv, bay, mui)}.")
-    hienBang(d, dong.joinToString("\n") to XuLyLenh.bangThem(chu, en, khoaTv, bay), traLoi)
+/** ⚙️ Thêm của bàn phím cũ (hay /them, nút `m` trong tin cũ): menu Thêm đã bỏ từ Tele Remote 1.2, gửi lại bàn phím chính. */
+internal fun LamViec.them(d: Den, nd: NguoiDung) {
+    if (d.nut != null) ra.traLoiNut(d.idNut)
+    ra.gui(d.chat, chuBanPhimMoi(nd), banPhim(nd))
 }
 
 /**
@@ -254,10 +252,12 @@ internal fun LamViec.khoaThanhVien(d: Den, nd: NguoiDung, phut: Int) {
     val den = if (phut == 0) 0L else XuLyLenh.khoaTvToi(phut, bay, mui)
     dv.kho.khoaThanhVienDen = den
     val gio = ChuBot.gio(den, bay, mui)
-    ra.traLoiNut(d.idNut, if (den == 0L) t("▶️ Thành viên dùng bot lại được", "▶️ Members can use the bot again")
-        else t("⏸ Đã khoá thành viên tới $gio", "⏸ Members are paused until $gio"))
+    if (d.nut != null) ra.traLoiNut(d.idNut)
+    // Gửi kèm bàn phím chính đổi theo: đang khoá thì nút ▶️ Mở lại thay hai nút ⏸.
+    ra.gui(d.chat, if (den == 0L) t("▶️ Thành viên dùng bot lại được.", "▶️ Members can use the bot again.")
+        else t("⏸ Đã khoá thành viên tới $gio: tới lúc đó họ không dùng được bot.", "⏸ Members are paused until $gio: they can't use the bot until then."),
+        banPhim(nd))
     ghi(nd, if (den == 0L) "mo-tv" else "khoa-tv|$gio")
-    them(d, nd, traLoi = false)
 }
 
 // ---------- 📹 Quay màn hình ----------

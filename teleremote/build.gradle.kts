@@ -21,8 +21,8 @@ android {
         applicationId = "vn.tivikit.teleremote"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.1.0"
+        versionCode = 5
+        versionName = "1.2.0"
     }
     signingConfigs {
         if (kyFile.exists()) {
