@@ -201,7 +201,8 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
             }
             if (h.kdlHoi) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(NenCanhBao).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Tv, null, tint = Cam); Spacer(Modifier.width(8.dp))
-                Phu(t("Nhìn tivi: hộp \"Cho phép gỡ lỗi USB?\" → chọn Luôn cho phép → OK.", "Look at the TV: \"Allow USB debugging?\" → tick Always allow → OK."), ChuChinh)
+                Phu(t("Nhìn tivi: hộp \"Cho phép gỡ lỗi USB?\" → chọn Luôn cho phép → OK. Khoá trẻ em đang bật thì tivi hỏi mã bố mẹ trước (mã 6 số trong app xác thực).",
+                    "Look at the TV: \"Allow USB debugging?\" → tick Always allow → OK. With the Kids lock on, the TV asks for the parent code first (the 6-digit code in the authenticator app)."), ChuChinh)
             }
             if (h.kdlChuaLuu) Phu(t("Có thay đổi chưa lưu lên tivi.", "There are changes not saved to the TV yet."), Cam)
             NutPhu(t("Lưu Auto Reboot", "Save Auto Reboot"), Icons.Rounded.Check, enabled = !vm.dangBan) { h.luuKdl() }

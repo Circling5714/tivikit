@@ -157,13 +157,17 @@ object ChayAutoReboot {
         dv.tatSauKhoiDong()
     }
 
-    /** Nối thử ADB của tivi (TiviKit gọi lúc lưu Auto Reboot): lần đầu tivi hỏi Cho phép gỡ lỗi. Kết quả ở Kho.kdlAdb. */
+    /**
+     * Nối thử ADB của tivi (TiviKit gọi lúc lưu Auto Reboot): lần đầu tivi hỏi Cho phép gỡ lỗi. Chờ người dùng tới 2 phút:
+     * Khoá trẻ em đang bật thì che hộp đó bằng màn hỏi mã bố mẹ, bố mẹ mở app xác thực gõ mã trước (Skyworth 2/11/2026).
+     * Kết quả ở Kho.kdlAdb.
+     */
     fun thuAdb(ctx: Context) {
         val app = ctx.applicationContext
         val kho = Kho(app)
         kho.kdlAdb = "dang-thu"
         thread(name = "hengio-adb") {
-            val kq = AdbNoiBo.chay(app.filesDir, "shell:true", { kho.kdlAdb = "cho-cho-phep" })
+            val kq = AdbNoiBo.chay(app.filesDir, "shell:true", { kho.kdlAdb = "cho-cho-phep" }, choToiDa = 120_000)
             kho.kdlAdb = when (kq) {
                 AdbNoiBo.KetQua.DA_GUI -> "da-noi"
                 AdbNoiBo.KetQua.KHONG_CO -> "khong-co"

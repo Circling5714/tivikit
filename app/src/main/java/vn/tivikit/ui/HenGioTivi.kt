@@ -220,16 +220,20 @@ class HenGioTivi(private val vm: PhienLamViec) {
         kdlBao = if (!k.bat) t("Đã tắt Auto Reboot.", "Auto Reboot is off.") else t("Đã bật Auto Reboot. ", "Auto Reboot is on. ") + keTiepKdl()
     }
 
-    /** Cho app Hẹn giờ nối ADB của tivi rồi chờ kết quả (người dùng bấm Cho phép trên tivi, tối đa 75 giây). */
+    /**
+     * Cho app Hẹn giờ nối ADB của tivi rồi chờ kết quả: người dùng bấm Cho phép trên tivi, tối đa 2 phút (app phụ chờ 120
+     * giây) vì Khoá trẻ em đang bật thì hỏi mã bố mẹ trước hộp đó.
+     */
     private suspend fun noiAdb() {
         vm.io { vm.tv.thuAdbHenGio() }
-        val het = System.currentTimeMillis() + 75_000
+        val het = System.currentTimeMillis() + 135_000
         try {
             while (true) {
                 delay(1_500)
                 val adb = vm.io { vm.tv.docHenGio() }?.let { HenGio.trangThai(it).kdl?.adb }.orEmpty()
                 kdlHoi = adb == "cho-cho-phep"
-                if (kdlHoi) vm.thongBao = t("Nhìn tivi: hộp \"Cho phép gỡ lỗi USB?\" → chọn Luôn cho phép → OK.", "Look at the TV: \"Allow USB debugging?\" → tick Always allow → OK.")
+                if (kdlHoi) vm.thongBao = t("Nhìn tivi: hộp \"Cho phép gỡ lỗi USB?\" → chọn Luôn cho phép → OK (Khoá trẻ em đang bật thì nhập mã bố mẹ trước).",
+                    "Look at the TV: \"Allow USB debugging?\" → tick Always allow → OK (with the Kids lock on, enter the parent code first).")
                 when (adb) {
                     "da-noi" -> return
                     "khong-co" -> error(t("ADB qua mạng (cổng 5555) của tivi đang tắt: Auto Reboot cần nó để khởi động lại tivi.",
