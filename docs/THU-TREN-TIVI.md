@@ -263,16 +263,17 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | 🔒 Khoá trẻ em → Khoá ngay, rồi 🔓 30 phút, gõ mã 6 số của bố mẹ | Tivi khoá; mã đúng thì mở tới giờ bot báo và tin chứa mã bị xoá; mã sai báo còn mấy lần |
 | 🧹 Làm mới → Đóng app nền; bật Chụp màn hình ở TiviKit rồi bấm 📸 Màn hình | RAM trống tăng; bot gửi ảnh màn hình tivi |
 | Cập nhật Tele Remote lên 1.1 rồi nhắn bot một tin bất kỳ | Bot gửi một lần "Bàn phím của bot có nút mới…" kèm bàn phím có 🔆 Bật tivi (chủ có thêm 🗂 Tắt đa nhiệm); tin sau không gửi lại |
+| Tele Remote 1.2: bấm ⚙️ Thêm còn trên bàn phím cũ (hay /start) | Bot gửi bàn phím mới: không còn ⚙️ Thêm, dưới hàng Bật tivi | Tắt tivi có 🧹 Làm mới, 🌐 Kiểm tra mạng, 👥 Người dùng, 📜 Việc vừa làm, ⏸ Khoá thành viên (thành viên chỉ có 🌐 ở cuối) |
 | Tivi MediaTek (VD Skyworth): bấm 📸 Màn hình | Bot gửi ảnh màn hình (Tele Remote 1.0 báo "Chưa chụp được màn hình tivi" vì tivi in chữ trước ảnh; sửa ở 1.0.1) |
 | Bật Báo tin ở TiviKit, tắt tivi bằng remote, vài phút sau bật lại | Bot nhắn các chủ "vừa tắt", rồi "vừa bật" |
 | 📢 Nhắn tivi → gõ "ăn cơm thôi", rồi bấm OK trên remote | Lời nhắn hiện to trên tivi kèm tiếng bíp; OK thì đóng và bot báo "đã xem" |
-| ⚙️ Thêm → 🌐 Kiểm tra mạng | Bot báo Wi-Fi (băng, sóng, tốc độ) hay dây LAN, độ trễ tới router / Internet / YouTube, nhận xét |
+| 🌐 Kiểm tra mạng (cuối bàn phím) | Bot báo Wi-Fi (băng, sóng, tốc độ) hay dây LAN, độ trễ tới router / Internet / YouTube, nhận xét |
 | Gõ "âm lượng 10", "to lên", "tắt tiếng", "bật tiếng" | Âm lượng đổi đúng, bot báo mức mới |
 | Tivi tắt bằng remote mà không ngủ sâu (VD Skyworth), hay đang ở màn bảo vệ: bấm 🔆 Bật tivi (hay gõ "bật tivi", /bat); tivi đang bật thì bấm lại | Tivi bật lại / thoát màn bảo vệ, bot báo "Đã bật tivi"; lần sau báo "Tivi đang bật rồi"; thành viên cũng bấm được |
 | Một tài khoản lạ nhắn bot; chủ bấm ✅ Duyệt thành viên ngay trong tin báo | Người đó nhận tin "đã được duyệt", dùng được bot; 👥 hiện họ |
-| ⚙️ Thêm → 👥 Người dùng → bấm một người → đổi vai trò / bỏ; ➕ thêm @username | Danh sách đổi theo; tivi không cho bỏ / hạ chủ cuối cùng |
-| ⚙️ Thêm → ⏸ Khoá thành viên 1 giờ, thành viên bấm thử | Thành viên bị báo "tạm khoá tới …"; ▶️ Mở lại (hay nút ở TiviKit) thì dùng lại được |
-| ⚙️ Thêm → 📜 Việc vừa làm | 15 việc gần nhất, ai làm, lúc nào |
+| 👥 Người dùng → bấm một người → đổi vai trò / bỏ; ➕ thêm @username | Danh sách đổi theo; tivi không cho bỏ / hạ chủ cuối cùng |
+| ⏸ Khoá thành viên 1 giờ, thành viên bấm thử | Bàn phím của chủ đổi hàng cuối thành ▶️ Mở lại; thành viên bị báo "tạm khoá tới …"; ▶️ Mở lại (hay nút ở TiviKit) thì dùng lại được |
+| 📜 Việc vừa làm | 15 việc gần nhất, ai làm, lúc nào |
 | 📸 Màn hình → 📹 Quay 10 giây (đang phát video) | Bot gửi video 10 giây màn hình tivi, xem được ngay trong Telegram |
 | Gửi một ảnh, bấm 🖼 Đặt làm ảnh nền Home (tivi có TiviKit Launcher) | Home của TiviKit Launcher đổi nền thành ảnh đó (cắt giữa 16:9); ↩️ thì về ảnh nền mặc định |
 | 📺 Kênh nhanh → 📺 Tất cả kênh → bấm VTV3, HTV7 | Map Voice mở kênh bằng app kênh đã chọn (TV360 / VTVgo / FPT Play) |
