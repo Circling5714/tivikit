@@ -258,15 +258,17 @@ Cần một bot Telegram mới (tạo ở @BotFather, chỉ dùng cho tivi này)
 | Gửi một ảnh, một video ngắn | Tivi chiếu ảnh toàn màn hình / phát video; Back trên remote để tắt; ảnh tự tắt sau 10 phút |
 | 🎮 → ⌨️ Gõ chữ, dùng ⬆️⬇️⬅️➡️ chọn ô tìm kiếm của SmartTube, gõ "phở bò", rồi ⌨️ Gõ tiếp " hà nội", ↵ Enter | "phở bò" thay chữ cũ trong ô (chữ có dấu đúng), rồi thành "phở bò hà nội"; Enter thì SmartTube tìm |
 | 📱 Ứng dụng → bấm một app; chủ bấm ⏹ Buộc dừng | App mở; app đang mở bị dừng |
+| Mở vài app (SmartTube, một app khác), chủ bấm 🗂 Tắt đa nhiệm → Đóng hết | Bot kể đúng các app đang mở (không có app hệ thống, TiviKit); Đóng hết thì các app đó đóng, tivi về Home, bot báo RAM trống trước / sau; Thôi thì không đóng gì; thành viên không có nút này |
 | ⏰ Hẹn giờ → Tắt sau 15 phút → ✕ huỷ | Hẹn hiện trong bảng rồi mất; TiviKit → Hẹn giờ thấy giống vậy |
 | 🔒 Khoá trẻ em → Khoá ngay, rồi 🔓 30 phút, gõ mã 6 số của bố mẹ | Tivi khoá; mã đúng thì mở tới giờ bot báo và tin chứa mã bị xoá; mã sai báo còn mấy lần |
 | 🧹 Làm mới → Đóng app nền; bật Chụp màn hình ở TiviKit rồi bấm 📸 Màn hình | RAM trống tăng; bot gửi ảnh màn hình tivi |
+| Cập nhật Tele Remote lên 1.1 rồi nhắn bot một tin bất kỳ | Bot gửi một lần "Bàn phím của bot có nút mới…" kèm bàn phím có 🔆 Bật tivi (chủ có thêm 🗂 Tắt đa nhiệm); tin sau không gửi lại |
 | Tivi MediaTek (VD Skyworth): bấm 📸 Màn hình | Bot gửi ảnh màn hình (Tele Remote 1.0 báo "Chưa chụp được màn hình tivi" vì tivi in chữ trước ảnh; sửa ở 1.0.1) |
 | Bật Báo tin ở TiviKit, tắt tivi bằng remote, vài phút sau bật lại | Bot nhắn các chủ "vừa tắt", rồi "vừa bật" |
 | 📢 Nhắn tivi → gõ "ăn cơm thôi", rồi bấm OK trên remote | Lời nhắn hiện to trên tivi kèm tiếng bíp; OK thì đóng và bot báo "đã xem" |
 | ⚙️ Thêm → 🌐 Kiểm tra mạng | Bot báo Wi-Fi (băng, sóng, tốc độ) hay dây LAN, độ trễ tới router / Internet / YouTube, nhận xét |
 | Gõ "âm lượng 10", "to lên", "tắt tiếng", "bật tiếng" | Âm lượng đổi đúng, bot báo mức mới |
-| Tivi ở màn bảo vệ: ℹ️ Tivi → ☀️ Bật màn hình (hay gõ "bật tivi") | Tivi thoát màn bảo vệ |
+| Tivi tắt bằng remote mà không ngủ sâu (VD Skyworth), hay đang ở màn bảo vệ: bấm 🔆 Bật tivi (hay gõ "bật tivi", /bat); tivi đang bật thì bấm lại | Tivi bật lại / thoát màn bảo vệ, bot báo "Đã bật tivi"; lần sau báo "Tivi đang bật rồi"; thành viên cũng bấm được |
 | Một tài khoản lạ nhắn bot; chủ bấm ✅ Duyệt thành viên ngay trong tin báo | Người đó nhận tin "đã được duyệt", dùng được bot; 👥 hiện họ |
 | ⚙️ Thêm → 👥 Người dùng → bấm một người → đổi vai trò / bỏ; ➕ thêm @username | Danh sách đổi theo; tivi không cho bỏ / hạ chủ cuối cùng |
 | ⚙️ Thêm → ⏸ Khoá thành viên 1 giờ, thành viên bấm thử | Thành viên bị báo "tạm khoá tới …"; ▶️ Mở lại (hay nút ở TiviKit) thì dùng lại được |
