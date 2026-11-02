@@ -226,7 +226,7 @@ Nên có SmartTube hay một ô Kênh nhanh trên tivi để hẹn mở.
 | Trên tivi: + Thêm việc → ◀ ▶ đổi việc, Giờ (gõ phím số), Lặp lại, App → ▼ tới Lưu | ▼ từ dòng cuối vào thẳng nút Lưu; việc mới có trong lịch, TiviKit cũng thấy |
 | Trên tivi: OK ở một việc → đổi Trạng thái → Lưu; rồi Xoá việc | Việc thành Đang tắt, rồi mất khỏi lịch; màn hỏi lại chọn sẵn Thôi |
 | Khoá trẻ em đang bật: trên tivi thêm / sửa / xoá một việc | Hiện màn "Cần mã của bố mẹ"; Back thì không đổi gì, đúng mã thì đổi; hẹn tắt tivi thì không hỏi mã |
-| Auto Reboot (Hẹn giờ 1.4): bật công tắc → Lưu Auto Reboot | Lần đầu tivi hỏi "Cho phép gỡ lỗi USB?" (tivi không bật xác thực ADB thì không hỏi): chọn Luôn cho phép → OK; app báo "Đã bật Auto Reboot. Lần tới: 04:00 …" và "Tivi đã cho phép app Hẹn giờ khởi động lại tivi" |
+| Auto Reboot (Hẹn giờ 1.4): bật công tắc → Lưu Auto Reboot | Lần đầu tivi hỏi "Cho phép gỡ lỗi USB?" (tivi không bật xác thực ADB thì không hỏi; Khoá trẻ em đang bật thì hỏi mã bố mẹ trước): chọn Luôn cho phép → OK; app báo "Đã bật Auto Reboot. Lần tới: 04:00 …" và "Tivi đã cho phép app Hẹn giờ khởi động lại tivi" |
 | Auto Reboot lúc vài phút nữa, để màn hình bật | Tới giờ không khởi động lại; Lần chạy gần đây có "Auto Reboot – tivi đang bật, chờ tivi tắt"; dòng trạng thái báo đang chờ và giờ kiểm lại (sau 15 phút) |
 | Rồi tắt tivi bằng remote (tivi chỉ tắt màn hình, như Skyworth) | Lần kiểm sau tivi khởi động lại; lên lại thì tự tắt màn hình sau chừng nửa phút; bấm nguồn là lên bình thường; nhật ký có "đã khởi động lại, màn hình tắt như trước" |
 | Thử ngay: khởi động lại tivi → Khởi động lại | Tivi khởi động lại ngay, lên lại thì tự tắt màn hình; TiviKit mất kết nối rồi nối lại được |
