@@ -65,6 +65,14 @@ class TiviKitLauncherTest {
         // "Không hiện" thời tiết: gửi noi = null để launcher bỏ nơi đã lưu; lúc cài / cập nhật thì không đụng tới.
         assertTrue(JSONObject(TiviKitLauncher.cauHinh("", true, null, boNoiNeuRong = true)).isNull("noi"))
         assertFalse(JSONObject(TiviKitLauncher.cauHinh("", true, null)).has("noi"))
+        // Thông tin trên Home (launcher 1.5, issue #1): bản cũ không báo thì không có công tắc; bản mới báo đang hiện / ẩn.
+        assertNull(trong.hienThi)
+        val moi = TiviKitLauncher.trangThai(JSONObject("""{"ban":"1.5.0","cauHinh":{"thong_so":false},"hienThi":{"thongSo":false,"tocDo":true}}"""), false)
+        assertEquals(TiviKitLauncher.HienThi(thongSo = false, tocDo = true), moi.hienThi)
+        val lenh = JSONObject(TiviKitLauncher.cauHinhHienThi(thongSo = false, tocDo = true))
+        assertFalse(lenh.getBoolean("thong_so"))
+        assertTrue(lenh.getBoolean("toc_do"))
+        assertTrue(TiviKitLauncher.cauHinhHienThi(false, false).none { it.code > 127 || it == '\'' })
         // Ảnh có sẵn đều có trong assets của app, ảnh đầu là ảnh mặc định của launcher.
         assertEquals(TiviKitLauncher.NEN_MAC_DINH, TiviKitLauncher.ANH_CO_SAN.first().asset)
         TiviKitLauncher.ANH_CO_SAN.forEach { assertTrue(it.asset, java.io.File("src/main/assets/${it.asset}").isFile) }

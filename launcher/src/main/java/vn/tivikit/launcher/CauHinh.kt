@@ -58,8 +58,9 @@ class CauHinh(ctx: Context) {
         /**
          * Ghép cấu hình TiviKit gửi ([moi]) vào [cu]: chỉ nhận "ten" (chữ, tối đa 40 ký tự, "" = bỏ tên), "dock" (mảng tên
          * gói hợp lệ), "ngon_ngu" ("vi" / "en" / "" = theo tivi), "noi" (nơi xem thời tiết {ten, lat, lon}; sai / rỗng =
-         * bỏ), "ten_app" (tên riêng {gói: tên}, gộp vào tên đã có; "" = bỏ tên riêng của gói đó) và "cau" (câu kinh mỗi
-         * ngày {bat, ten}: bật / tắt, tên bộ câu riêng; "" = bỏ tên). Trả các khoá đã nhận.
+         * bỏ), "ten_app" (tên riêng {gói: tên}, gộp vào tên đã có; "" = bỏ tên riêng của gói đó), "cau" (câu kinh mỗi
+         * ngày {bat, ten}: bật / tắt, tên bộ câu riêng; "" = bỏ tên), "thong_so" và "toc_do" (hiện dòng RAM / bộ nhớ trống
+         * dưới đồng hồ, tốc độ mạng dưới nút mạng; mặc định hiện, chỉ giữ khi tắt). Trả các khoá đã nhận.
          */
         fun tron(cu: JSONObject, moi: JSONObject): List<String> {
             val nhan = mutableListOf<String>()
@@ -99,11 +100,27 @@ class CauHinh(ctx: Context) {
                 if (c.length() == 0) cu.remove("cau") else cu.put("cau", c)
                 nhan += "cau"
             }
+            for (k in listOf(THONG_SO, TOC_DO)) if (moi.has(k)) {
+                if (moi.optBoolean(k, true)) cu.remove(k) else cu.put(k, false)
+                nhan += k
+            }
             return nhan
         }
 
         /** Câu kinh mỗi ngày có bật không (mặc định bật). */
         fun cauBat(j: JSONObject): Boolean = j.optJSONObject("cau")?.optBoolean("bat", true) ?: true
+
+        /**
+         * Dòng RAM / bộ nhớ trống dưới đồng hồ có hiện không (mặc định hiện). Người dùng xin tắt được nó và tốc độ mạng
+         * (issue #1 trên GitHub, 2/11/2026).
+         */
+        fun hienThongSo(j: JSONObject): Boolean = j.optBoolean(THONG_SO, true)
+
+        /** Tốc độ mạng (↓ ↑) dưới nút mạng có hiện không (mặc định hiện). */
+        fun hienTocDo(j: JSONObject): Boolean = j.optBoolean(TOC_DO, true)
+
+        const val THONG_SO = "thong_so"
+        const val TOC_DO = "toc_do"
 
         /** Tên bộ câu riêng TiviKit gửi kèm cau.txt ("" nếu không có). */
         fun tenCau(j: JSONObject): String = j.optJSONObject("cau")?.optString("ten").orEmpty()

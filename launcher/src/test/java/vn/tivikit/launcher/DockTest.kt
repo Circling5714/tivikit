@@ -65,6 +65,23 @@ class DockTest {
     }
 
     @Test
+    fun anThongSoVaTocDoMang() {
+        // Issue #1 (2/11/2026): người dùng xin tắt dòng RAM / bộ nhớ trống và tốc độ mạng. Mặc định hiện.
+        val cu = JSONObject()
+        assertTrue(CauHinh.hienThongSo(cu))
+        assertTrue(CauHinh.hienTocDo(cu))
+        assertEquals(listOf("thong_so", "toc_do"), CauHinh.tron(cu, JSONObject().put("thong_so", false).put("toc_do", false)))
+        assertFalse(CauHinh.hienThongSo(cu))
+        assertFalse(CauHinh.hienTocDo(cu))
+        // Bật lại thì bỏ khoá (cấu hình gọn như chưa đụng); khoá khác giữ nguyên.
+        CauHinh.tron(cu, JSONObject().put("thong_so", true).put("ten", "Nhà"))
+        assertFalse(cu.has("thong_so"))
+        assertTrue(CauHinh.hienThongSo(cu))
+        assertFalse(CauHinh.hienTocDo(cu))
+        assertEquals("Nhà", cu.getString("ten"))
+    }
+
+    @Test
     fun tenRiengCuaAppTuTiviKit() {
         val cu = JSONObject()
         val moi = JSONObject().put("ten_app", JSONObject().put("vn.tivikit.kenh", " VTV1 ").put("vn.tivikit.kenh2", "VTV2")

@@ -156,6 +156,8 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             else -> Locale.getDefault().language == "vi"
         }
         tt.ten = j.optString("ten")
+        tt.hienThongSo = CauHinh.hienThongSo(j)
+        tt.hienTocDo = CauHinh.hienTocDo(j)
         val ten = CauHinh.tenApp(j)
         if (ten != tenRieng) { tenRieng = ten; datApps() }
         dockLuu = if (j.has("dock")) CauHinh.dsGoi(j.optJSONArray("dock")) else null

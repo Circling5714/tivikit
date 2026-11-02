@@ -27,6 +27,7 @@ import java.io.FileNotFoundException
  *     logo kênh của ô Kênh nhanh, như app_banners của Home sạch; content delete để về banner của app)
  *   content write --uri content://vn.tivikit.launcher/cau.txt < bo-cau.txt   (bộ câu riêng thay Kinh Pháp Cú đi kèm, bản 1.4
  *     trở đi; content delete để về Kinh Pháp Cú; bật / tắt và tên bộ: dat {"cau":{"bat":true,"ten":"…"}})
+ *   dat {"thong_so":false,"toc_do":false}   (bản 1.5: ẩn dòng RAM / bộ nhớ trống, tốc độ mạng; true = hiện lại)
  * bat-home / tat-home bật / tắt bí danh .Home (bộ lọc HOME): ADB không đổi được trạng thái từng thành phần của app thường
  * ("Shell cannot change component state", chỉ đổi được cả gói), còn app thì tự đổi được thành phần của mình.
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được.
@@ -76,8 +77,11 @@ class CauHinhProvider : ContentProvider() {
                 val (rieng, bo) = runCatching { docBoCau(ctx) }.getOrDefault(false to emptyList())
                 val cau = JSONObject().put("bat", CauHinh.cauBat(cj)).put("ten", CauHinh.tenCau(cj)).put("rieng", rieng)
                     .put("so", bo.sumOf { it.soLuong }).put("co", File(ctx.filesDir, CAU).length())
+                // Dòng thông số, tốc độ mạng (bản 1.5 trở đi): TiviKit biết launcher tắt được chúng.
+                val hienThi = JSONObject().put("thongSo", CauHinh.hienThongSo(cj)).put("tocDo", CauHinh.hienTocDo(cj))
                 val o = JSONObject().put("ban", pi.versionName).put("ma", ma).put("homeBat", homeBat).put("cauHinh", cj)
                     .put("nen", File(ctx.filesDir, ANH_NEN).length()).put("anhApp", anhApp).put("dangPhat", dangPhat).put("cau", cau)
+                    .put("hienThi", hienThi)
                 kq.putString("json", o.toString())
             }
             "bat-home", "tat-home" -> {

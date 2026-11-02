@@ -162,7 +162,7 @@ private fun KhoiGio(tt: TrangThaiHome, modifier: Modifier) {
             }
         }
         DongHo(tt)
-        if (tt.ramTrong > 0) Nhan(Chu.thongSo(tt.ramTrong, tt.boNhoTrong, viet), 14.sp, FontWeight.SemiBold, Color.White.copy(alpha = 0.95f),
+        if (tt.hienThongSo && tt.ramTrong > 0) Nhan(Chu.thongSo(tt.ramTrong, tt.boNhoTrong, viet), 14.sp, FontWeight.SemiBold, Color.White.copy(alpha = 0.95f),
             modifier = Modifier.padding(start = 14.dp))
         tt.cau?.let {
             Spacer(Modifier.height(14.dp))
@@ -235,7 +235,7 @@ private fun HangNut(tt: TrangThaiHome, modifier: Modifier) {
                 else -> Icons.Rounded.WifiOff to t("Không có mạng", "Offline")
             }
             NutKinh(hinh, chu) { tt.hd.moMang() }
-            if (tt.tocXuong >= 0) {
+            if (tt.hienTocDo && tt.tocXuong >= 0) {
                 Spacer(Modifier.height(7.dp))
                 Nhan("↓ ${Chu.tocDo(tt.tocXuong, viet)} · ↑ ${Chu.tocDo(tt.tocLen.coerceAtLeast(0), viet)}", 12.sp, FontWeight.Medium,
                     Color.White.copy(alpha = 0.88f))

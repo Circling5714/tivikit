@@ -175,9 +175,18 @@ object TiviKitLauncher {
      */
     data class TrangThai(val ban: String?, val homeBat: Boolean = false, val canCapNhat: Boolean = false, val ten: String = "",
                          val noi: ThanhPho? = null, val coNenRieng: Boolean = false, val khongDocDuocDangPhat: Boolean = false,
-                         val cau: Cau? = null) {
+                         val cau: Cau? = null, val hienThi: HienThi? = null) {
         val daCai: Boolean get() = ban != null
     }
+
+    /**
+     * Thông tin trên Home của launcher (bản 1.5, null = bản cũ chưa tắt được): [thongSo] dòng RAM / bộ nhớ trống dưới đồng
+     * hồ, [tocDo] tốc độ mạng dưới nút mạng. Người dùng xin tắt được (issue #1 trên GitHub, 2/11/2026).
+     */
+    data class HienThi(val thongSo: Boolean, val tocDo: Boolean)
+
+    /** Cấu hình hiện / ẩn [HienThi]. Gửi bằng [lenhDat]. */
+    fun cauHinhHienThi(thongSo: Boolean, tocDo: Boolean): String = JSONObject().put("thong_so", thongSo).put("toc_do", tocDo).toString()
 
     /**
      * Câu kinh mỗi ngày trên launcher (null = bản cũ chưa có): [bat] đang hiện, [rieng] dùng bộ riêng [ten] (không thì Kinh
@@ -191,8 +200,9 @@ object TiviKitLauncher {
         val n = ch?.optJSONObject("noi")
         val noi = n?.let { ThanhPho(it.optString("ten"), it.optDouble("lat"), it.optDouble("lon")) }?.takeIf { !it.lat.isNaN() && !it.lon.isNaN() }
         val cau = j?.optJSONObject("cau")?.let { Cau(it.optBoolean("bat", true), it.optString("ten"), it.optBoolean("rieng"), it.optInt("so"), it.optLong("co")) }
+        val hienThi = j?.optJSONObject("hienThi")?.let { HienThi(it.optBoolean("thongSo", true), it.optBoolean("tocDo", true)) }
         return TrangThai(j?.optString("ban")?.takeIf { it.isNotBlank() } ?: "?", j?.optBoolean("homeBat") == true, canCapNhat,
-            ch?.optString("ten").orEmpty(), noi, (j?.optLong("nen") ?: 0L) > 0, j?.optString("dangPhat") == "khong-co-quyen", cau)
+            ch?.optString("ten").orEmpty(), noi, (j?.optLong("nen") ?: 0L) > 0, j?.optString("dangPhat") == "khong-co-quyen", cau, hienThi)
     }
 
     /** Đọc kết quả `content call … doc` của launcher ("Result: Bundle[{json={…}}]"); null nếu không đọc được. */

@@ -55,6 +55,9 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
      * tên bộ hiện trên thẻ; hay về lại Kinh Pháp Cú đi kèm.
      */
     var cauBat by mutableStateOf(true)
+    /** Thông tin trên Home của launcher (bản 1.5): dòng RAM / bộ nhớ trống, tốc độ mạng. */
+    var hienThongSo by mutableStateOf(true)
+    var hienTocDo by mutableStateOf(true)
     var cauFile by mutableStateOf<ByteArray?>(null)
         private set
     var cauTenFile by mutableStateOf("")
@@ -108,6 +111,7 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
         tt = null; ban = emptyMap(); homeSachMoi = false; dangMo = null; bao = ""; daThu = null; hoi = null
         tkl = null; tklMo = false; nenTklAsset = null; nenTklRieng = null
         cauBat = true; cauFile = null; cauTenFile = ""; cauTen = ""; cauVePhapCu = false
+        hienThongSo = true; hienTocDo = true
     }
 
     // ---------- TiviKit Launcher (27/10/2026) ----------
@@ -164,6 +168,7 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
             if (vm.thanhPho == null) vm.thanhPho = k.noi
             cauBat = k.cau?.bat ?: true
             cauFile = null; cauTenFile = ""; cauTen = k.cau?.ten.orEmpty(); cauVePhapCu = false
+            hienThongSo = k.hienThi?.thongSo ?: true; hienTocDo = k.hienThi?.tocDo ?: true
         }
     }
 
@@ -235,6 +240,8 @@ class QuanLyLauncher(private val vm: PhienLamViec) {
             vm.io { vm.tv.datCauHinhTkl(TiviKitLauncher.cauHinhCau(cauBat, if (file != null) cauTen else null)) }
             cauFile = null; cauTenFile = ""; cauVePhapCu = false
         }
+        // Dòng RAM / bộ nhớ trống và tốc độ mạng (launcher 1.5 trở đi).
+        if (tkl?.hienThi != null) vm.io { vm.tv.datCauHinhTkl(TiviKitLauncher.cauHinhHienThi(hienThongSo, hienTocDo)) }
         doc()
         bao = t("Đã gửi lên TiviKit Launcher: màn Home trên tivi đổi ngay.", "Sent to TiviKit Launcher: the TV's Home changes right away.")
     }

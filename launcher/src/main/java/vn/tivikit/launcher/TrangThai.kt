@@ -22,6 +22,9 @@ class TrangThaiHome {
 
     var ramTrong by mutableLongStateOf(0L)
     var boNhoTrong by mutableLongStateOf(0L)
+    /** Hiện dòng RAM / bộ nhớ trống dưới đồng hồ, tốc độ mạng dưới nút mạng (TiviKit tắt được: "thong_so", "toc_do"). */
+    var hienThongSo by mutableStateOf(true)
+    var hienTocDo by mutableStateOf(true)
     var mang by mutableStateOf<HeThong.Mang?>(null)
     /** Byte mỗi giây; -1 = tivi không đếm được. */
     var tocXuong by mutableLongStateOf(-1L)

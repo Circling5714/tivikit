@@ -146,7 +146,29 @@ private fun TuyChinhTkl(vm: PhienLamViec, ql: QuanLyLauncher, k: TiviKitLauncher
         runCatching { chonAnh.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
     }
     CauMoiNgayTkl(vm, ql, k)
+    ThongTinHomeTkl(ql, k)
     NutChinh(t("Áp dụng lên tivi", "Apply to the TV"), enabled = !vm.dangBan, icon = Icons.Rounded.Check) { ql.apDungTkl() }
+}
+
+/**
+ * Thông tin trên Home (launcher 1.5): dòng RAM / bộ nhớ trống dưới đồng hồ, tốc độ mạng dưới nút mạng. Tắt được theo góp ý
+ * của người dùng (issue #1 trên GitHub, 2/11/2026). Gửi khi Áp dụng.
+ */
+@Composable
+private fun ThongTinHomeTkl(ql: QuanLyLauncher, k: TiviKitLauncher.TrangThai) {
+    Text(t("Thông tin trên Home", "Info on the Home screen"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    if (k.hienThi == null) {
+        Phu(t("Cần bản TiviKit Launcher mới: bấm Cập nhật ở trên.", "Needs a newer TiviKit Launcher: tap Update above."), Cam)
+        return
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(t("RAM / bộ nhớ trống dưới đồng hồ", "Free RAM / storage under the clock"), Modifier.weight(1f))
+        CongTac(ql.hienThongSo) { ql.hienThongSo = it }
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(t("Tốc độ mạng dưới nút mạng", "Network speed under the network button"), Modifier.weight(1f))
+        CongTac(ql.hienTocDo) { ql.hienTocDo = it }
+    }
 }
 
 /**
