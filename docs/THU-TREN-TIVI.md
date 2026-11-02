@@ -197,6 +197,7 @@ tivi (FPT Play phải đăng nhập).
 | App mở kênh: Tự động → Lưu; nói "mở VTV3" | Map Voice mở lần lượt VTVgo, TV360, FPT Play, IPTV… tới khi có tiếng (tivi báo đang chuyển nguồn) |
 | Có ô Kênh nhanh Auto VTV3 đặt thứ tự riêng (VD FPT Play trước), mở màn Kênh nhanh một lần; nói "mở VTV3" | Map Voice mở đúng thứ tự của ô (FPT Play trước); bỏ ô rồi nói lại thì về thứ tự tự học |
 | Khởi động lại tivi, nói lại một câu | Map Voice tự chạy và nghe lại, không hỏi cho phép lần nữa |
+| Map Voice 1.3.1: tivi đang phát video vài phút, Làm mới tivi → Đang ăn CPU | Không thấy `logcat … setFinalRecognizedText` ăn CPU (bản 1.3 trở về trước có thể tới 10–22%); nói một câu vẫn chạy |
 | Cách chuyển → Mở YouTube bằng → TizenTube → Lưu; đóng hẳn TizenTube rồi nói "tìm hoạt hình" | TizenTube mở trang kết quả "hoạt hình" (chữ tìm có thể hiện sau vài giây) |
 | Nói "mở nhạc piano" khi chọn TizenTube | TizenTube phát video đầu tiên |
 | Tivi có YouTube gốc thật: Mở YouTube bằng → YouTube gốc → nói "tìm nhạc piano" | YouTube gốc mở trang kết quả, không bị đóng ngay |
