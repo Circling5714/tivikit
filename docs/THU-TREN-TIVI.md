@@ -73,6 +73,7 @@ Màn chính → TiviKit Launcher (mở màn Quản lý launcher, thẻ TiviKit L
 | Tuỳ chỉnh → đổi tên lời chào, chọn ảnh nền có sẵn → Áp dụng lên tivi | Màn Home trên tivi đổi tên và ảnh ngay; thẻ ghi "Tivi đang dùng ảnh riêng" |
 | Tuỳ chỉnh → Ảnh từ điện thoại → Áp dụng | Ảnh chụp lên làm nền (cắt giữa 16:9), kính mờ theo màu ảnh |
 | Tuỳ chỉnh → Đồi chè → Áp dụng; thời tiết "Không hiện" → Áp dụng | Về ảnh mặc định; dòng âm lịch thôi hiện thời tiết |
+| Tuỳ chỉnh → Thông tin trên Home: tắt "RAM / bộ nhớ trống dưới đồng hồ" và "Tốc độ mạng dưới nút mạng" → Áp dụng lên tivi (TiviKit Launcher 1.5) | Home thôi hiện dòng RAM / bộ nhớ trống dưới đồng hồ và tốc độ dưới nút Wi-Fi; bật lại → Áp dụng thì hai dòng hiện như cũ |
 | Khôi phục (mục 1) khi TiviKit Launcher đang là Home | Home về như trước; TiviKit Launcher bị gỡ |
 
 - **Hỏng thì:** Quản lý launcher → Về Home gốc hay Đặt làm Home cho Home sạch; vẫn sai thì Khôi phục (mục 1).
