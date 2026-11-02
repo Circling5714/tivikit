@@ -228,8 +228,8 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
                 )
             }
             if (h.kdlBao.isNotEmpty()) Phu(h.kdlBao, Xanh)
-            Phu(t("Lần đầu lưu, tivi hỏi \"Cho phép gỡ lỗi USB?\" cho app Hẹn giờ: chọn Luôn cho phép. App khởi động lại bằng ADB của chính tivi (khởi động lại của Android trên tivi MediaTek thành tắt hẳn), nên ADB qua mạng của tivi phải để bật. Lúc khởi động màn hình sáng chừng 1–2 phút rồi tự tắt. Hộp tắt là ngủ sâu (mất mạng, như TX3) thì không tự chạy được lúc đang tắt. Có việc bật tivi hay mở app trong 30 phút tới thì Auto Reboot chờ qua giờ đó.",
-                "The first save makes the TV ask \"Allow USB debugging?\" for the Timer app: pick Always allow. It restarts the TV through the TV's own ADB (Android's restart turns MediaTek TVs off instead), so the TV's network ADB must stay on. The screen lights up for 1–2 minutes during the restart, then turns off. Boxes that sleep deeply when off (no network, like the TX3) can't run it while off. With a power-on or app opening due within 30 minutes, Auto Reboot waits until after it."))
+            Phu(t("Lần đầu lưu, tivi hỏi \"Cho phép gỡ lỗi USB?\" cho app Hẹn giờ: chọn Luôn cho phép. App khởi động lại bằng ADB của chính tivi (khởi động lại của Android trên tivi MediaTek thành tắt hẳn), nên ADB qua mạng của tivi phải để bật. Lúc khởi động màn hình có thể sáng lên chốc lát rồi tự tắt (Skyworth: chừng 2 giây, không có tiếng). Hộp tắt là ngủ sâu (mất mạng, như TX3) thì không tự chạy được lúc đang tắt. Có việc bật tivi hay mở app trong 30 phút tới thì Auto Reboot chờ qua giờ đó.",
+                "The first save makes the TV ask \"Allow USB debugging?\" for the Timer app: pick Always allow. It restarts the TV through the TV's own ADB (Android's restart turns MediaTek TVs off instead), so the TV's network ADB must stay on. The screen may light up briefly during the restart, then turns off (about 2 seconds on a Skyworth, no sound). Boxes that sleep deeply when off (no network, like the TX3) can't run it while off. With a power-on or app opening due within 30 minutes, Auto Reboot waits until after it."))
         }
     }
 
