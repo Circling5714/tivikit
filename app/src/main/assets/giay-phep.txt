@@ -28,7 +28,7 @@ NextDNS or your own server) the TV sends its DNS lookups to that provider.
 
 TiviKit dùng các phần mềm mã nguồn mở sau. / TiviKit uses the following open-source software.
 
-1. CleanYourTV — danh sách 316 mẫu tivi và màn Home sạch (launcher 3.0), có sửa thêm theo bản vá của CleanTV
+1. CleanYourTV — danh sách 416 mẫu tivi và màn Home sạch (launcher 3.0), có sửa thêm theo bản vá của CleanTV
    (dòng thời tiết, ô kênh truyền hình, mở app khi bật từ chế độ chờ…) / TV lists and the clean Home launcher 3.0,
    modified with CleanTV's patches (weather line, TV channel tiles, open an app when waking from standby…)
    TiviKit Launcher: âm lịch chuyển từ Home sạch, ảnh nền đồi chè (Scenes) / lunar calendar ported from the clean
