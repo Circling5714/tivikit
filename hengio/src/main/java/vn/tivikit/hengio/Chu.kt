@@ -34,13 +34,15 @@ internal object Chu {
     fun loai(loai: String) = when (loai) {
         Viec.BAT -> t("Bật tivi", "Turn on")
         Viec.TAT -> t("Tắt tivi", "Turn off")
+        Viec.KDL -> "Auto Reboot"
         else -> t("Mở app / kênh", "Open an app")
     }
 
-    /** "Bật tivi", "Bật tivi rồi mở VTV1", "Tắt tivi", "Mở SmartTube"; [ten] đổi tên gói ra tên app. */
+    /** "Bật tivi", "Bật tivi rồi mở VTV1", "Tắt tivi", "Mở SmartTube", "Auto Reboot"; [ten] đổi tên gói ra tên app. */
     fun viec(loai: String, goi: String?, ten: (String) -> String): String = when (loai) {
         Viec.BAT -> t("Bật tivi", "Turn on") + (goi?.let { t(" rồi mở ", ", then open ") + ten(it) } ?: "")
         Viec.TAT -> t("Tắt tivi", "Turn off")
+        Viec.KDL -> "Auto Reboot"
         else -> t("Mở ", "Open ") + (goi?.let(ten) ?: "?")
     }
 
@@ -83,8 +85,10 @@ internal object Chu {
             viec == Viec.TAT -> t("Tắt tivi", "Turn off")
             viec.startsWith("${Viec.MO}:") -> t("Mở ", "Open ") + ten(viec.removePrefix("${Viec.MO}:"))
             viec == Viec.MO -> t("Mở app", "Open an app")
+            viec == Viec.KDL -> "Auto Reboot"
             else -> viec
         }
+        if (viec == Viec.KDL) return "$v – ${kdl(kq)}"
         val k = MA_SO.matchEntire(kq)?.destructured?.let { (loai, so) ->
             if (loai == "hoan") t("hoãn $so phút", "snoozed $so min") else t("hẹn tự bật sau $so giây", "set to come on in $so s")
         } ?: when (kq) {
@@ -104,5 +108,20 @@ internal object Chu {
             else -> kq
         }
         return "$v – $k"
+    }
+
+    /** Kết quả Auto Reboot nói bằng lời (như dulieu/HenGio.moTa của TiviKit). */
+    fun kdl(kq: String): String = when (kq) {
+        "khoi-dong-lai" -> t("tivi đang chờ, đã gửi lệnh khởi động lại", "the TV was in standby; restarting it")
+        "thu" -> t("thử ngay: đã gửi lệnh khởi động lại", "test: restarting now")
+        "da-khoi-dong-lai" -> t("đã khởi động lại, màn hình tắt như trước", "restarted, screen back off")
+        "cho-tivi-tat" -> t("tivi đang bật, chờ tivi tắt (kiểm lại mỗi 15 phút)", "the TV was on; waiting for it to be off (checks every 15 min)")
+        "bo-qua" -> t("bỏ qua hôm nay: tivi bật suốt 3 giờ", "skipped today: the TV stayed on for 3 hours")
+        "lo-gio" -> t("bỏ qua vì tới trễ quá 3 giờ (tivi ngủ sâu, tắt điện hay vừa đổi giờ)", "skipped: over 3 hours late (deep sleep, power off or a clock change)")
+        "loi-khong-co-adb" -> t("không khởi động lại được: ADB qua mạng của tivi đang tắt", "couldn't restart: the TV's network ADB is off")
+        "loi-chua-cho-phep" -> t("không khởi động lại được: tivi chưa cho phép gỡ lỗi cho Hẹn giờ", "couldn't restart: the TV hasn't allowed debugging for the Timer")
+        "loi" -> t("không khởi động lại được (lỗi ADB)", "couldn't restart (ADB error)")
+        "tat-loi" -> t("đã khởi động lại nhưng không tắt được màn hình", "restarted but couldn't turn the screen off")
+        else -> kq
     }
 }

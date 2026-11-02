@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- Android 14+: bật màn hình bằng khoá thức (ngoài màn DanhThuc) — TiviKit cấp qua ADB (appops). -->
     <uses-permission android:name="android.permission.TURN_SCREEN_ON" tools:ignore="ProtectedPermissions" />
+    <!-- Auto Reboot (2/11/2026): gửi lệnh reboot qua ADB của chính tivi (127.0.0.1:5555), không ra mạng ngoài. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <!-- Android 11+: thấy được các app có màn mở để mở app đã hẹn, và các launcher (HOME) để biết Home có đè lên app vừa mở. -->

@@ -30,8 +30,10 @@ object HenGio {
             if (kho.daBaoTat != tat) { kho.daBaoTat = tat; baoTat(ctx, kho, "bao-tre") }
         }
         motLanQua(ctx, kho, System.currentTimeMillis())
+        ChayAutoReboot.kiemLo(kho, System.currentTimeMillis())
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
-        val ke = Lich.keTiep(kho.lich, kho.motLan(), System.currentTimeMillis(), ZoneId.systemDefault())
+        val bay = System.currentTimeMillis()
+        val ke = Lich.keTiep(kho.lich, kho.motLan(bay, ZoneId.systemDefault()), bay, ZoneId.systemDefault())
         val i = Intent(ctx, BaoThuc::class.java).setAction(BAO)
         if (ke == null) {
             PendingIntent.getBroadcast(ctx, 1, i, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)?.let { am.cancel(it) }
@@ -48,14 +50,26 @@ object HenGio {
     /** Chạy các việc đến hạn lúc [luc] (giờ đã hẹn, không phải giờ báo thức tới — Android có thể giao trễ vài giây). */
     fun thucHien(ctx: Context, luc: Long) {
         val kho = Kho(ctx)
+        val zone = ZoneId.systemDefault()
         val laThu = kho.thuDen == luc
-        val ke = Lich.keTiep(kho.lich, kho.motLan(), luc - 1, ZoneId.systemDefault())
+        val motLan = kho.motLan(luc - 1, zone)
+        val ke = Lich.keTiep(kho.lich, motLan, luc - 1, zone)
         kho.xongMotLan(luc)
         if (ke == null || ke.luc != luc) return
-        if (Lich.daLo(luc, System.currentTimeMillis())) { ke.viec.forEach { kho.ghi(Lich.tenViec(it, laThu), "lo-gio") }; return }
+        // Auto Reboot tự lo việc trễ và chờ tivi tắt (ChayAutoReboot), không theo luật lỡ giờ 10 phút; chạy sau các việc khác
+        // cùng giờ, và chờ nếu lúc này hay 30 phút tới có việc bật tivi / mở app (khởi động xong là tắt màn hình).
+        val viec = ke.viec.filter { it.loai != Viec.KDL }
+        if (viec.isNotEmpty()) chayViec(ctx, kho, viec, luc, laThu)
+        if (viec.size < ke.viec.size) ChayAutoReboot.toiGio(ctx, luc,
+            ban = viec.any { it.loai == Viec.BAT || it.loai == Viec.MO } || Lich.coViecMo(kho.lich, motLan, luc, luc + AutoReboot.TRANH_VIEC_MS, zone))
+    }
+
+    /** Các việc bật / tắt / mở app đến hạn lúc [luc]. */
+    private fun chayViec(ctx: Context, kho: Kho, ds: List<Viec>, luc: Long, laThu: Boolean) {
+        if (Lich.daLo(luc, System.currentTimeMillis())) { ds.forEach { kho.ghi(Lich.tenViec(it, laThu), "lo-gio") }; return }
         // Màn bảo vệ cũng tính là đang bật: bật tivi / mở app lúc đó phải tắt màn bảo vệ trước (sangManHinh).
         val dangBat = ctx.getSystemService(PowerManager::class.java)?.isInteractive == true
-        for (v in ke.viec) when (v.loai) {
+        for (v in ds) when (v.loai) {
             Viec.BAT -> if (!dangBat) {
                 danhThuc(ctx, v.goi, laThu); kho.ghi(Lich.tenViec(v, laThu), "danh-thuc")
             } else {

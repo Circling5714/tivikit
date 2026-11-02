@@ -34,7 +34,8 @@ class CauHinhProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
         val uid = Binder.getCallingUid()
         val ctx = context!!
-        // App phụ khác của TiviKit (cùng khoá ký) báo việc cần nhắn chủ tivi: trẻ xin thêm giờ (Khoá trẻ em), tivi sắp tắt (Hẹn giờ).
+        // App phụ khác của TiviKit (cùng khoá ký) báo việc cần nhắn chủ tivi: trẻ xin thêm giờ (Khoá trẻ em), tivi sắp tắt và
+        // Auto Reboot lỗi / bỏ qua (Hẹn giờ).
         val cungKhoa = runCatching { ctx.packageManager.checkSignatures(uid, Process.myUid()) == PackageManager.SIGNATURE_MATCH }.getOrDefault(false)
         if (uid != Process.SHELL_UID && uid != 0 && uid != Process.myUid() && !(cungKhoa && method in BAO_TU_APP)) throw SecurityException("chỉ ADB")
         val kho = Kho(ctx)
@@ -128,6 +129,12 @@ class CauHinhProvider : ContentProvider() {
                 dv.sapTat(arg?.toLongOrNull() ?: (System.currentTimeMillis() + 60_000))
                 kq.putString("ok", "1")
             }
+            // Auto Reboot của Hẹn giờ (2/11/2026): không khởi động lại được, hay bỏ qua hôm nay vì tivi bật suốt.
+            "auto-reboot" -> {
+                if (dv == null) return kq.apply { putString("loi", "dich-vu-tat") }
+                dv.autoReboot(arg.orEmpty())
+                kq.putString("ok", "1")
+            }
             "thu" -> {
                 if (dv == null) return kq.apply { putString("loi", "dich-vu-tat") }
                 val j = runCatching { JSONObject(arg ?: "") }.getOrDefault(JSONObject())
@@ -169,6 +176,6 @@ class CauHinhProvider : ContentProvider() {
         /** Chat của lệnh thu (ID chat Telegram thật luôn khác 0). */
         private const val CHAT_THU = 0L
         /** Lệnh app phụ cùng khoá ký gọi được (ngoài ADB). */
-        private val BAO_TU_APP = setOf("xin-them-gio", "sap-tat")
+        private val BAO_TU_APP = setOf("xin-them-gio", "sap-tat", "auto-reboot")
     }
 }

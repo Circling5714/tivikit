@@ -124,6 +124,27 @@ class TeleRemoteDichVu : AccessibilityService() {
             XuLyLenh.bangSapTat(ch.tiengAnh))
     }
 
+    /**
+     * Auto Reboot của Hẹn giờ (2/11/2026): báo tin bật thì nhắn các chủ khi không khởi động lại được hay phải bỏ hôm đó; lần
+     * nào chạy được thì Hẹn giờ không báo. [arg]: {"kq": bo-qua | loi-khong-co-adb | loi-chua-cho-phep | loi | tat-loi, "luc"}.
+     */
+    fun autoReboot(arg: String) {
+        val ch = kho.cauHinh
+        if (!ch.baoTin) return
+        val j = runCatching { org.json.JSONObject(arg) }.getOrDefault(org.json.JSONObject())
+        val gio = j.optLong("luc").takeIf { it > 0 }?.let { java.text.SimpleDateFormat("HH:mm", Locale.ROOT).format(java.util.Date(it)) } ?: "?"
+        val en = ch.tiengAnh
+        val ly = when (j.optString("kq")) {
+            "bo-qua" -> if (en) "skipped today, the TV stayed on for 3 hours from $gio" else "hôm nay bỏ qua vì tivi bật suốt 3 giờ từ $gio"
+            "loi-khong-co-adb" -> if (en) "couldn't restart at $gio: the TV's network ADB is off" else "không khởi động lại được lúc $gio: ADB qua mạng của tivi đang tắt"
+            "loi-chua-cho-phep" -> if (en) "couldn't restart at $gio: the TV hasn't allowed debugging for the Timer (TiviKit → Timer → Auto Reboot → Save, then Always allow on the TV)"
+                else "không khởi động lại được lúc $gio: tivi chưa cho phép gỡ lỗi cho Hẹn giờ (TiviKit → Hẹn giờ → Auto Reboot → Lưu, rồi chọn Luôn cho phép trên tivi)"
+            "tat-loi" -> if (en) "restarted but couldn't turn the screen back off" else "đã khởi động lại nhưng không tắt được màn hình"
+            else -> if (en) "couldn't restart at $gio (ADB error)" else "không khởi động lại được lúc $gio (lỗi ADB)"
+        }
+        baoTin(if (en) "🔄 Auto Reboot on ${tenTivi()}: $ly." else "🔄 Auto Reboot trên tivi ${tenTivi()}: $ly.")
+    }
+
     /** Nhắn [chu] cho các chủ tivi (báo tin); giữ máy thức một lúc cho kịp gửi khi tivi vừa tắt màn hình. */
     fun baoTin(chu: String, banPhim: org.json.JSONObject? = null) {
         runCatching { getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tivikit:teleremote-bao").acquire(30_000) }

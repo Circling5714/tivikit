@@ -22,6 +22,11 @@ import java.time.ZoneId
  *   content call --uri content://vn.tivikit.hengio --method huy-mot-lan --arg tat-1793422740000
  *   content call --uri content://vn.tivikit.hengio --method ten-app --arg '{"vn.tivikit.kenh":"Kênh nhanh: VTV1"}'
  *   content call --uri content://vn.tivikit.hengio --method hoan        (màn báo trước đang đếm ngược: hoãn 30 phút; tat-ngay: tắt luôn)
+ * Auto Reboot (2/11/2026, bản 1.4):
+ *   content call --uri content://vn.tivikit.hengio --method kdl --arg '{"bat":true,"gio":4,"phut":0,"ngay":[1,2,3,4,5,6,7]}'
+ *   content call --uri content://vn.tivikit.hengio --method kdl-adb   (nối thử ADB của tivi; lần đầu tivi hỏi Cho phép gỡ lỗi;
+ *     kết quả ở doc → kdl.adb)
+ *   content call --uri content://vn.tivikit.hengio --method kdl-thu   (khởi động lại ngay, lên lại thì tắt màn hình)
  * Chỉ nhận lời gọi từ shell (ADB) hoặc root: app khác trên tivi không đổi được lịch.
  */
 class CauHinhProvider : ContentProvider() {
@@ -60,6 +65,15 @@ class CauHinhProvider : ContentProvider() {
                 bt.tuXa(tat = method == "tat-ngay")
                 kq.putString("ok", "1")
             }
+            "kdl" -> {
+                val c = AutoReboot.doc(arg) ?: return kq.apply { putString("loi", "kdl sai") }
+                kho.kdl = c
+                kho.kdlCho = 0
+                HenGio.datBaoThuc(ctx)
+                kq.putString("ok", "1")
+            }
+            "kdl-adb" -> { ChayAutoReboot.thuAdb(ctx); kq.putString("ok", "1") }
+            "kdl-thu" -> { ChayAutoReboot.khoiDongLai(ctx, System.currentTimeMillis(), thu = true); kq.putString("ok", "1") }
             "ten-app" -> {
                 val o = runCatching { JSONObject(arg.orEmpty()) }.getOrNull() ?: return kq.apply { putString("loi", "ten sai") }
                 kho.tenApp = o.keys().asSequence().filter { Lich.laTenGoi(it) }.take(100).associateWith { o.optString(it).take(60) }
@@ -78,6 +92,9 @@ class CauHinhProvider : ContentProvider() {
                     .put("bayGio", System.currentTimeMillis())
                     .put("muiGio", ZoneId.systemDefault().id)
                     .put("nhatKy", kho.nhatKy)
+                    // Auto Reboot: cấu hình, lần kế tiếp (giờ hẹn hay lần kiểm lại), giờ hẹn đang chờ tivi tắt, ADB của app.
+                    .put("kdl", kho.kdl.json().put("ke", kho.kdlKeTiep(System.currentTimeMillis(), ZoneId.systemDefault()) ?: 0L)
+                        .put("cho", kho.kdlCho).put("adb", kho.kdlAdb))
                 kq.putString("json", o.toString())
             }
             else -> kq.putString("loi", "khong biet $method")

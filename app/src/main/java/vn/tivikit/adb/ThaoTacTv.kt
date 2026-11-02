@@ -1844,6 +1844,22 @@ class ThaoTacTv(private val adb: KetNoiAdb, private val kho: KhoSaoLuu) {
         sh("content call --uri $henGioUri --method huy-mot-lan --arg $id")
     }
 
+    /** Auto Reboot (2/11/2026, app Hẹn giờ 1.4): lưu cấu hình [json] (HenGio.jsonKdl, không có nháy đơn). */
+    fun datAutoReboot(json: String) {
+        require(!json.contains('\'')) { "json" }
+        val kq = sh("content call --uri $henGioUri --method kdl --arg '$json'")
+        if (!kq.contains("ok=1")) error(t("Tivi không nhận Auto Reboot: ${kq.trim()}", "The TV rejected Auto Reboot: ${kq.trim()}"))
+    }
+
+    /** Cho app Hẹn giờ nối thử ADB của chính tivi (lần đầu tivi hỏi Cho phép gỡ lỗi); kết quả đọc ở doc → kdl.adb. */
+    fun thuAdbHenGio() { sh("content call --uri $henGioUri --method kdl-adb") }
+
+    /** Auto Reboot: khởi động lại tivi ngay (nút Thử ngay); lên lại thì tivi tự tắt màn hình. */
+    fun thuAutoReboot() {
+        val kq = sh("content call --uri $henGioUri --method kdl-thu")
+        if (!kq.contains("ok=1")) error(t("Tivi không nhận lệnh: ${kq.trim()}", "The TV rejected it: ${kq.trim()}"))
+    }
+
     /** Tên app cho màn Hẹn giờ trên tivi (HenGio.jsonTenApp); app phụ bản cũ không biết lệnh này thì thôi. */
     fun datTenAppHenGio(json: String) {
         require(!json.contains('\'')) { "json" }

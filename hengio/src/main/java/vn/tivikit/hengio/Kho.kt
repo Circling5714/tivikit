@@ -3,6 +3,7 @@ package vn.tivikit.hengio
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.ZoneId
 
 /** Trạng thái lưu trên tivi: lịch, việc một lần (hoãn tắt, thử đánh thức), báo thức kế tiếp, nhật ký vài lần chạy gần nhất. */
 class Kho(ctx: Context) {
@@ -43,10 +44,48 @@ class Kho(ctx: Context) {
             .getOrDefault(emptyMap())
         set(v) { p.edit().putString("ten_app", JSONObject(v).toString()).apply() }
 
-    /** Việc một lần còn hạn, đưa vào Lich.keTiep: hoãn tắt, thử đánh thức, việc một lần (theo giờ báo). */
-    fun motLan(): List<Pair<Long, Viec>> = listOfNotNull(
+    /** Auto Reboot (2/11/2026): giờ, ngày, bật / tắt. */
+    var kdl: AutoReboot
+        get() = AutoReboot.doc(p.getString("kdl", null)) ?: AutoReboot()
+        set(v) { p.edit().putString("kdl", v.json().toString()).apply() }
+
+    /** Giờ hẹn Auto Reboot đang chờ tivi tắt (ms); 0 = không chờ. */
+    var kdlCho: Long
+        get() = p.getLong("kdl_cho", 0)
+        set(v) { p.edit().putLong("kdl_cho", v).apply() }
+
+    /** Lần kiểm lại kế tiếp khi đang chờ tivi tắt (ms). */
+    var kdlKiemLuc: Long
+        get() = p.getLong("kdl_kiem", 0)
+        set(v) { p.edit().putLong("kdl_kiem", v).apply() }
+
+    /** Lúc vừa gửi lệnh khởi động lại (ms); 0 = không. Lên lại trong ít phút thì tắt màn hình (ChayAutoReboot.sauKhoiDong). */
+    val kdlVuaLam: Long get() = p.getLong("kdl_vua_lam", 0)
+
+    /** Ghi chắc (commit, không apply): tivi khởi động lại ngay sau khi gửi lệnh, ghi chậm thì mất. */
+    fun datCoKhoiDong(luc: Long) { p.edit().putLong("kdl_vua_lam", luc).commit() }
+
+    /** ADB riêng của Hẹn giờ: "" chưa thử, dang-thu, cho-cho-phep (tivi đang hỏi), da-noi, khong-co, chua-cho-phep, loi. */
+    var kdlAdb: String
+        get() = p.getString("kdl_adb", "").orEmpty()
+        set(v) { p.edit().putString("kdl_adb", v).apply() }
+
+    /** Lần Auto Reboot kế tiếp sau [tu]: đang chờ tivi tắt thì lần kiểm lại, không thì giờ hẹn tới; null nếu đang tắt. */
+    fun kdlKeTiep(tu: Long, zone: ZoneId): Long? {
+        val c = kdl
+        if (!c.bat) return null
+        if (kdlCho > 0) return kdlKiemLuc.takeIf { it > tu }
+        return AutoReboot.lanToi(c, tu, zone)
+    }
+
+    /**
+     * Việc một lần còn hạn, đưa vào Lich.keTiep: hoãn tắt, thử đánh thức, Auto Reboot, việc một lần (theo giờ báo). Auto
+     * Reboot tính từ [tu]: lúc chạy báo thức [tu] là ngay trước giờ báo, nên lần đó vẫn có trong danh sách.
+     */
+    fun motLan(tu: Long, zone: ZoneId): List<Pair<Long, Viec>> = listOfNotNull(
         hoanDen.takeIf { it > 0 }?.let { it to Viec(0, 0, (1..7).toSet(), Viec.TAT) },
         thuDen.takeIf { it > 0 }?.let { it to Viec(0, 0, (1..7).toSet(), Viec.BAT) },
+        kdlKeTiep(tu, zone)?.let { it to Viec(0, 0, (1..7).toSet(), Viec.KDL) },
     ) + motLanDs.map { it.bao to it.viec() }
 
     /** Bỏ các việc một lần đã tới lúc [luc]. */
@@ -60,10 +99,12 @@ class Kho(ctx: Context) {
     /** 20 dòng gần nhất: {luc, viec, kq} để TiviKit xem lần chạy có được không. */
     val nhatKy: JSONArray get() = runCatching { JSONArray(p.getString("nhat_ky", "[]")) }.getOrDefault(JSONArray())
 
-    fun ghi(viec: String, kq: String) {
+    /** Ghi một dòng; [chac]: ghi xong mới trả (ngay trước khi tivi khởi động lại). */
+    fun ghi(viec: String, kq: String, chac: Boolean = false) {
         val a = nhatKy
         a.put(JSONObject().put("luc", System.currentTimeMillis()).put("viec", viec).put("kq", kq))
         val bot = JSONArray(); for (i in maxOf(0, a.length() - 20) until a.length()) bot.put(a.get(i))
-        p.edit().putString("nhat_ky", bot.toString()).apply()
+        val e = p.edit().putString("nhat_ky", bot.toString())
+        if (chac) e.commit() else e.apply()
     }
 }

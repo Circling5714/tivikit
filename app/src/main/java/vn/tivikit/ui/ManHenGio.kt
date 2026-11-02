@@ -172,6 +172,60 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
     NutChinh(t("Lưu lên tivi", "Save to the TV"), enabled = !vm.dangBan && h.duocCai && (h.chuaLuu || !h.daCai || h.trangThai?.dichVuChay == false), icon = Icons.Rounded.Check) { h.luu() }
     if (h.bao.isNotEmpty()) Phu(h.bao, Xanh)
 
+    // Auto Reboot (2/11/2026): mỗi ngày khởi động lại tivi lúc nó đang chờ, lên lại thì tắt màn hình. Lưu riêng, không cần Lưu lên tivi.
+    if (h.duocCai) The("Auto Reboot", Icons.Rounded.RestartAlt) {
+        Phu(t("Mỗi ngày tự khởi động lại tivi lúc tivi đang tắt (chờ) cho tivi luôn mượt. Khởi động xong tivi tự tắt màn hình, bấm nguồn trên remote là lên bình thường. Tới giờ mà tivi đang bật thì chờ tivi tắt (15 phút kiểm lại một lần, tối đa 3 giờ), không ngắt người đang xem.",
+            "Restarts the TV every day while it's in standby, to keep it smooth. Once it's back the screen turns off again; the remote's power button brings it up as usual. If the TV is on at that time it waits for it to be off (checks every 15 min, up to 3 hours), never interrupting anyone watching."))
+        if (!h.duocTat) Phu(t("Auto Reboot cần Android 9 trở lên.", "Auto Reboot needs Android 9 or later."), Cam)
+        else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(t("Bật Auto Reboot", "Turn on Auto Reboot"), Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                CongTac(h.kdlBat) { h.kdlBat = it; h.kdlChuaLuu = true }
+            }
+            OutlinedTextField(TextFieldValue(h.kdlGio, TextRange(h.kdlGio.length)), { h.kdlGio = HenGio.oGio(it.text); h.kdlChuaLuu = true }, modifier = Modifier.width(150.dp),
+                singleLine = true, shape = RoundedCornerShape(12.dp), isError = HenGio.gioSai(h.kdlGio), placeholder = { Text("04:00") },
+                label = { Text(t("Giờ (VD 04:00)", "Time (e.g. 04:00)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                (1..7).forEach { d -> ChonChip(t(TEN_THU[d - 1], TEN_THU_EN[d - 1]), d in h.kdlNgay) { h.kdlNgay = if (d in h.kdlNgay) h.kdlNgay - d else h.kdlNgay + d; h.kdlChuaLuu = true } }
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChonChip(t("Mọi ngày", "Every day"), h.kdlNgay == (1..7).toSet()) { h.kdlNgay = (1..7).toSet(); h.kdlChuaLuu = true }
+                ChonChip(t("T2–T6", "Mon–Fri"), h.kdlNgay == (1..5).toSet()) { h.kdlNgay = (1..5).toSet(); h.kdlChuaLuu = true }
+                ChonChip(t("T7, CN", "Sat, Sun"), h.kdlNgay == setOf(6, 7)) { h.kdlNgay = setOf(6, 7); h.kdlChuaLuu = true }
+            }
+            val k = h.trangThai?.kdl
+            h.keTiepKdl().takeIf { it.isNotEmpty() }?.let { Text(it, fontWeight = FontWeight.SemiBold) }
+            if (k?.adb == "da-noi") Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.CheckCircle, null, Modifier.size(16.dp), tint = Xanh); Spacer(Modifier.width(6.dp))
+                Text(t("Tivi đã cho phép app Hẹn giờ khởi động lại tivi", "The TV lets the Timer app restart it"), fontSize = 13.sp, color = Xanh)
+            }
+            if (h.kdlHoi) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(NenCanhBao).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Tv, null, tint = Cam); Spacer(Modifier.width(8.dp))
+                Phu(t("Nhìn tivi: hộp \"Cho phép gỡ lỗi USB?\" → chọn Luôn cho phép → OK.", "Look at the TV: \"Allow USB debugging?\" → tick Always allow → OK."), ChuChinh)
+            }
+            if (h.kdlChuaLuu) Phu(t("Có thay đổi chưa lưu lên tivi.", "There are changes not saved to the TV yet."), Cam)
+            NutPhu(t("Lưu Auto Reboot", "Save Auto Reboot"), Icons.Rounded.Check, enabled = !vm.dangBan) { h.luuKdl() }
+            if (k?.adb == "da-noi") {
+                var hoiThu by remember { mutableStateOf(false) }
+                TextButton(onClick = { hoiThu = true }, enabled = !vm.dangBan) {
+                    Icon(Icons.Rounded.RestartAlt, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(t("Thử ngay: khởi động lại tivi", "Test now: restart the TV"))
+                }
+                if (hoiThu) AlertDialog(
+                    onDismissRequest = { hoiThu = false },
+                    icon = { Icon(Icons.Rounded.RestartAlt, null) },
+                    title = { Text(t("Khởi động lại tivi ngay?", "Restart the TV now?")) },
+                    text = { Text(t("Tivi khởi động lại như lúc Auto Reboot tự chạy, lên lại thì tự tắt màn hình. Ai đang xem sẽ bị ngắt.",
+                        "The TV restarts as Auto Reboot would, then turns its screen off once it's back. Anyone watching is interrupted.")) },
+                    confirmButton = { TextButton(onClick = { hoiThu = false; h.thuKdl() }) { Text(t("Khởi động lại", "Restart")) } },
+                    dismissButton = { TextButton(onClick = { hoiThu = false }) { Text(t("Thôi", "Cancel")) } },
+                )
+            }
+            if (h.kdlBao.isNotEmpty()) Phu(h.kdlBao, Xanh)
+            Phu(t("Lần đầu lưu, tivi hỏi \"Cho phép gỡ lỗi USB?\" cho app Hẹn giờ: chọn Luôn cho phép. App khởi động lại bằng ADB của chính tivi (khởi động lại của Android trên tivi MediaTek thành tắt hẳn), nên ADB qua mạng của tivi phải để bật. Lúc khởi động màn hình sáng chừng 1–2 phút rồi tự tắt. Hộp tắt là ngủ sâu (mất mạng, như TX3) thì không tự chạy được lúc đang tắt. Có việc bật tivi hay mở app trong 30 phút tới thì Auto Reboot chờ qua giờ đó.",
+                "The first save makes the TV ask \"Allow USB debugging?\" for the Timer app: pick Always allow. It restarts the TV through the TV's own ADB (Android's restart turns MediaTek TVs off instead), so the TV's network ADB must stay on. The screen lights up for 1–2 minutes during the restart, then turns off. Boxes that sleep deeply when off (no network, like the TX3) can't run it while off. With a power-on or app opening due within 30 minutes, Auto Reboot waits until after it."))
+        }
+    }
+
     if (h.daCai) The(t("Thử bật tivi bằng hẹn giờ", "Test timed power-on"), Icons.Rounded.PowerSettingsNew) {
         Phu(t("Hẹn giờ bật chỉ chạy khi tivi tắt bằng remote vào chế độ chờ; tivi rút điện hay tắt sâu thì không app nào bật lại được. Thử một lần cho chắc.",
             "Timed power-on only works when the remote puts the TV in standby; if it's unplugged or powers down deeply, no app can turn it back on. Test it once."))

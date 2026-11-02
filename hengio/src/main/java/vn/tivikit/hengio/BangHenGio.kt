@@ -192,7 +192,7 @@ class BangHenGio : Activity() {
 
     /** "Việc kế tiếp: Tắt tivi lúc 22:30 hôm nay" (tắt tivi: giờ tắt, không phải giờ báo trước). */
     private fun chuKeTiep(bay: Long): String {
-        val k = Lich.keTiep(kho.lich, kho.motLan(), bay, zone) ?: return t("Chưa có việc nào sắp tới.", "Nothing coming up.")
+        val k = Lich.keTiep(kho.lich, kho.motLan(bay, zone), bay, zone) ?: return t("Chưa có việc nào sắp tới.", "Nothing coming up.")
         val luc = k.luc + if (k.viec.all { it.loai == Viec.TAT }) Lich.BAO_TRUOC_MS else 0
         return t("Việc kế tiếp: ", "Next: ") + k.viec.joinToString(", ") { Chu.viec(it.loai, it.goi, ::ten) } +
             t(" lúc ", " at ") + Chu.gio(luc, zone) + " " + Chu.ngayCua(luc, bay, zone)

@@ -4,8 +4,10 @@ import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.view.accessibility.AccessibilityEvent
 
 /** Báo thức tới giờ (chỉ AlarmManager của chính app gửi được: không xuất ra ngoài). */
@@ -16,12 +18,16 @@ class BaoThuc : BroadcastReceiver() {
     }
 }
 
-/** Tivi khởi động / app cập nhật / đổi giờ hay múi giờ: báo thức cũ mất hoặc lệch, đặt lại. Việc đã lỡ thì bỏ, không chạy bù. */
+/**
+ * Tivi khởi động / app cập nhật / đổi giờ hay múi giờ: báo thức cũ mất hoặc lệch, đặt lại. Việc đã lỡ thì bỏ, không chạy bù.
+ * Tivi vừa lên lại do Auto Reboot thì tắt màn hình (dịch vụ trợ năng đã nối; chưa thì lúc nó nối).
+ */
 class KhoiDongLai : BroadcastReceiver() {
     override fun onReceive(ctx: Context, i: Intent) {
         when (i.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> HenGio.datBaoThuc(ctx)
         }
+        if (i.action == Intent.ACTION_BOOT_COMPLETED) ChayAutoReboot.sauKhoiDong(ctx)
     }
 }
 
@@ -41,6 +47,32 @@ class HenGioDichVu : AccessibilityService() {
         super.onServiceConnected()
         dangChay = this
         HenGio.datBaoThuc(this)
+        ChayAutoReboot.sauKhoiDong(this)
+    }
+
+    private var lanTat = 0
+
+    /** Lần kiểm màn hình sau khi Auto Reboot khởi động lại; lần đầu ghi nhật ký (đã tắt, hay không tắt được thì báo Tele Remote). */
+    private val tatMan = object : Runnable {
+        override fun run() {
+            val dangBat = getSystemService(PowerManager::class.java)?.isInteractive == true
+            val ok = !dangBat || (Build.VERSION.SDK_INT >= 28 && performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN))
+            if (lanTat == 0) {
+                Kho(this@HenGioDichVu).ghi(ChayAutoReboot.VIEC, if (ok) "da-khoi-dong-lai" else "tat-loi")
+                if (!ok) ChayAutoReboot.baoTeleRemote(this@HenGioDichVu, "tat-loi", System.currentTimeMillis())
+            }
+            if (++lanTat < 3) tay.postDelayed(this, 30_000)
+        }
+    }
+
+    /**
+     * Auto Reboot vừa khởi động lại tivi (2/11/2026): đợi launcher lên xong rồi tắt màn hình (như tắt bằng remote), kiểm lại
+     * hai lần nữa sau mỗi 30 giây vì có tivi bật màn hình trễ lúc khởi động.
+     */
+    fun tatSauKhoiDong() {
+        tay.removeCallbacks(tatMan)
+        lanTat = 0
+        tay.postDelayed(tatMan, 8_000)
     }
 
     /**

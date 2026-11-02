@@ -16,6 +16,8 @@ data class Viec(val gio: Int, val phut: Int, val ngay: Set<Int>, val loai: Strin
         const val BAT = "bat"
         const val TAT = "tat"
         const val MO = "mo"
+        /** Auto Reboot (2/11/2026): chỉ có trong báo thức (Kho.motLan), không nằm trong lịch TiviKit gửi. */
+        const val KDL = "kdl"
     }
 }
 
@@ -149,6 +151,22 @@ object Lich {
             }
         }
         return null
+    }
+
+    /**
+     * Có việc bật tivi / mở app (lịch đang bật, hay việc một lần trong [motLan]) lúc nào đó trong [tu]..[den] không (khoảng
+     * ngắn, dưới một ngày). Auto Reboot tránh giờ đó: khởi động xong là tắt màn hình, đè lên việc vừa bật tivi.
+     */
+    fun coViecMo(ds: List<Viec>, motLan: List<Pair<Long, Viec>>, tu: Long, den: Long, zone: ZoneId): Boolean {
+        fun mo(v: Viec) = v.loai == Viec.BAT || v.loai == Viec.MO
+        if (motLan.any { (luc, v) -> mo(v) && luc in tu..den }) return true
+        val homNay = Instant.ofEpochMilli(tu).atZone(zone).toLocalDate()
+        return ds.any { v ->
+            v.bat && mo(v) && (0L..1L).any { d ->
+                val ngay = homNay.plusDays(d)
+                ngay.dayOfWeek.value in v.ngay && ZonedDateTime.of(ngay, LocalTime.of(v.gio, v.phut), zone).toInstant().toEpochMilli() in tu..den
+            }
+        }
     }
 
     /**

@@ -75,6 +75,8 @@ object HenGio {
 
     /** Việc "thử đánh thức" (nút Thử) trong nhật ký. */
     private const val VIEC_THU = "thu"
+    /** Việc Auto Reboot trong nhật ký (app phụ 1.4). */
+    const val VIEC_KDL = "kdl"
     private val MA_SO = Regex("""^(hoan|hen)-(\d+)$""")
 
     /**
@@ -82,6 +84,7 @@ object HenGio {
      * – đã mở". [tenApp] đổi tên gói ra tên app. Mã chưa biết (app phụ bản sau) thì hiện nguyên mã.
      */
     fun moTa(n: NhatKy, tenApp: (String) -> String): String {
+        if (n.viec == VIEC_KDL) return "Auto Reboot – " + moTaKdl(n.kq)
         val viec = when {
             n.viec == BAT -> t("Bật tivi", "Turn on")
             n.viec == VIEC_THU -> t("Thử bật tivi", "Power-on test")
@@ -112,17 +115,57 @@ object HenGio {
         return "$viec – $kq"
     }
 
+    /** Kết quả Auto Reboot trong nhật ký, nói bằng lời (như Chu.kdl của app phụ). */
+    fun moTaKdl(kq: String): String = when (kq) {
+        "khoi-dong-lai" -> t("tivi đang chờ, đã gửi lệnh khởi động lại", "the TV was in standby; restarting it")
+        "thu" -> t("thử ngay: đã gửi lệnh khởi động lại", "test: restarting now")
+        "da-khoi-dong-lai" -> t("đã khởi động lại, màn hình tắt như trước", "restarted, screen back off")
+        "cho-tivi-tat" -> t("tivi đang bật, chờ tivi tắt (kiểm lại mỗi 15 phút)", "the TV was on; waiting for it to be off (checks every 15 min)")
+        "bo-qua" -> t("bỏ qua hôm nay: tivi bật suốt 3 giờ", "skipped today: the TV stayed on for 3 hours")
+        "lo-gio" -> t("bỏ qua vì tới trễ quá 3 giờ (tivi ngủ sâu, tắt điện hay vừa đổi giờ)", "skipped: over 3 hours late (deep sleep, power off or a clock change)")
+        "loi-khong-co-adb" -> t("không khởi động lại được: ADB qua mạng của tivi đang tắt", "couldn't restart: the TV's network ADB is off")
+        "loi-chua-cho-phep" -> t("không khởi động lại được: tivi chưa cho phép gỡ lỗi cho Hẹn giờ", "couldn't restart: the TV hasn't allowed debugging for the Timer")
+        "loi" -> t("không khởi động lại được (lỗi ADB)", "couldn't restart (ADB error)")
+        "tat-loi" -> t("đã khởi động lại nhưng không tắt được màn hình", "restarted but couldn't turn the screen off")
+        else -> kq
+    }
+
+    /**
+     * Auto Reboot (2/11/2026, app phụ 1.4): mỗi ngày lúc [gio]:[phut] các ngày [ngay] khởi động lại tivi lúc nó đang chờ cho
+     * tivi luôn mượt, lên lại thì tắt màn hình. Tivi đang bật thì chờ tivi tắt (15 phút kiểm một lần, tối đa 3 giờ).
+     */
+    data class AutoReboot(val bat: Boolean = false, val gio: Int = 4, val phut: Int = 0, val ngay: Set<Int> = (1..7).toSet()) {
+        val gioChu: String get() = "%02d:%02d".format(java.util.Locale.ROOT, gio, phut)
+    }
+
+    /** Cấu hình gửi app phụ (content call … --method kdl): chỉ số, không có nháy đơn. */
+    fun jsonKdl(k: AutoReboot): String =
+        JSONObject().put("bat", k.bat).put("gio", k.gio).put("phut", k.phut).put("ngay", JSONArray(k.ngay.sorted())).toString()
+
+    /**
+     * Auto Reboot trên tivi: cấu hình, [keTiep] lần tới (giờ hẹn, hay lần kiểm lại khi đang chờ), [cho] giờ hẹn đang chờ tivi
+     * tắt (0 = không), [adb] ADB riêng của app phụ: "" chưa thử, dang-thu, cho-cho-phep, da-noi, khong-co, chua-cho-phep, loi.
+     */
+    data class TrangThaiKdl(val cauHinh: AutoReboot, val keTiep: Long, val cho: Long, val adb: String)
+
+    fun docKdl(o: JSONObject?): TrangThaiKdl? {
+        o ?: return null
+        val ngay = o.optJSONArray("ngay")?.let { n -> (0 until n.length()).map { n.optInt(it) }.filter { it in 1..7 }.toSet() }.orEmpty()
+        val k = AutoReboot(o.optBoolean("bat"), o.optInt("gio", 4).coerceIn(0, 23), o.optInt("phut").coerceIn(0, 59), ngay.ifEmpty { (1..7).toSet() })
+        return TrangThaiKdl(k, o.optLong("ke"), o.optLong("cho"), o.optString("adb"))
+    }
+
     /** Việc một lần đang chờ trên tivi (app phụ 1.2): [loai] lúc [luc] (tắt tivi: giờ tắt), [id] để huỷ. */
     data class MotLan(val id: String, val luc: Long, val loai: String, val goi: String?)
 
     /**
      * Trạng thái app phụ trên tivi (content call … --method doc). [coManTv]: app phụ 1.2 trở lên, có màn Hẹn giờ trên tivi
-     * và việc một lần.
+     * và việc một lần. [kdl]: Auto Reboot (app phụ 1.4; null với bản cũ hơn).
      */
     data class TrangThai(
         val lich: List<Viec>, val keTiep: Long, val hoanDen: Long, val dichVuChay: Boolean, val chinhXac: Boolean,
         val bayGio: Long, val muiGio: ZoneId, val nhatKy: List<NhatKy>,
-        val motLan: List<MotLan> = emptyList(), val coManTv: Boolean = false,
+        val motLan: List<MotLan> = emptyList(), val coManTv: Boolean = false, val kdl: TrangThaiKdl? = null,
     )
 
     fun trangThai(j: JSONObject): TrangThai {
@@ -133,7 +176,7 @@ object HenGio {
             if (o.optString("id").isBlank() || loai !in setOf(BAT, TAT, MO)) null else MotLan(o.optString("id"), o.optLong("luc"), loai, o.optString("goi").ifBlank { null })
         }
         return TrangThai(docLich(j.optJSONArray("lich")), j.optLong("keTiep"), j.optLong("hoanDen"), j.optBoolean("dichVuChay"),
-            j.optBoolean("chinhXac", true), j.optLong("bayGio"), zone, nk, ml.sortedBy { it.luc }, j.has("motLan"))
+            j.optBoolean("chinhXac", true), j.optLong("bayGio"), zone, nk, ml.sortedBy { it.luc }, j.has("motLan"), docKdl(j.optJSONObject("kdl")))
     }
 
     /** Lệnh hẹn một lần (content call … --method mot-lan): tắt tivi sau [phut] phút. */

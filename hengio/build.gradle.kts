@@ -22,8 +22,8 @@ android {
         applicationId = "vn.tivikit.hengio"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.3.0"
+        versionCode = 7
+        versionName = "1.4.0"
     }
     signingConfigs {
         if (kyFile.exists()) {

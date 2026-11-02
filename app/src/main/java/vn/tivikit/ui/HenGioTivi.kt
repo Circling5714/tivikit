@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import vn.tivikit.dulieu.HenGio
 import vn.tivikit.dulieu.KenhNhanh
 import vn.tivikit.dulieu.tenDep
@@ -67,6 +68,7 @@ class HenGioTivi(private val vm: PhienLamViec) {
         trangThai = j?.let { HenGio.trangThai(it) }
         ds.clear(); trangThai?.let { ds.addAll(HenGio.sapXep(it.lich)) }
         chuaLuu = false; dangSua = null
+        napKdl()
     }
 
     /** Chỉ đọc lại trạng thái (việc một lần, việc kế tiếp, nhật ký), giữ lịch đang soạn chưa lưu. */
@@ -174,6 +176,97 @@ class HenGioTivi(private val vm: PhienLamViec) {
     fun quen() {
         ds.clear(); trangThai = null; daCai = false; chuaLuu = false; bao = ""; dsApp = emptyList(); goi = null; dangSua = null
         motLan = false; khac = false; phutKhac = ""
+        napKdl(); kdlBao = ""
+    }
+
+    // ---------- Auto Reboot (2/11/2026, app phụ 1.4) ----------
+
+    var kdlBat by mutableStateOf(false)
+    var kdlGio by mutableStateOf("04:00")
+    var kdlNgay by mutableStateOf((1..7).toSet())
+    /** Có thay đổi Auto Reboot chưa lưu lên tivi. */
+    var kdlChuaLuu by mutableStateOf(false)
+    /** Tivi đang hiện hộp "Cho phép gỡ lỗi USB?" cho app Hẹn giờ (lần đầu lưu Auto Reboot). */
+    var kdlHoi by mutableStateOf(false)
+        private set
+    var kdlBao by mutableStateOf("")
+        private set
+
+    /** Đưa cấu hình Auto Reboot trên tivi (hay mặc định 04:00 mọi ngày) lên ô soạn. */
+    private fun napKdl() {
+        val k = trangThai?.kdl?.cauHinh ?: HenGio.AutoReboot()
+        kdlBat = k.bat; kdlGio = k.gioChu; kdlNgay = k.ngay; kdlChuaLuu = false
+    }
+
+    /**
+     * Lưu Auto Reboot: cài / cập nhật app Hẹn giờ (bản 1.4 trở lên, không đổi lịch), lần đầu cho nó nối ADB của chính tivi —
+     * tivi hỏi "Cho phép gỡ lỗi USB?", người dùng chọn Luôn cho phép — rồi gửi cấu hình.
+     */
+    fun luuKdl() = vm.chay(t("Đang lưu Auto Reboot…", "Saving Auto Reboot…")) {
+        if (!duocTat) error(t("Auto Reboot cần Android 9 trở lên.", "Auto Reboot needs Android 9 or later."))
+        val (g, p) = HenGio.docGio(kdlGio) ?: error(t("Giờ dạng 04:00 (0:00 đến 23:59).", "Time like 04:00 (0:00 to 23:59)."))
+        if (kdlNgay.isEmpty()) error(t("Chọn ít nhất một ngày.", "Pick at least one day."))
+        vm.damBaoKetNoi()
+        kdlBao = ""
+        val apk = vm.io { vn.tivikit.CapNhat.moAsset(vm.ctx, "hengio.apk").readBytes() }
+        vm.io { vm.tv.caiAppHenGio(apk) { s -> vm.thongBao = s } }
+        docTrangThaiTv()
+        val kdl = trangThai?.kdl ?: error(t("App Hẹn giờ trên tivi chưa có Auto Reboot. Bấm Lưu lên tivi rồi thử lại.", "The Timer app on the TV has no Auto Reboot yet. Tap Save to the TV, then try again."))
+        if (kdlBat && kdl.adb != "da-noi") noiAdb()
+        val k = HenGio.AutoReboot(kdlBat, g, p, kdlNgay)
+        vm.io { vm.tv.datAutoReboot(HenGio.jsonKdl(k)) }
+        docTrangThaiTv()
+        kdlGio = k.gioChu; kdlChuaLuu = false
+        kdlBao = if (!k.bat) t("Đã tắt Auto Reboot.", "Auto Reboot is off.") else t("Đã bật Auto Reboot. ", "Auto Reboot is on. ") + keTiepKdl()
+    }
+
+    /** Cho app Hẹn giờ nối ADB của tivi rồi chờ kết quả (người dùng bấm Cho phép trên tivi, tối đa 75 giây). */
+    private suspend fun noiAdb() {
+        vm.io { vm.tv.thuAdbHenGio() }
+        val het = System.currentTimeMillis() + 75_000
+        try {
+            while (true) {
+                delay(1_500)
+                val adb = vm.io { vm.tv.docHenGio() }?.let { HenGio.trangThai(it).kdl?.adb }.orEmpty()
+                kdlHoi = adb == "cho-cho-phep"
+                if (kdlHoi) vm.thongBao = t("Nhìn tivi: hộp \"Cho phép gỡ lỗi USB?\" → chọn Luôn cho phép → OK.", "Look at the TV: \"Allow USB debugging?\" → tick Always allow → OK.")
+                when (adb) {
+                    "da-noi" -> return
+                    "khong-co" -> error(t("ADB qua mạng (cổng 5555) của tivi đang tắt: Auto Reboot cần nó để khởi động lại tivi.",
+                        "The TV's network ADB (port 5555) is off: Auto Reboot needs it to restart the TV."))
+                    "chua-cho-phep" -> error(t("Tivi chưa cho phép gỡ lỗi cho app Hẹn giờ. Bấm Lưu Auto Reboot lần nữa, trên tivi chọn Luôn cho phép rồi OK.",
+                        "The TV didn't allow debugging for the Timer app. Tap Save Auto Reboot again, then pick Always allow and OK on the TV."))
+                    "loi" -> error(t("App Hẹn giờ không nối được ADB của tivi. Thử lại sau.", "The Timer app couldn't reach the TV's ADB. Try again later."))
+                }
+                if (System.currentTimeMillis() > het) error(t("Hết giờ chờ tivi cho phép gỡ lỗi. Bấm Lưu Auto Reboot lần nữa.", "Timed out waiting for the TV to allow debugging. Tap Save Auto Reboot again."))
+            }
+        } finally {
+            kdlHoi = false
+        }
+    }
+
+    /** Khởi động lại tivi ngay bằng Auto Reboot (Thử ngay): lên lại thì tivi tự tắt màn hình. TiviKit mất kết nối lúc đó. */
+    fun thuKdl() = vm.chay(t("Đang gửi lệnh khởi động lại…", "Sending the restart…")) {
+        vm.damBaoKetNoi()
+        docTrangThaiTv()
+        if (trangThai?.kdl?.adb != "da-noi") error(t("Bấm Lưu Auto Reboot trước (cho app Hẹn giờ nối ADB của tivi), rồi thử.",
+            "Tap Save Auto Reboot first (lets the Timer app use the TV's ADB), then test."))
+        vm.io { vm.tv.thuAutoReboot() }
+        kdlBao = t("Đã gửi: tivi khởi động lại trong vài giây, lên lại (1–2 phút) thì tự tắt màn hình. TiviKit mất kết nối lúc đó, nối lại sau khi tivi lên.",
+            "Sent: the TV restarts in a few seconds and turns its screen off once it's back (1–2 min). TiviKit loses the connection meanwhile; reconnect after.")
+    }
+
+    /** "Lần tới: 04:00 Thứ Ba." hay "Đang chờ tivi tắt (hẹn 04:00), kiểm lại lúc 04:15." theo giờ của tivi. */
+    fun keTiepKdl(): String {
+        val tt = trangThai ?: return ""
+        val k = tt.kdl ?: return ""
+        if (!k.cauHinh.bat || k.keTiep <= 0) return ""
+        val (g, thu) = HenGio.gioCua(k.keTiep, tt.muiGio)
+        if (k.cho > 0) {
+            val hen = HenGio.gioCua(k.cho, tt.muiGio).first
+            return t("Đang chờ tivi tắt (hẹn $hen), kiểm lại lúc $g.", "Waiting for the TV to be off (set for $hen), next check at $g.")
+        }
+        return t("Lần tới: $g ${tenThu(thu)}.", "Next: $g ${tenThu(thu)}.")
     }
 
     // ---------- Việc một lần (31/10/2026, app phụ 1.2) ----------

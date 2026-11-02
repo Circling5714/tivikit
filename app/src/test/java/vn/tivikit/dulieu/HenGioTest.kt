@@ -132,5 +132,45 @@ class HenGioTest {
         assertEquals("danh-thuc", t.nhatKy.single().kq)
         // 1792971000000 ms = 26/10/2026 06:30 giờ Việt Nam, Thứ Hai.
         assertEquals("06:30" to 1, HenGio.gioCua(t.keTiep, t.muiGio))
+        // App phụ trước 1.4 không có Auto Reboot.
+        assertNull(t.kdl)
+    }
+
+    /** Auto Reboot (2/11/2026, app phụ 1.4): cấu hình gửi đi, trạng thái đọc về, nhật ký nói bằng lời. */
+    @Test fun autoReboot() {
+        val k = HenGio.AutoReboot(true, 4, 0, (1..7).toSet())
+        // Gửi đi rồi đọc lại như app phụ (thứ tự khoá JSON không cố định trên máy tính).
+        fun khuHoi(a: HenGio.AutoReboot) = HenGio.docKdl(JSONObject(HenGio.jsonKdl(a)))!!.cauHinh
+        assertEquals(k, khuHoi(k))
+        val cuoiTuan = HenGio.AutoReboot(false, 23, 5, setOf(7, 6))
+        assertEquals(cuoiTuan, khuHoi(cuoiTuan))
+        assertEquals("[6,7]", JSONObject(HenGio.jsonKdl(cuoiTuan)).getJSONArray("ngay").toString())
+        assertFalse(HenGio.jsonKdl(cuoiTuan).contains('\''))
+        assertEquals("04:00", k.gioChu)
+        // Mặc định khi tivi chưa có: tắt, 04:00 mọi ngày.
+        assertEquals(HenGio.AutoReboot(false, 4, 0, (1..7).toSet()), HenGio.AutoReboot())
+
+        val j = JSONObject("""{"lich":[],"keTiep":1793653200000,"dichVuChay":true,"bayGio":1793540000000,"muiGio":"Asia/Ho_Chi_Minh",
+            "nhatKy":[],"motLan":[],"kdl":{"bat":true,"gio":4,"phut":0,"ngay":[1,2,3,4,5,6,7],"ke":1793653200000,"cho":0,"adb":"da-noi"}}""")
+        val kdl = HenGio.trangThai(j).kdl!!
+        assertEquals(k, kdl.cauHinh)
+        assertEquals("da-noi", kdl.adb)
+        assertEquals(0L, kdl.cho)
+        // 1793653200000 ms = 03/11/2026 04:00 giờ Việt Nam, Thứ Ba.
+        assertEquals("04:00" to 2, HenGio.gioCua(kdl.keTiep, ZoneId.of("Asia/Ho_Chi_Minh")))
+        // Ngày rỗng / giờ lạ từ bản sau: không vỡ, về mặc định an toàn.
+        val la = HenGio.docKdl(JSONObject("""{"bat":true,"gio":99,"phut":-1,"ngay":[]}"""))!!
+        assertEquals(HenGio.AutoReboot(true, 23, 0, (1..7).toSet()), la.cauHinh)
+        assertEquals("", la.adb)
+
+        fun mt(kq: String) = HenGio.moTa(HenGio.NhatKy(0, HenGio.VIEC_KDL, kq)) { it }
+        assertEquals("Auto Reboot – tivi đang chờ, đã gửi lệnh khởi động lại", mt("khoi-dong-lai"))
+        assertEquals("Auto Reboot – đã khởi động lại, màn hình tắt như trước", mt("da-khoi-dong-lai"))
+        assertEquals("Auto Reboot – tivi đang bật, chờ tivi tắt (kiểm lại mỗi 15 phút)", mt("cho-tivi-tat"))
+        assertEquals("Auto Reboot – bỏ qua hôm nay: tivi bật suốt 3 giờ", mt("bo-qua"))
+        // Luật lỡ giờ của Auto Reboot là 3 giờ, không phải 10 phút như việc khác.
+        assertEquals("Auto Reboot – bỏ qua vì tới trễ quá 3 giờ (tivi ngủ sâu, tắt điện hay vừa đổi giờ)", mt("lo-gio"))
+        assertEquals("Auto Reboot – không khởi động lại được: ADB qua mạng của tivi đang tắt", mt("loi-khong-co-adb"))
+        assertEquals("Auto Reboot – ma-moi", mt("ma-moi"))
     }
 }
