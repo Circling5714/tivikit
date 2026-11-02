@@ -198,6 +198,12 @@ internal fun ManHenGio(vm: PhienLamViec) = Cuon {
             if (k?.adb == "da-noi") Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.CheckCircle, null, Modifier.size(16.dp), tint = Xanh); Spacer(Modifier.width(6.dp))
                 Text(t("Tivi đã cho phép app Hẹn giờ khởi động lại tivi", "The TV lets the Timer app restart it"), fontSize = 13.sp, color = Xanh)
+            } else if (k != null && k.cauHinh.bat && k.adb in setOf("chua-luu", "chua-cho-phep", "khong-co")) Row(verticalAlignment = Alignment.CenterVertically) {
+                // Đang bật mà tivi không còn cho phép (lần chạy vừa rồi bị từ chối, hay chỉ cho phép một lần): cần Lưu lại.
+                Icon(Icons.Rounded.Warning, null, Modifier.size(16.dp), tint = Cam); Spacer(Modifier.width(6.dp))
+                Text(if (k.adb == "khong-co") t("ADB qua mạng của tivi đang tắt: Auto Reboot không chạy được", "The TV's network ADB is off: Auto Reboot can't run")
+                    else t("Tivi chưa cho phép app Hẹn giờ: bật tivi lên, bấm Lưu Auto Reboot, tick Luôn cho phép", "The TV hasn't allowed the Timer app: turn the TV on, tap Save Auto Reboot, tick Always allow"),
+                    fontSize = 13.sp, color = Cam)
             }
             if (h.kdlHoi) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(NenCanhBao).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Tv, null, tint = Cam); Spacer(Modifier.width(8.dp))

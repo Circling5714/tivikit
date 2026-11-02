@@ -65,8 +65,13 @@ object AdbNoiBo {
      */
     fun khoiDongLai(thuMuc: File, dangHoi: () -> Unit): KetQua = chay(thuMuc, "shell:reboot", dangHoi)
 
+    /**
+     * [hoi] = false: tivi chưa biết khoá thì thôi luôn (CHUA_CHO_PHEP), không gửi khoá công khai nên tivi không hiện hộp hỏi.
+     * Dùng lúc không ai ở trước tivi: adbd chỉ giữ một hộp hỏi đang chờ, hộp đó bị Home đè (Skyworth: Home nhảy lên khi
+     * tivi thức) thì nó chờ mãi và mọi lần hỏi sau bị bỏ qua ("prompt currently pending") tới khi khởi động lại tivi.
+     */
     internal fun chay(thuMuc: File, lenh: String, dangHoi: () -> Unit, may: String = "127.0.0.1", cong: Int = 5555,
-                      choToiDa: Int = 60_000): KetQua {
+                      choToiDa: Int = 60_000, hoi: Boolean = true): KetQua {
         val k = try { khoa(thuMuc) } catch (_: Exception) { return KetQua.LOI }
         Socket().use { s ->
             try {
@@ -97,6 +102,7 @@ object AdbNoiBo {
                     }
                     // Tivi chưa biết khoá: gửi khoá công khai, tivi hiện hộp "Cho phép gỡ lỗi?" và chờ người dùng. Token tới
                     // sau đó (adbd chưa nối được phần hiện hộp hỏi thì hỏi lại khi nối được) cũng trả bằng khoá, như adb.
+                    if (!hoi) return KetQua.CHUA_CHO_PHEP
                     gui(AUTH, KHOA_CONG_KHAI, khoaCongKhai(k.public as RSAPublicKey))
                     if (!daHoi) {
                         daHoi = true

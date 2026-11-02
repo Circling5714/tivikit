@@ -123,11 +123,18 @@ object ChayAutoReboot {
         kho.ghi(VIEC, if (thu) "thu" else "khoi-dong-lai", chac = true)
         val wl = runCatching { app.getSystemService(PowerManager::class.java)?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "hengio:kdl")?.apply { acquire(90_000) } }.getOrNull()
         thread(name = "hengio-kdl") {
-            val kq = AdbNoiBo.chay(app.filesDir, "shell:reboot", {}, choToiDa = if (thu) 60_000 else 5_000)
+            // Tự chạy thì không bao giờ để tivi hiện hộp hỏi (hoi = false): không ai bấm, hộp treo làm kẹt adbd.
+            val kq = AdbNoiBo.chay(app.filesDir, "shell:reboot", {}, choToiDa = if (thu) 60_000 else 5_000, hoi = thu)
             if (kq != AdbNoiBo.KetQua.DA_GUI) {
                 kho.datCoKhoiDong(0)
                 val ma = maLoi(kq)
                 kho.ghi(VIEC, ma)
+                // TiviKit thấy phải cho phép lại (khoá bị gỡ khỏi tivi, hay lần trước chỉ cho phép một lần).
+                when (kq) {
+                    AdbNoiBo.KetQua.CHUA_CHO_PHEP -> kho.kdlAdb = "chua-cho-phep"
+                    AdbNoiBo.KetQua.KHONG_CO -> kho.kdlAdb = "khong-co"
+                    else -> {}
+                }
                 if (!thu) baoTeleRemote(app, ma, dot)
             }
             runCatching { wl?.release() }
@@ -167,9 +174,13 @@ object ChayAutoReboot {
         val kho = Kho(app)
         kho.kdlAdb = "dang-thu"
         thread(name = "hengio-adb") {
-            val kq = AdbNoiBo.chay(app.filesDir, "shell:true", { kho.kdlAdb = "cho-cho-phep" }, choToiDa = 120_000)
+            var daHoi = false
+            val kq = AdbNoiBo.chay(app.filesDir, "shell:true", { daHoi = true; kho.kdlAdb = "cho-cho-phep" }, choToiDa = 120_000)
             kho.kdlAdb = when (kq) {
-                AdbNoiBo.KetQua.DA_GUI -> "da-noi"
+                // Vừa hỏi và được cho phép: nối lại không hỏi xem tivi có lưu khoá không. Cho phép mà không tick Luôn cho phép
+                // thì tivi chỉ nhận lần đó, Auto Reboot lúc tivi tắt bị từ chối (Skyworth 2/11/2026).
+                AdbNoiBo.KetQua.DA_GUI ->
+                    if (daHoi && AdbNoiBo.chay(app.filesDir, "shell:true", {}, choToiDa = 3_000, hoi = false) != AdbNoiBo.KetQua.DA_GUI) "chua-luu" else "da-noi"
                 AdbNoiBo.KetQua.KHONG_CO -> "khong-co"
                 AdbNoiBo.KetQua.CHUA_CHO_PHEP -> "chua-cho-phep"
                 AdbNoiBo.KetQua.LOI -> "loi"

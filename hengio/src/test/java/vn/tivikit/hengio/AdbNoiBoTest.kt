@@ -197,6 +197,24 @@ class AdbNoiBoTest {
     }
 
     @Test
+    fun khongDuocHoiThiKhongGuiKhoaCongKhai() {
+        // Auto Reboot tự chạy (hoi = false): khoá lạ thì thôi luôn, tivi không hiện hộp hỏi treo (Skyworth 2/11/2026).
+        val thuMuc = tam.newFolder()
+        val gia = AdbdGia { vao, ra ->
+            doc(vao)
+            gui(ra, AUTH, 1, 0, ByteArray(20))
+            assertEquals(2, doc(vao).a0) // chữ ký
+            gui(ra, AUTH, 1, 0, ByteArray(20))
+            // Client đóng kết nối, không gửi khoá công khai (AUTH loại 3).
+            assertTrue(runCatching { doc(vao) }.isFailure)
+        }
+        var hoi = 0
+        assertEquals(AdbNoiBo.KetQua.CHUA_CHO_PHEP, AdbNoiBo.chay(thuMuc, "shell:reboot", { hoi++ }, cong = gia.cong, hoi = false))
+        gia.xong()
+        assertEquals(0, hoi)
+    }
+
+    @Test
     fun tiviKhongMoAdbHayChiCoTls() {
         val thuMuc = tam.newFolder()
         val dong = ServerSocket(0).use { it.localPort }

@@ -65,7 +65,10 @@ class Kho(ctx: Context) {
     /** Ghi chắc (commit, không apply): tivi khởi động lại ngay sau khi gửi lệnh, ghi chậm thì mất. */
     fun datCoKhoiDong(luc: Long) { p.edit().putLong("kdl_vua_lam", luc).commit() }
 
-    /** ADB riêng của Hẹn giờ: "" chưa thử, dang-thu, cho-cho-phep (tivi đang hỏi), da-noi, khong-co, chua-cho-phep, loi. */
+    /**
+     * ADB riêng của Hẹn giờ: "" chưa thử, dang-thu, cho-cho-phep (tivi đang hỏi), da-noi, chua-luu (cho phép một lần, chưa
+     * tick Luôn cho phép), khong-co, chua-cho-phep, loi.
+     */
     var kdlAdb: String
         get() = p.getString("kdl_adb", "").orEmpty()
         set(v) { p.edit().putString("kdl_adb", v).apply() }

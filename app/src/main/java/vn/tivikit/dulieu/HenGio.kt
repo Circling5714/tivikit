@@ -160,12 +160,13 @@ object HenGio {
 
     /**
      * Trạng thái app phụ trên tivi (content call … --method doc). [coManTv]: app phụ 1.2 trở lên, có màn Hẹn giờ trên tivi
-     * và việc một lần. [kdl]: Auto Reboot (app phụ 1.4; null với bản cũ hơn).
+     * và việc một lần. [kdl]: Auto Reboot (app phụ 1.4; null với bản cũ hơn). [dangBat]: màn hình tivi đang sáng.
      */
     data class TrangThai(
         val lich: List<Viec>, val keTiep: Long, val hoanDen: Long, val dichVuChay: Boolean, val chinhXac: Boolean,
         val bayGio: Long, val muiGio: ZoneId, val nhatKy: List<NhatKy>,
         val motLan: List<MotLan> = emptyList(), val coManTv: Boolean = false, val kdl: TrangThaiKdl? = null,
+        val dangBat: Boolean = true,
     )
 
     fun trangThai(j: JSONObject): TrangThai {
@@ -176,7 +177,8 @@ object HenGio {
             if (o.optString("id").isBlank() || loai !in setOf(BAT, TAT, MO)) null else MotLan(o.optString("id"), o.optLong("luc"), loai, o.optString("goi").ifBlank { null })
         }
         return TrangThai(docLich(j.optJSONArray("lich")), j.optLong("keTiep"), j.optLong("hoanDen"), j.optBoolean("dichVuChay"),
-            j.optBoolean("chinhXac", true), j.optLong("bayGio"), zone, nk, ml.sortedBy { it.luc }, j.has("motLan"), docKdl(j.optJSONObject("kdl")))
+            j.optBoolean("chinhXac", true), j.optLong("bayGio"), zone, nk, ml.sortedBy { it.luc }, j.has("motLan"), docKdl(j.optJSONObject("kdl")),
+            j.optBoolean("dangBat", true))
     }
 
     /** Lệnh hẹn một lần (content call … --method mot-lan): tắt tivi sau [phut] phút. */

@@ -212,7 +212,12 @@ class HenGioTivi(private val vm: PhienLamViec) {
         vm.io { vm.tv.caiAppHenGio(apk) { s -> vm.thongBao = s } }
         docTrangThaiTv()
         val kdl = trangThai?.kdl ?: error(t("App Hẹn giờ trên tivi chưa có Auto Reboot. Bấm Lưu lên tivi rồi thử lại.", "The Timer app on the TV has no Auto Reboot yet. Tap Save to the TV, then try again."))
-        if (kdlBat && kdl.adb != "da-noi") noiAdb()
+        if (kdlBat && kdl.adb != "da-noi") {
+            // Hộp cho phép hiện lúc màn hình tắt thì không ai thấy; tivi thức dậy thì Home nhảy lên đè nó (Skyworth).
+            if (trangThai?.dangBat == false) error(t("Bật tivi lên (màn hình sáng, đang ở Home) rồi bấm Lưu Auto Reboot: lần đầu tivi hiện hộp cho phép gỡ lỗi trên màn hình.",
+                "Turn the TV on (screen on, at Home), then tap Save Auto Reboot: the first time, the TV shows a debugging prompt on screen."))
+            noiAdb()
+        }
         val k = HenGio.AutoReboot(kdlBat, g, p, kdlNgay)
         vm.io { vm.tv.datAutoReboot(HenGio.jsonKdl(k)) }
         docTrangThaiTv()
@@ -238,8 +243,10 @@ class HenGioTivi(private val vm: PhienLamViec) {
                     "da-noi" -> return
                     "khong-co" -> error(t("ADB qua mạng (cổng 5555) của tivi đang tắt: Auto Reboot cần nó để khởi động lại tivi.",
                         "The TV's network ADB (port 5555) is off: Auto Reboot needs it to restart the TV."))
-                    "chua-cho-phep" -> error(t("Tivi chưa cho phép gỡ lỗi cho app Hẹn giờ. Bấm Lưu Auto Reboot lần nữa, trên tivi chọn Luôn cho phép rồi OK.",
-                        "The TV didn't allow debugging for the Timer app. Tap Save Auto Reboot again, then pick Always allow and OK on the TV."))
+                    "chua-luu" -> error(t("Tivi mới cho phép một lần (chưa tick \"Luôn cho phép\"): lúc tivi tắt, Auto Reboot sẽ bị từ chối. Bấm Lưu Auto Reboot lần nữa, trên tivi tick Luôn cho phép rồi OK.",
+                        "The TV allowed it just once (Always allow wasn't ticked), so Auto Reboot would be refused while the TV is off. Tap Save Auto Reboot again, tick Always allow on the TV, then OK."))
+                    "chua-cho-phep" -> error(t("Tivi chưa cho phép gỡ lỗi cho app Hẹn giờ. Bấm Lưu Auto Reboot lần nữa, trên tivi tick Luôn cho phép rồi OK. Không thấy hộp hỏi trên tivi thì khởi động lại tivi rồi thử lại (tivi có thể đang giữ một hộp hỏi cũ bị che).",
+                        "The TV didn't allow debugging for the Timer app. Tap Save Auto Reboot again, tick Always allow on the TV, then OK. If no prompt shows on the TV, restart the TV and try again (an old hidden prompt may be pending)."))
                     "loi" -> error(t("App Hẹn giờ không nối được ADB của tivi. Thử lại sau.", "The Timer app couldn't reach the TV's ADB. Try again later."))
                 }
                 if (System.currentTimeMillis() > het) error(t("Hết giờ chờ tivi cho phép gỡ lỗi. Bấm Lưu Auto Reboot lần nữa.", "Timed out waiting for the TV to allow debugging. Tap Save Auto Reboot again."))

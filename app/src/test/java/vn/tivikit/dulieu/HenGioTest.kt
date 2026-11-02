@@ -172,5 +172,8 @@ class HenGioTest {
         assertEquals("Auto Reboot – bỏ qua vì tới trễ quá 3 giờ (tivi ngủ sâu, tắt điện hay vừa đổi giờ)", mt("lo-gio"))
         assertEquals("Auto Reboot – không khởi động lại được: ADB qua mạng của tivi đang tắt", mt("loi-khong-co-adb"))
         assertEquals("Auto Reboot – ma-moi", mt("ma-moi"))
+        // Màn hình tivi: lần đầu cho phép gỡ lỗi chỉ làm lúc tivi đang sáng; app phụ cũ không báo thì coi như sáng.
+        assertFalse(HenGio.trangThai(JSONObject("""{"dangBat":false}""")).dangBat)
+        assertTrue(HenGio.trangThai(JSONObject("{}")).dangBat)
     }
 }
