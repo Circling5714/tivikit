@@ -127,18 +127,27 @@ class XuLyLenhTest {
         fun nut(b: JSONObject) = b.getJSONArray("keyboard").let { a ->
             (0 until a.length()).flatMap { i -> (0 until a.getJSONArray(i).length()).map { a.getJSONArray(i).getJSONObject(it).getString("text") } }
         }
-        // Chủ, tivi chưa có Hẹn giờ / Khoá trẻ em, chưa bật chụp: 8 nút, hai cột, Tắt tivi cuối.
+        // Chủ, tivi chưa có Hẹn giờ / Khoá trẻ em, chưa bật chụp: 8 nút hai cột, rồi hàng cuối Bật tivi | Tắt tivi.
         val chuPhim = XuLyLenh.banPhimChinh(VaiTro.CHU, en = false)
-        assertEquals(4, chuPhim.getJSONArray("keyboard").length())
-        assertEquals("📴 Tắt tivi", nut(chuPhim).last())
-        assertEquals(listOf("🎮 Điều khiển", "📺 Kênh nhanh", "▶️ YouTube", "📱 Ứng dụng", "📢 Nhắn tivi", "ℹ️ Tivi", "⚙️ Thêm"),
+        assertEquals(5, chuPhim.getJSONArray("keyboard").length())
+        assertEquals(listOf("🔆 Bật tivi", "📴 Tắt tivi"), nut(chuPhim).takeLast(2))
+        assertEquals(2, chuPhim.getJSONArray("keyboard").getJSONArray(4).length())
+        assertTrue(nut(chuPhim).contains("🗂 Tắt đa nhiệm"))
+        // Thành viên: có Bật tivi, không có Tắt đa nhiệm / Tắt tivi.
+        assertEquals(listOf("🎮 Điều khiển", "📺 Kênh nhanh", "▶️ YouTube", "📱 Ứng dụng", "📢 Nhắn tivi", "ℹ️ Tivi", "⚙️ Thêm", "🔆 Bật tivi"),
             nut(XuLyLenh.banPhimChinh(VaiTro.THANH_VIEN, en = false)))
         // Đủ tính năng: mỗi nút của bàn phím chính đọc lại ra đúng việc (cả tiếng Anh).
         val du = XuLyLenh.Co(henGio = true, khoa = true, manHinh = true)
-        assertEquals(6, XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du).getJSONArray("keyboard").length())
+        assertEquals(7, XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du).getJSONArray("keyboard").length())
         assertEquals(listOf(XuLyLenh.DieuKhien, XuLyLenh.Kenh, XuLyLenh.YouTube, XuLyLenh.UngDung(0), XuLyLenh.HenGio, XuLyLenh.Khoa,
-            XuLyLenh.NhanTivi(), XuLyLenh.Tivi, XuLyLenh.ChupManHinh, XuLyLenh.Them, XuLyLenh.HoiTat),
+            XuLyLenh.NhanTivi(), XuLyLenh.Tivi, XuLyLenh.ChupManHinh, XuLyLenh.HoiDaNhiem, XuLyLenh.Them, XuLyLenh.BatManHinh, XuLyLenh.HoiTat),
             nut(XuLyLenh.banPhimChinh(VaiTro.CHU, en = true, co = du)).map(XuLyLenh::viecTuChu))
+        assertEquals(XuLyLenh.HoiDaNhiem, XuLyLenh.viecTuChu("/dongapp"))
+        assertEquals(XuLyLenh.BatManHinh, XuLyLenh.viecTuChu("🔆 Bật tivi"))
+        // Nút mới là nút bàn phím, không phải chữ tự do (khi bot đang chờ chữ để gõ, bấm nút này là chọn việc khác).
+        assertFalse(XuLyLenh.laChuTuDo("🗂 Tắt đa nhiệm"))
+        listOf(XuLyLenh.HoiDaNhiem, XuLyLenh.DaNhiem).forEach { assertTrue(it.toString(), XuLyLenh.chiChu(it)) }
+        assertFalse(XuLyLenh.chiChu(XuLyLenh.BatManHinh))
         // Nút cũ còn trong Telegram (bàn phím trước): 🧹 Làm mới vẫn hiểu.
         assertEquals(XuLyLenh.LamMoiTv, XuLyLenh.viecTuChu("🧹 Làm mới"))
         // Bảng điều khiển: 4 hàng ba phím + hàng Cập nhật; nút nào cũng đọc lại được.
@@ -156,7 +165,7 @@ class XuLyLenhTest {
             XuLyLenh.sauKhiChup(false), XuLyLenh.nutDatNen(true), XuLyLenh.nutBoNen(false), XuLyLenh.bangCast(7, false),
             XuLyLenh.bangTatCaKenh(1), XuLyLenh.bangKenh(listOf(1 to "VTV1"), tatCa = true), XuLyLenh.bangXinGio(false), XuLyLenh.bangSapTat(true),
             XuLyLenh.sauKhiGo(en = false), XuLyLenh.bangHenGio(listOf("tat-1793422740000" to "22:30 tắt tivi"), en = false), XuLyLenh.bangKhoa(en = true, coMa = true),
-            XuLyLenh.bangLamMoi(en = false, ganDay = true), XuLyLenh.hoiTat(en = false),
+            XuLyLenh.bangLamMoi(en = false, ganDay = true), XuLyLenh.hoiTat(en = false), XuLyLenh.hoiDaNhiem(en = false), XuLyLenh.sauDaNhiem(en = true),
             XuLyLenh.bangUngDung((1..30).map { "com.app.so$it" to "App $it" }, 1, en = false, chu = true)).forEach { bp ->
             val h = bp.getJSONArray("inline_keyboard")
             for (i in 0 until h.length()) for (k in 0 until h.getJSONArray(i).length()) {

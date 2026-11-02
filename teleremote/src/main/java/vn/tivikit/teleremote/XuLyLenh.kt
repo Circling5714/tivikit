@@ -43,6 +43,10 @@ object XuLyLenh {
     data class MoUngDung(val goi: String) : Viec
     /** Buộc dừng app đang mở (app treo). */
     data object DungApp : Viec
+    /** 🗂 Tắt đa nhiệm: kể các app người dùng cài đang chạy rồi hỏi đóng hết ([DaNhiem]) hay thôi ([ThoiDaNhiem]). */
+    data object HoiDaNhiem : Viec
+    data object DaNhiem : Viec
+    data object ThoiDaNhiem : Viec
     data object Tivi : Viec
     data object LamMoiTv : Viec
     data object DongAppNen : Viec
@@ -151,12 +155,19 @@ object XuLyLenh {
     class Nhan(
         val dieuKhien: String, val kenh: String, val youTube: String, val ungDung: String, val henGio: String, val khoa: String,
         val lamMoi: String, val tivi: String, val manHinh: String, val tat: String, val nhanTivi: String, val them: String,
+        val batTivi: String, val daNhiem: String,
     )
 
     val VI = Nhan("🎮 Điều khiển", "📺 Kênh nhanh", "▶️ YouTube", "📱 Ứng dụng", "⏰ Hẹn giờ", "🔒 Khoá trẻ em", "🧹 Làm mới",
-        "ℹ️ Tivi", "📸 Màn hình", "📴 Tắt tivi", "📢 Nhắn tivi", "⚙️ Thêm")
+        "ℹ️ Tivi", "📸 Màn hình", "📴 Tắt tivi", "📢 Nhắn tivi", "⚙️ Thêm", "🔆 Bật tivi", "🗂 Tắt đa nhiệm")
     val EN = Nhan("🎮 Remote", "📺 Quick channel", "▶️ YouTube", "📱 Apps", "⏰ Timer", "🔒 Kids lock", "🧹 Refresh TV",
-        "ℹ️ TV", "📸 Screenshot", "📴 Turn off TV", "📢 Message TV", "⚙️ More")
+        "ℹ️ TV", "📸 Screenshot", "📴 Turn off TV", "📢 Message TV", "⚙️ More", "🔆 Turn on TV", "🗂 Close all apps")
+
+    /**
+     * Bản của bàn phím chính: tăng khi bàn phím có nút mới, để bot tự gửi lại bàn phím một lần cho mỗi người (khỏi phải
+     * bấm /start). 2: 🔆 Bật tivi, 🗂 Tắt đa nhiệm (Tele Remote 1.1).
+     */
+    const val BAN_PHIM = 2
 
     fun nhan(en: Boolean) = if (en) EN else VI
 
@@ -233,8 +244,11 @@ object XuLyLenh {
     private val NUT_TAT = nut { it.tat }
     private val NUT_NHAN_TIVI = nut { it.nhanTivi }
     private val NUT_THEM = nut { it.them }
+    private val NUT_BAT_TIVI = nut { it.batTivi }
+    private val NUT_DA_NHIEM = nut { it.daNhiem }
     private val TAT_CA_NUT = listOf(VI, EN).flatMap {
-        listOf(it.dieuKhien, it.kenh, it.youTube, it.ungDung, it.henGio, it.khoa, it.lamMoi, it.tivi, it.manHinh, it.tat, it.nhanTivi, it.them)
+        listOf(it.dieuKhien, it.kenh, it.youTube, it.ungDung, it.henGio, it.khoa, it.lamMoi, it.tivi, it.manHinh, it.tat, it.nhanTivi, it.them,
+            it.batTivi, it.daNhiem)
     }.toSet()
 
     /**
@@ -268,7 +282,8 @@ object XuLyLenh {
             lenh == "/nhan" || lenh == "/message" -> NhanTivi(c.substringAfter(' ', "").trim().take(500))
             c in NUT_NHAN_TIVI -> NhanTivi()
             lenh == "/them" || lenh == "/more" || c in NUT_THEM -> Them
-            lenh == "/bat" || lenh == "/on" -> BatManHinh
+            lenh == "/bat" || lenh == "/on" || c in NUT_BAT_TIVI -> BatManHinh
+            lenh == "/dongapp" || lenh == "/closeapps" || c in NUT_DA_NHIEM -> HoiDaNhiem
             lenh == "/mang" || lenh == "/network" -> KiemTraMang
             lenh == "/nhatky" || lenh == "/log" -> NhatKyXem
             lenh == "/nguoi" || lenh == "/people" -> NguoiDs
@@ -303,6 +318,9 @@ object XuLyLenh {
         du == "g" -> GoChu
         du == "g+" -> GoTiep
         du == "as" -> DungApp
+        du == "dn:hoi" -> HoiDaNhiem
+        du == "dn:ok" -> DaNhiem
+        du == "dn:x" -> ThoiDaNhiem
         du == "t:ok" -> Tat
         du == "t:x" -> ThoiTat
         du == "t:rb" -> KhoiDongLai
@@ -352,29 +370,31 @@ object XuLyLenh {
     }
 
     /**
-     * Việc chỉ chủ tivi được làm. Thành viên: điều khiển, gõ chữ, kênh, YouTube, ứng dụng, nhắn như nói, âm lượng, bật màn
-     * hình, link, ảnh, lời nhắn lên tivi, kiểm tra mạng, xem tivi.
+     * Việc chỉ chủ tivi được làm. Thành viên: điều khiển, gõ chữ, kênh, YouTube, ứng dụng, nhắn như nói, âm lượng, bật tivi,
+     * link, ảnh, lời nhắn lên tivi, kiểm tra mạng, xem tivi.
      */
     fun chiChu(v: Viec): Boolean = v is TatSau || v is HuyHen || v is MoTam || v is NguoiXem || v is DatVaiTro || v is BoNguoi ||
         v is Duyet || v is BoQuaXin || v is KhoaThanhVien || v is CastDuyet || v in setOf(
             HoiTat, Tat, KhoiDongLai, HenGio, Khoa, KhoaNgay, ChupManHinh, LamMoiTv, DongAppNen, DonCache, DungApp, NguoiDs, ThemNguoi, NhatKyXem,
-            QuayManHinh, DatNen, BoNen, BaoCao7, TuChoiXin, HoanTat, TatNgayHen,
+            QuayManHinh, DatNen, BoNen, BaoCao7, TuChoiXin, HoanTat, TatNgayHen, HoiDaNhiem, DaNhiem,
         )
 
     /** Tính năng đang dùng được trên tivi, để bàn phím chỉ hiện nút có tác dụng: Hẹn giờ, Khoá trẻ em đã cài, chủ bật chụp. */
     data class Co(val henGio: Boolean = false, val khoa: Boolean = false, val manHinh: Boolean = false)
 
     /**
-     * Bàn phím chính (nằm cố định dưới ô gõ tin): hai cột; chủ có thêm Hẹn giờ, Khoá trẻ em, Màn hình, Tắt tivi. Việc ít
-     * dùng (Làm mới, kiểm tra mạng, người dùng, nhật ký, khoá thành viên, bật màn hình) nằm trong ⚙️ Thêm.
+     * Bàn phím chính (nằm cố định dưới ô gõ tin): hai cột, Bật tivi ở cuối; chủ có thêm Hẹn giờ, Khoá trẻ em, Màn hình, Tắt
+     * đa nhiệm, và hàng cuối Bật tivi | Tắt tivi. Việc ít dùng (Làm mới, kiểm tra mạng, người dùng, nhật ký, khoá thành viên)
+     * nằm trong ⚙️ Thêm.
      */
     fun banPhimChinh(vt: VaiTro, en: Boolean, co: Co = Co()): JSONObject {
         val n = nhan(en)
-        val ds = if (vt == VaiTro.CHU) listOfNotNull(
+        val hang = if (vt == VaiTro.CHU) listOfNotNull(
             n.dieuKhien, n.kenh, n.youTube, n.ungDung, n.henGio.takeIf { co.henGio }, n.khoa.takeIf { co.khoa },
-            n.nhanTivi, n.tivi, n.manHinh.takeIf { co.manHinh }, n.them, n.tat,
-        ) else listOf(n.dieuKhien, n.kenh, n.youTube, n.ungDung, n.nhanTivi, n.tivi, n.them)
-        return JSONObject().put("keyboard", JSONArray(ds.chunked(2).map { h -> JSONArray(h.map { JSONObject().put("text", it) }) }))
+            n.nhanTivi, n.tivi, n.manHinh.takeIf { co.manHinh }, n.daNhiem, n.them,
+        ).chunked(2) + listOf(listOf(n.batTivi, n.tat))
+        else listOf(n.dieuKhien, n.kenh, n.youTube, n.ungDung, n.nhanTivi, n.tivi, n.them, n.batTivi).chunked(2)
+        return JSONObject().put("keyboard", JSONArray(hang.map { h -> JSONArray(h.map { JSONObject().put("text", it) }) }))
             .put("resize_keyboard", true).put("is_persistent", true)
             .put("input_field_placeholder", if (en) "Type like talking to the Assistant…" else "Gõ như nói với Trợ lý…")
     }
@@ -468,8 +488,8 @@ object XuLyLenh {
     ))
 
     /**
-     * Menu ⚙️ Thêm: ai cũng có kiểm tra mạng, bật màn hình; chủ có thêm Làm mới, người dùng, nhật ký, tạm khoá thành viên
-     * (đang khoá tới [khoaTvDen] thì nút mở lại).
+     * Menu ⚙️ Thêm: ai cũng có kiểm tra mạng; chủ có thêm Làm mới, người dùng, nhật ký, tạm khoá thành viên (đang khoá tới
+     * [khoaTvDen] thì nút mở lại). Bật tivi đã lên bàn phím chính (Tele Remote 1.1).
      */
     fun bangThem(chu: Boolean, en: Boolean, khoaTvDen: Long, bay: Long): JSONObject = nutTrongTin(listOfNotNull(
         listOfNotNull(((if (en) "🧹 Refresh TV" else "🧹 Làm mới") to "lm:r").takeIf { chu }, (if (en) "🌐 Network check" else "🌐 Kiểm tra mạng") to "net"),
@@ -477,11 +497,18 @@ object XuLyLenh {
         (if (khoaTvDen > bay) listOf((if (en) "▶️ Let members back in" else "▶️ Mở lại cho thành viên") to "kt:0")
             else listOf((if (en) "⏸ Pause members 1 h" else "⏸ Khoá thành viên 1 giờ") to "kt:60", (if (en) "⏸ Until 6 am" else "⏸ Tới 6 giờ sáng") to "kt:s"))
             .takeIf { chu },
-        listOf((if (en) "☀️ Turn the screen on" else "☀️ Bật màn hình") to "on"),
     ))
 
-    /** Nút ☀️ Bật màn hình (tình trạng tivi khi màn hình đang tắt / màn bảo vệ). */
-    fun nutBatManHinh(en: Boolean): JSONObject = nutTrongTin(listOf(listOf((if (en) "☀️ Turn the screen on" else "☀️ Bật màn hình") to "on")))
+    /** Nút 🔆 Bật tivi (tình trạng tivi khi màn hình đang tắt / màn bảo vệ). */
+    fun nutBatManHinh(en: Boolean): JSONObject = nutTrongTin(listOf(listOf(nhan(en).batTivi to "on")))
+
+    /** 🗂 Tắt đa nhiệm: đóng hết các app vừa kể, hay thôi. */
+    fun hoiDaNhiem(en: Boolean): JSONObject = nutTrongTin(listOf(
+        listOf((if (en) "🗂 Close them all" else "🗂 Đóng hết") to "dn:ok", (if (en) "Cancel" else "Thôi") to "dn:x"),
+    ))
+
+    /** Sau khi đóng: xem lại các app đang chạy. */
+    fun sauDaNhiem(en: Boolean): JSONObject = nutTrongTin(listOf(listOf((if (en) "🔄 Check again" else "🔄 Xem lại") to "dn:hoi")))
 
     /** Khoá của [nd] trong nút: ID số khi đã nhắn bot, không thì @username. */
     fun khoaCua(nd: NguoiDung): String = if (nd.id != 0L) nd.id.toString() else nd.ten

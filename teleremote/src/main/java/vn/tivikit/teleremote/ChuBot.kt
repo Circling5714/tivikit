@@ -61,7 +61,8 @@ object ChuBot {
             "dong-app-nen" -> t(en, "đóng app nền", "closed background apps")
             "don-cache" -> t(en, "dọn cache", "cleared the cache")
             "nhan" -> t(en, "nhắn lên màn hình tivi", "showed a message on the TV")
-            "bat-man-hinh" -> t(en, "bật màn hình", "turned the screen on")
+            "bat-man-hinh" -> t(en, "bật tivi", "turned the TV on")
+            "da-nhiem" -> t(en, "tắt đa nhiệm ($sau app)", "closed all apps ($sau)")
             "am-luong" -> if (sau == "0") t(en, "tắt tiếng", "muted") else t(en, "chỉnh âm lượng $sau", "set the volume to $sau")
             "kiem-tra-mang" -> t(en, "kiểm tra mạng", "checked the network")
             "duyet" -> t(en, "duyệt $sau", "approved $sau")
@@ -86,6 +87,23 @@ object ChuBot {
             else -> viec
         }
     }
+
+    // ---------- 🗂 Tắt đa nhiệm ----------
+
+    /** Các app sắp đóng ([ten], đã xếp) và câu hỏi; không có app nào thì nói vậy. */
+    fun hoiDaNhiem(ten: List<String>, tenTivi: String, en: Boolean): String {
+        val dau = "🗂 ${t(en, "Tắt đa nhiệm", "Close all apps")} · $tenTivi"
+        if (ten.isEmpty()) return "$dau\n" + t(en, "Không có app nào đang mở, ngoài app hệ thống của tivi và TiviKit.",
+            "No apps are open apart from the TV's system apps and TiviKit.")
+        return "$dau\n" + t(en, "Đang mở ${ten.size} app: ", "${ten.size} apps are open: ") + ten.joinToString(", ") + "\n" +
+            t(en, "Đóng hết? App hệ thống của tivi và TiviKit vẫn chạy; app đang xem cũng đóng, tivi về Home.",
+                "Close them all? The TV's system apps and TiviKit keep running; the app on screen closes too and the TV goes Home.")
+    }
+
+    /** Đã đóng [ten], RAM trống trước / sau. */
+    fun daDongDaNhiem(ten: List<String>, truoc: Long, sau: Long, en: Boolean): String =
+        t(en, "🗂 Đã đóng ${ten.size} app: ", "🗂 Closed ${ten.size} apps: ") + ten.joinToString(", ") + "\n" +
+            t(en, "RAM trống: ", "Free RAM: ") + "${gb(truoc, en)} → ${gb(sau, en)}"
 
     // ---------- Hẹn giờ (app vn.tivikit.hengio) ----------
 

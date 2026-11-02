@@ -101,4 +101,17 @@ class ChuBotTest {
         assertEquals("▶ CN 1/11 · 2 giờ 5 phút / 2 giờ ⚠️", dong[2])
         assertTrue(ChuBot.baoCao(JSONObject("""{"coQuyen":false,"ngay":[]}"""), "TV", true).contains("apps aren't listed"))
     }
+
+    @Test
+    fun daNhiem() {
+        assertEquals("🗂 Tắt đa nhiệm · Skyworth\nKhông có app nào đang mở, ngoài app hệ thống của tivi và TiviKit.",
+            ChuBot.hoiDaNhiem(emptyList(), "Skyworth", false))
+        val hoi = ChuBot.hoiDaNhiem(listOf("AirScreen", "Kodi", "SmartTube"), "Skyworth", false).lines()
+        assertEquals("Đang mở 3 app: AirScreen, Kodi, SmartTube", hoi[1])
+        assertTrue(hoi[2].startsWith("Đóng hết?"))
+        val xong = ChuBot.daDongDaNhiem(listOf("Kodi", "SmartTube"), 600L shl 20, 3L shl 29, false).lines()
+        assertEquals(listOf("🗂 Đã đóng 2 app: Kodi, SmartTube", "RAM trống: 600 MB → 1,5 GB"), xong)
+        assertEquals("tắt đa nhiệm (4 app)", ChuBot.moTaViec("da-nhiem|4", false, ::tenApp))
+        assertEquals("closed all apps (4)", ChuBot.moTaViec("da-nhiem|4", true, ::tenApp))
+    }
 }

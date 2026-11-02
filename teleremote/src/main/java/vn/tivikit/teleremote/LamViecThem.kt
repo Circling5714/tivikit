@@ -45,12 +45,62 @@ internal fun LamViec.them(d: Den, nd: NguoiDung, traLoi: Boolean = true) {
     hienBang(d, dong.joinToString("\n") to XuLyLenh.bangThem(chu, en, khoaTv, bay), traLoi)
 }
 
+/**
+ * 🔆 Bật tivi: dùng cho tivi tắt mà không ngủ sâu (Skyworth: tắt chỉ tắt màn hình, bot vẫn nghe), hay đang ở màn bảo vệ.
+ * Tivi ngủ sâu (TX3) thì tin không tới bot cho tới khi bật bằng remote.
+ */
 internal fun LamViec.batManHinh(d: Den, nd: NguoiDung) {
     if (d.nut != null) ra.traLoiNut(d.idNut)
+    if (dv.manHinh() == "Awake") {
+        ra.gui(d.chat, t("🔆 Tivi đang bật rồi.", "🔆 The TV is already on."))
+        return
+    }
     val ok = dv.batManHinh()
-    ra.gui(d.chat, if (ok) t("☀️ Màn hình tivi đã bật.", "☀️ The TV screen is on.")
-        else t("Chưa bật được màn hình: tivi ngủ sâu hay tắt nguồn thì phải bật bằng remote.", "Couldn't turn the screen on: a TV in deep sleep or powered off needs its remote."))
+    ra.gui(d.chat, if (ok) t("🔆 Đã bật tivi.", "🔆 The TV is on.")
+        else t("Chưa bật được tivi: tivi ngủ sâu hay tắt nguồn thì phải bật bằng remote.", "Couldn't turn the TV on: a TV in deep sleep or powered off needs its remote."))
     if (ok) ghi(nd, "bat-man-hinh")
+}
+
+// ---------- 🗂 Tắt đa nhiệm ----------
+
+/** Kể các app người dùng cài đang chạy rồi hỏi đóng hết (tin mới, cả khi bấm 🔄 Xem lại: giữ tin kết quả lần trước). */
+internal fun LamViec.hoiDaNhiem(d: Den) {
+    if (d.nut != null) ra.traLoiNut(d.idNut)
+    ra.dangLam(d.chat, "typing")
+    val ds = dv.appDaNhiem()
+    if (ds == null) {
+        ra.gui(d.chat, chuChuaAdb())
+        return
+    }
+    ra.gui(d.chat, ChuBot.hoiDaNhiem(ds.map { it.second }, dv.tenTivi(), en), if (ds.isEmpty()) null else XuLyLenh.hoiDaNhiem(en))
+}
+
+/** Đóng hết: đọc lại danh sách (có app vừa mở / vừa tắt từ lúc hỏi), về Home nếu app đang xem nằm trong đó, rồi đóng. */
+internal fun LamViec.daNhiem(d: Den, nd: NguoiDung) {
+    ra.traLoiNut(d.idNut, t("Đang đóng các app…", "Closing the apps…"))
+    val ds = dv.appDaNhiem()
+    if (ds == null) {
+        ra.sua(d.chat, d.idTin, chuChuaAdb())
+        return
+    }
+    if (ds.isEmpty()) {
+        ra.sua(d.chat, d.idTin, ChuBot.hoiDaNhiem(emptyList(), dv.tenTivi(), en))
+        return
+    }
+    val goi = ds.map { it.first }
+    val truoc = dv.soDo(doCpu = false).ramCon
+    // Về Home trước khi đóng app đang xem (khỏi màn đen giữa chừng); màn hình tắt / màn bảo vệ thì không bấm, khỏi bật tivi.
+    if (dv.goiDangMo() in goi && dv.manHinh() == "Awake") {
+        dv.bamPhim(3)
+        Thread.sleep(800)
+    }
+    if (!dv.dongDaNhiem(goi)) {
+        ra.sua(d.chat, d.idTin, chuChuaAdb())
+        return
+    }
+    Thread.sleep(1500)
+    ra.sua(d.chat, d.idTin, ChuBot.daDongDaNhiem(ds.map { it.second }, truoc, dv.soDo(doCpu = false).ramCon, en), XuLyLenh.sauDaNhiem(en))
+    ghi(nd, "da-nhiem|${ds.size}")
 }
 
 internal fun LamViec.amLuong(d: Den, nd: NguoiDung, v: XuLyLenh.AmLuong) {

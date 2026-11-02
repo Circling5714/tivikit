@@ -135,6 +135,24 @@ class Kho(ctx: Context) {
         get() = p.getLong("khoa_thanh_vien_den", 0)
         set(v) { p.edit().putLong("khoa_thanh_vien_den", v).apply() }
 
+    /**
+     * Người [id] (ID Telegram) đã nhận bàn phím chính bản [XuLyLenh.BAN_PHIM]. Lưu "<bản>:<id>,<id>…"; bản cũ hơn coi như chưa
+     * ai nhận: bàn phím có nút mới thì bot gửi lại một lần cho mỗi người.
+     */
+    @Synchronized
+    fun coBanPhim(id: Long): Boolean = id in daCoBanPhim()
+
+    @Synchronized
+    fun ghiBanPhim(id: Long) {
+        p.edit().putString("ban_phim", "${XuLyLenh.BAN_PHIM}:" + (daCoBanPhim() + id).joinToString(",")).apply()
+    }
+
+    private fun daCoBanPhim(): Set<Long> {
+        val s = p.getString("ban_phim", null).orEmpty()
+        if (s.substringBefore(':') != XuLyLenh.BAN_PHIM.toString()) return emptySet()
+        return s.substringAfter(':', "").split(',').mapNotNull { it.toLongOrNull() }.toSet()
+    }
+
     companion object {
         const val CHO_TOI_DA = 10
         const val GIU = 40

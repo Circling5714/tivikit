@@ -259,6 +259,19 @@ class TeleRemoteDichVu : AccessibilityService() {
     fun dungApp(goi: String): Boolean = lenh("am force-stop $goi", 5000) != null
 
     /**
+     * App 🗂 Tắt đa nhiệm sẽ đóng: (gói, tên) các app người dùng cài đang chạy, trừ TiviKit, app Home, chính bot và app giữ vai
+     * trò cho tivi (DaNhiemTr), xếp theo tên; null nếu chưa nối ADB.
+     */
+    fun appDaNhiem(): List<Pair<String, String>>? {
+        val kq = lenh(DaNhiemTr.LENH_DOC, 10_000) ?: return null
+        val so = Collator.getInstance(Locale("vi"))
+        return DaNhiemTr.chon(kq, home() + packageName).map { it to tenApp(it) }.sortedWith(compareBy(so) { it.second })
+    }
+
+    /** Buộc dừng các app [goi] rồi đóng tiến trình nền còn lại; false nếu chưa nối ADB. */
+    fun dongDaNhiem(goi: List<String>): Boolean = lenh(DaNhiemTr.lenhDong(goi), 30_000) != null
+
+    /**
      * Gọi app phụ [goi] của TiviKit qua ADB (provider của chúng chỉ nhận lời gọi từ shell): content call, [thamSo] thuần ASCII
      * không có nháy đơn (XuLyLenh.thamSo, mã hẹn, mã số). null nếu chưa nối ADB / quá giờ.
      */

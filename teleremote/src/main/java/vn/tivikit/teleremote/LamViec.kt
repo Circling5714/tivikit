@@ -63,6 +63,13 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
             if (d.nut != null) ra.traLoiNut(d.idNut, loi, canhBao = true) else ra.gui(d.chat, loi)
             return
         }
+        // Bàn phím chính vừa có nút mới (Tele Remote cập nhật): gửi lại một lần cho người này, khỏi phải bấm /start. Lệnh thử
+        // của TiviKit (chat 0) không tính: người thật chưa thấy bàn phím đó.
+        if (d.chat != 0L && nd.id != 0L && !dv.kho.coBanPhim(nd.id)) {
+            dv.kho.ghiBanPhim(nd.id)
+            val moi = listOfNotNull(XuLyLenh.nhan(en).batTivi, XuLyLenh.nhan(en).daNhiem.takeIf { nd.vaiTro == VaiTro.CHU }).joinToString(", ")
+            if (viec != XuLyLenh.Menu) ra.gui(d.chat, t("⌨️ Bàn phím của bot có nút mới: $moi.", "⌨️ The bot's keyboard has new buttons: $moi."), banPhim(nd))
+        }
         when (viec) {
             XuLyLenh.Menu -> ra.gui(d.chat, chao(nd), banPhim(nd))
             XuLyLenh.DieuKhien -> {
@@ -82,6 +89,12 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
             is XuLyLenh.UngDung -> ungDung(d, nd, viec.trang)
             is XuLyLenh.MoUngDung -> moUngDung(d, nd, viec.goi)
             XuLyLenh.DungApp -> dungApp(d, nd)
+            XuLyLenh.HoiDaNhiem -> hoiDaNhiem(d)
+            XuLyLenh.DaNhiem -> daNhiem(d, nd)
+            XuLyLenh.ThoiDaNhiem -> {
+                ra.traLoiNut(d.idNut)
+                ra.sua(d.chat, d.idTin, t("Đã thôi, các app vẫn chạy.", "Cancelled; the apps keep running."))
+            }
             XuLyLenh.Tivi -> tinhTrang().let { (chu, tat) -> ra.gui(d.chat, chu, if (tat) XuLyLenh.nutBatManHinh(en) else null) }
             XuLyLenh.LamMoiTv -> lamMoi(d)
             XuLyLenh.DongAppNen -> dongAppNen(d, nd)
@@ -638,10 +651,12 @@ class LamViec(internal val dv: TeleRemoteDichVu, internal val ra: Ra) {
         /** Lệnh hiện ở nút Menu của chat với bot. */
         fun lenhMenu(en: Boolean): List<Pair<String, String>> = if (en) listOf(
             "start" to "Open the menu", "remote" to "Remote control", "go" to "Type text on the TV", "nhan" to "Show a message on the TV",
-            "kenh" to "Quick channel", "apps" to "Apps on the TV", "tivi" to "TV status", "mang" to "Network check", "them" to "More",
+            "kenh" to "Quick channel", "apps" to "Apps on the TV", "tivi" to "TV status", "bat" to "Turn on the TV", "mang" to "Network check",
+            "them" to "More",
         ) else listOf(
             "start" to "Mở menu", "remote" to "Bảng điều khiển", "go" to "Gõ chữ lên tivi", "nhan" to "Nhắn lên màn hình tivi",
-            "kenh" to "Kênh nhanh", "apps" to "Ứng dụng trên tivi", "tivi" to "Tình trạng tivi", "mang" to "Kiểm tra mạng", "them" to "Thêm",
+            "kenh" to "Kênh nhanh", "apps" to "Ứng dụng trên tivi", "tivi" to "Tình trạng tivi", "bat" to "Bật tivi", "mang" to "Kiểm tra mạng",
+            "them" to "Thêm",
         )
     }
 }
