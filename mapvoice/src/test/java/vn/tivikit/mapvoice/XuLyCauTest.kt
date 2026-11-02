@@ -2,6 +2,7 @@ package vn.tivikit.mapvoice
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class XuLyCauTest {
@@ -22,6 +23,14 @@ class XuLyCauTest {
         assertNull(XuLyCau.cauTuLog("I/ActivityTaskManager( 500): START u0 {cmp=com.google.android.youtube.tv/.Main}"))
         assertNull(XuLyCau.cauTuLog("I/x( 1): setFinalRecognizedText()"))
         assertNull(XuLyCau.cauTuLog("I/x( 1): setFinalRecognizedText(null)"))
+    }
+
+    @Test
+    fun logcatLocTheoTagTruoc() {
+        // Tag lọc sau cùng (sau mọi tuỳ chọn), regex chỉ còn chạy trên dòng của đúng tag.
+        assertTrue(XuLyCau.LENH_LOGCAT.endsWith(" -s katniss_interactor_StreamingTextView:V katniss_search_StreamingTextView:V"))
+        assertTrue(XuLyCau.LENH_LOGCAT.contains(" -b main "))
+        assertTrue(XuLyCau.LENH_LOGCAT.contains(" -e setFinalRecognizedText "))
     }
 
     @Test

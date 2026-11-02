@@ -56,10 +56,19 @@ object XuLyCau {
     const val DAU_LOG = "setFinalRecognizedText"
 
     /**
-     * Lệnh logcat chạy suốt trên tivi: chỉ dòng có [DAU_LOG] (lọc ngay trên tivi, Map Voice không nhận dòng nào khác), từ
-     * lúc bắt đầu (không đọc lại câu cũ).
+     * Tag của dòng đó: katniss đặt tag "katniss_<tiến trình>_<lớp>"; câu nói nằm ở tiến trình :interactor (thấy trên
+     * Skyworth 2/11/2026), thêm :search để phòng bản katniss khác.
      */
-    const val LENH_LOGCAT = "exec logcat -v brief -T \"\$(date +'%m-%d %H:%M:%S.000')\" -e $DAU_LOG"
+    val TAG_LOG = listOf("katniss_interactor_StreamingTextView", "katniss_search_StreamingTextView")
+
+    /**
+     * Lệnh logcat chạy suốt trên tivi: chỉ dòng có [DAU_LOG] (lọc ngay trên tivi, Map Voice không nhận dòng nào khác), từ
+     * lúc bắt đầu (không đọc lại câu cũ). Lọc theo tag trước (`-s` [TAG_LOG]): logcat so tag rẻ và chỉ chạy regex `-e` trên
+     * dòng đúng tag. Chỉ có `-e` thì regex chạy trên mọi dòng log của tivi, ngốn 10–22% CPU trên Skyworth (2/11/2026).
+     * `-b main`: log của app nằm ở main, khỏi đọc system / crash.
+     */
+    val LENH_LOGCAT = "exec logcat -v brief -b main -T \"\$(date +'%m-%d %H:%M:%S.000')\" -e $DAU_LOG -s " +
+        TAG_LOG.joinToString(" ") { "$it:V" }
 
     private val VI = Locale("vi")
 
