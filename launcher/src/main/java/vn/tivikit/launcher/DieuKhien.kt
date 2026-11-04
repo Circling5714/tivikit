@@ -97,14 +97,14 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
 
     fun hien() {
         docDuocDangPhat = true
-        NgheNen.chung.homeTu = System.currentTimeMillis()
+        NgheNen.chung.homeHien = true
         tt.coKhoa = runCatching { pm.getPackageInfo(GOI_KHOA, 0); true }.getOrDefault(false)
         docApp()
         chayNhip()
     }
 
     fun an() {
-        NgheNen.chung.homeTu = null
+        NgheNen.chung.homeHien = false
         nhip?.cancel()
         nhip = null
         if (tt.dangDoi != null) xongDoi()
@@ -304,7 +304,8 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             while (isActive) {
                 tt.bayGio = LocalDateTime.now()
                 if (tt.bayGio.toLocalDate() != ngayCau) napCau()
-                // Thẻ Đang phát: 2 giây một lần; 5 giây đầu thì mỗi giây, để thẻ hiện ngay khi đủ NgheNen.CHO_HOME.
+                // Thẻ Đang phát: 2 giây một lần; 5 giây đầu thì mỗi giây, để thẻ hiện ngay khi app vừa rời màn hình đủ
+                // NgheNen.CHO_DUNG.
                 if (dem % 2 == 0 || dem < 5) xemDangPhat()
                 if (dem % 60 == 0) xemThoiTiet()
                 if (dem % 5 == 0) {
