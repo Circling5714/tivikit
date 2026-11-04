@@ -70,7 +70,7 @@ Màn chính → TiviKit Launcher (mở màn Quản lý launcher, thẻ TiviKit L
 | Tivi có Home sạch đặt tên lời chào và nơi xem thời tiết → Cài lên tivi / Cập nhật | Lời chào có tên; dòng âm lịch có biểu tượng, nhiệt độ, trời (VD "26°C Nhiều mây") |
 | Mở app bằng giọng nói hay nút remote gán riêng, rồi bấm Home | App đó vẫn hiện sau vạch ngăn (thống kê sử dụng) |
 | Tivi thường (không phải box RAM thấp): phát nhạc / video trong SmartTube hay YouTube Music, bấm Home | Thẻ Đang phát trên dock: tên bài, tên app, sóng nhạc; OK mở lại đúng màn đang phát; giữ OK tạm dừng / phát tiếp |
-| TiviKit Launcher 1.5.1: xem kênh trong TV360 hay FPT Play (app không phát nền), bấm Home, chờ 5 giây | Không có thẻ Đang phát (bản 1.5.0 hiện thẻ chỉ có tên và biểu tượng app, dấu tạm dừng) |
+| TiviKit Launcher 1.5.1: xem video trong TizenTube (app không phát nền, có phiên phát), bấm Home, chờ 10 giây | Không có thẻ Đang phát, kể cả mấy giây đầu; `doc` của launcher: `ngheNen` không có TizenTube. (TV360, FPT Play, VTVgo không tạo phiên phát nên không bao giờ có thẻ) |
 | TiviKit Launcher 1.5.1: SmartTube bật phát nền, đang xem video thì bấm Home; giữ OK ở thẻ; rồi OK mở SmartTube, tạm dừng trong app, bấm Home | Chừng 3 giây sau có thẻ: tên video, sóng nhạc. Giữ OK thì tạm dừng, thẻ còn với dấu tạm dừng. Tạm dừng trong app rồi về Home thì không còn thẻ |
 | Tuỳ chỉnh → đổi tên lời chào, chọn ảnh nền có sẵn → Áp dụng lên tivi | Màn Home trên tivi đổi tên và ảnh ngay; thẻ ghi "Tivi đang dùng ảnh riêng" |
 | Tuỳ chỉnh → Ảnh từ điện thoại → Áp dụng | Ảnh chụp lên làm nền (cắt giữa 16:9), kính mờ theo màu ảnh |
