@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.Process
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileNotFoundException
@@ -58,8 +59,9 @@ class CauHinhProvider : ContentProvider() {
                 @Suppress("DEPRECATION")
                 val ma = if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()
                 val homeBat = pm.getComponentEnabledSetting(ComponentName(ctx, HOME)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                // Bài đang phát (như thẻ Đang phát đọc), hoặc "khong-co-quyen" (box RAM thấp không cho đọc phiên phát): TiviKit
-                // báo ở thẻ, và thử được phần đọc khi app phát nhạc đang mở.
+                // Bài đang phát (như thẻ Đang phát đọc: bản 1.5.1 trở đi chỉ app đang phát nền), hoặc "khong-co-quyen" (box RAM
+                // thấp không cho đọc phiên phát): TiviKit báo ở thẻ. "coTieng" / "ngheNen" (1.5.1): tivi đang có tiếng nhạc /
+                // video không, các app đã nghe thấy phát nền; để xem trên tivi thật vì sao thẻ hiện hay không.
                 val dangPhat: Any = try {
                     DangPhat.doc(ctx, { g -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(g, 0)).toString() }.getOrDefault(g) })?.first?.let { b ->
                         JSONObject().put("goi", b.goi).put("tieuDe", b.tieuDe).put("phu", b.phu).put("dangPhat", b.dangPhat)
@@ -81,7 +83,7 @@ class CauHinhProvider : ContentProvider() {
                 val hienThi = JSONObject().put("thongSo", CauHinh.hienThongSo(cj)).put("tocDo", CauHinh.hienTocDo(cj))
                 val o = JSONObject().put("ban", pi.versionName).put("ma", ma).put("homeBat", homeBat).put("cauHinh", cj)
                     .put("nen", File(ctx.filesDir, ANH_NEN).length()).put("anhApp", anhApp).put("dangPhat", dangPhat).put("cau", cau)
-                    .put("hienThi", hienThi)
+                    .put("hienThi", hienThi).put("coTieng", DangPhat.coTieng(ctx)).put("ngheNen", JSONArray(NgheNen.chung.daNghe()))
                 kq.putString("json", o.toString())
             }
             "bat-home", "tat-home" -> {

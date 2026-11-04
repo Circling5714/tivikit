@@ -57,12 +57,7 @@ class ThoiTietTest {
 
     @Test
     fun dangPhatVaAppGanDay() {
-        // 2 = tạm dừng, 3 = đang phát, 1 = dừng, 6 = đang tải.
-        assertEquals(1, DangPhat.chonPhien(listOf(2, 3)))
-        assertEquals(0, DangPhat.chonPhien(listOf(2, 1)))
-        assertEquals(1, DangPhat.chonPhien(listOf(1, 6)))
-        assertNull(DangPhat.chonPhien(listOf(1, 0)))
-        assertNull(DangPhat.chonPhien(emptyList()))
+        // Chọn phiên của thẻ Đang phát: NgheNenTest.
         assertEquals("SmartTube · Alan Walker", DangPhat.dongPhu("SmartTube", " Alan Walker "))
         assertEquals("Spotify", DangPhat.dongPhu("Spotify", "Spotify"))
         assertEquals("Spotify", DangPhat.dongPhu("Spotify", null))

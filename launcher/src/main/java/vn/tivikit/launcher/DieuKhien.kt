@@ -97,12 +97,14 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
 
     fun hien() {
         docDuocDangPhat = true
+        NgheNen.chung.homeTu = System.currentTimeMillis()
         tt.coKhoa = runCatching { pm.getPackageInfo(GOI_KHOA, 0); true }.getOrDefault(false)
         docApp()
         chayNhip()
     }
 
     fun an() {
+        NgheNen.chung.homeTu = null
         nhip?.cancel()
         nhip = null
         if (tt.dangDoi != null) xongDoi()
@@ -267,7 +269,10 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
         }
     }
 
-    /** Thẻ Đang phát: đọc phiên phát hiện tại (giữ ảnh bìa cũ nếu vẫn là bài đó). Chưa có quyền thì thôi đọc tới lần hiện sau. */
+    /**
+     * Thẻ Đang phát: đọc phiên của app đang phát nền (NgheNen; giữ ảnh bìa cũ nếu vẫn là bài đó). Chưa có quyền thì thôi đọc
+     * tới lần hiện sau.
+     */
     private fun xemDangPhat() {
         if (!docDuocDangPhat) return
         val ten = tt.apps.associate { it.goi to it.ten }
@@ -299,7 +304,8 @@ class DieuKhien(private val act: ComponentActivity, private val tt: TrangThaiHom
             while (isActive) {
                 tt.bayGio = LocalDateTime.now()
                 if (tt.bayGio.toLocalDate() != ngayCau) napCau()
-                if (dem % 2 == 0) xemDangPhat()
+                // Thẻ Đang phát: 2 giây một lần; 5 giây đầu thì mỗi giây, để thẻ hiện ngay khi đủ NgheNen.CHO_HOME.
+                if (dem % 2 == 0 || dem < 5) xemDangPhat()
                 if (dem % 60 == 0) xemThoiTiet()
                 if (dem % 5 == 0) {
                     val ram = withContext(Dispatchers.IO) { HeThong.ramTrong(ctx) }
